@@ -33,6 +33,26 @@ importers:
         specifier: 8.72.1
         version: 8.72.1(eslint@10.13.0)(typescript@6.0.3)
 
+  agents/muse-fixer: {}
+
+  apps/cloud:
+    dependencies:
+      '@intenzo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  apps/worker:
+    dependencies:
+      '@intenzo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  bench/intentbench:
+    dependencies:
+      '@intenzo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   packages/core:
     dependencies:
       playwright:

@@ -1,0 +1,11 @@
+{
+  "name": "@intenzo/muse-fixer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reference coding agent: a GitHub Action that fixes Intenzo failures with Muse Code.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

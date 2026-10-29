@@ -1,0 +1,14 @@
+{
+  "name": "@intenzo/intentbench",
+  "version": "0.0.0",
+  "private": true,
+  "description": "IntentBench: record-once, judge-many benchmark for intent verification.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@intenzo/core": "workspace:*"
+  }
+}

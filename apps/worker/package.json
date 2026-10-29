@@ -1,0 +1,14 @@
+{
+  "name": "@intenzo/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Verification worker (runs on Modal) and the local intenzo CLI.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@intenzo/core": "workspace:*"
+  }
+}
