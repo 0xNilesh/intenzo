@@ -22,11 +22,12 @@
 | Unit | Vitest | `pnpm test` | pure functions, fixtures, mocked HTTP (msw) |
 | Contract | Vitest | `pnpm test:contract` | model prompt/schema fixtures; the pinned Playwright internal API |
 | Browser | Vitest + Playwright | `pnpm test:browser` | local demo-shop: base on `:3000` (main), PR on `:3001` (branch worktree) |
-| Live model | Vitest (tagged `@live`) | `pnpm test:live` | real Meta API / Baseten (costs credits; run on purpose) |
+| Live model | Vitest (`*.live.test.ts`, called `@live` below) | `pnpm test:live` | real Meta API / Baseten (costs credits; run on purpose) |
 | End-to-end | script | `pnpm test:e2e` | a real PR on `demo-shop` through GitHub → Cloud → Modal |
 | Phase gate | script | `pnpm gate:p<N>` | everything a phase promises, plus all earlier gates |
 
-- **Regression rule:** every gate script runs `pnpm test && pnpm test:contract && pnpm test:browser` first. Gates from Phase 2 on also run the previous phase's gate.
+- **CI on every PR:** the required `check` job runs typecheck, lint, format, unit, contract and browser tests for the whole workspace, so no PR can break earlier work. Live tests run nightly or with the `run-live` PR label. See [CONTRIBUTING.md §6](../CONTRIBUTING.md#6-testing-guidelines).
+- **Regression rule:** every gate script runs `pnpm check:all` first. Gates from Phase 2 on also run the previous phase's gate.
 
 ## Milestones at a glance
 
@@ -484,7 +485,7 @@
 - [ ] **Build:** `bench/analysis/metrics.py` + `charts.py` (pandas + matplotlib):
   - accuracy, catch rate on almost-right, false-fail rate, inconclusive rate, side-effect detection, cost/PR, time/PR
   - mean ± spread
-- [ ] **Tests:** `pytest bench/analysis` on a tiny hand-computed results file (metric functions are exact).
+- [ ] **Tests:** `pytest bench/analysis` on a tiny hand-computed results file (metric functions are exact). Add a pytest step to `.github/workflows/ci.yml` so these run on every PR.
 - [ ] **Verify:** the charts render and the numbers match a manual check on 2 cases.
 
 ### ✅ Phase 6 gate: `pnpm gate:p6`

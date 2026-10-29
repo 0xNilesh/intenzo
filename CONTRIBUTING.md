@@ -16,21 +16,25 @@ Thanks for helping build Intenzo. This guide is for **human contributors and AI 
 nvm install && nvm use          # Node 24 from .nvmrc
 corepack enable pnpm            # pnpm version comes from package.json "packageManager"
 pnpm install
-pnpm check                      # typecheck + lint + format check + unit tests
+pnpm check                      # typecheck + lint + format check + unit + contract tests
 ```
 
 If `pnpm check` passes, your environment is ready.
 
-| Command                             | What it does                                       |
-| ----------------------------------- | -------------------------------------------------- |
-| `pnpm typecheck`                    | `tsc --noEmit` in every package                    |
-| `pnpm lint`                         | ESLint over the repo                               |
-| `pnpm format` / `pnpm format:check` | Prettier write / check                             |
-| `pnpm test`                         | Vitest unit tests in every package                 |
-| `pnpm check`                        | All of the above. **Run this before every commit** |
-| `pnpm --filter @intenzo/core test`  | Tests for one package                              |
+| Command                             | What it does                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `pnpm typecheck`                    | `tsc --noEmit` in every package                                          |
+| `pnpm lint`                         | ESLint over the repo                                                     |
+| `pnpm format` / `pnpm format:check` | Prettier write / check                                                   |
+| `pnpm test`                         | Unit tests in every package                                              |
+| `pnpm test:contract`                | Contract tests in every package                                          |
+| `pnpm test:browser`                 | Browser tests in every package (needs Playwright Chromium, see below)    |
+| `pnpm test:live`                    | Live model tests (real APIs, costs credits; needs `META_API_KEY` etc.)   |
+| `pnpm check`                        | Typecheck + lint + format + unit + contract. **Run before every commit** |
+| `pnpm check:all`                    | `check` + browser tests: **exactly what CI runs. Run before every push** |
+| `pnpm --filter @intenzo/core test`  | Tests for one package                                                    |
 
-More test layers (`test:browser`, `test:contract`, `test:live`, `test:e2e`, `gate:p<N>`) are added as the roadmap reaches them. See _Test layers_ in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+The test layer is picked by file suffix (§6). `test:e2e` and `gate:p<N>` are added as the roadmap reaches them. For browser tests, install Chromium once with `pnpm --filter @intenzo/core exec playwright install chromium`.
 
 TypeScript runs **directly on Node 24** (native type stripping), so there's no build step for local scripts:
 
@@ -75,7 +79,7 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
    ```
 4. **Build with the tests** listed in the task. Tests are part of the task, not a follow-up.
 5. **Run the task's Verify step** and look at the output (a video, a printed outline, a comment on GitHub, etc.).
-6. **Run `pnpm check`.** It must pass.
+6. **Run `pnpm check`** before each commit and **`pnpm check:all`** before you push. Both must pass.
 7. **Tick the task's checkboxes** in `docs/ROADMAP.md` in the same PR.
 8. **Open a PR** (see §7). CI must be green before merging.
 9. If the task is the last one in a phase, **run the phase gate** and paste its output in the PR.
@@ -84,7 +88,7 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 
 - [ ] Build, Tests and Verify from the roadmap are all complete
 - [ ] New logic has unit tests; external behavior has the test layer the roadmap asks for
-- [ ] `pnpm check` passes locally and in CI
+- [ ] `pnpm check:all` passes locally and the `check` CI job is green
 - [ ] Roadmap checkboxes ticked; `ARCHITECTURE.md` updated if the design changed; `DECISIONS.md` updated if a choice was made
 - [ ] No secrets, credentials, `.env` files or large binaries committed
 
@@ -132,13 +136,30 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 
 ## 6. Testing guidelines
 
-| Layer       | Where                          | Rules                                                                                                    |
-| ----------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Unit        | `*.test.ts` next to the source | Fast, no network, no browser, no real time. Table-driven for rule-heavy code                             |
-| Contract    | `*.contract.test.ts`           | Pin behavior of things we don't own (model response shapes from recorded fixtures, Playwright internals) |
-| Browser     | `*.browser.test.ts`            | Real Chromium against local demo-shop / fixture pages; no external network                               |
-| Live        | tests tagged `@live`           | Real Meta / Baseten calls. **Never in CI by default**; run on purpose (they cost credits)                |
-| E2E / gates | `scripts/`                     | Real GitHub → Cloud → Modal flows, run per the roadmap                                                   |
+| Layer       | File suffix                               | Rules                                                                                                    |
+| ----------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Unit        | `*.test.ts`, next to the source           | Fast, no network, no browser, no real time. Table-driven for rule-heavy code                             |
+| Contract    | `*.contract.test.ts`                      | Pin behavior of things we don't own (model response shapes from recorded fixtures, Playwright internals) |
+| Browser     | `*.browser.test.ts`                       | Real Chromium against fixture pages or a local demo-shop; no external network                            |
+| Live        | `*.live.test.ts` (`@live` in the roadmap) | Real Meta / Baseten calls. Cost credits, so they never gate a PR                                         |
+| E2E / gates | `scripts/`                                | Real GitHub → Cloud → Modal flows, run per the roadmap                                                   |
+
+### What runs where
+
+| What                    | Every PR: the `check` CI job (must pass to merge) | Nightly / on demand: `live.yml`                |
+| ----------------------- | ------------------------------------------------- | ---------------------------------------------- |
+| Typecheck, lint, format | ✅                                                |                                                |
+| Unit tests              | ✅                                                |                                                |
+| Contract tests          | ✅                                                |                                                |
+| Browser tests           | ✅ (as soon as any `*.browser.test.ts` exists)    |                                                |
+| Live model tests        |                                                   | ✅ nightly, manual run, or `run-live` PR label |
+| E2E / phase gates       |                                                   | run at the end of each phase (roadmap)         |
+
+- **Every PR runs the whole offline suite for the whole workspace**, not only the packages it touches, so a change can't quietly break something that already works.
+- **Merge rule:** a PR merges only when `check` is green **and** the branch is up to date with `main` (rebase onto `main` and let CI run again if it's behind). This will be enforced by branch protection on `main` (requires a public repo or GitHub Pro); until then it's a hard rule for everyone, agents included.
+- **New tests run in CI from the PR that adds them.** Use the file suffixes above. A new package with tests adds `test` / `test:<layer>` scripts (copy `packages/core/vitest.config.ts`). If a test needs something CI doesn't have yet (the demo-shop app, Python), wire it into `.github/workflows/ci.yml` in the same PR.
+- **Live tests on a PR:** add the `run-live` label (runs once per labeling). Repository secrets: `META_API_KEY`, `BASETEN_API_KEY`.
+- **`.only` fails in CI** (Vitest's default). Don't commit `.skip` without a linked issue.
 
 - **Write the failing case first** for rules from the architecture doc (e.g. `5.00` must not match `$45.00`).
 - **Don't call models in unit tests.** Use recorded fixtures through the `ModelPort` test adapter.
@@ -176,7 +197,7 @@ We keep a clean, readable history. Each commit is **one logical change** that bu
 - **Title:** `T1.4: Canonical clock, marker and video alignment` (task id + roadmap title).
 - **Description:** use the PR template. Link the issue (`Closes #12`), summarize the change, list the tests, and paste the Verify output (or a screenshot/video).
 - **Size:** aim for under ~400 changed lines excluding the lockfile and fixtures. Bigger means split the task.
-- **CI must be green.** Self-review the diff before asking for review.
+- **The `check` job must be green and the branch up to date with `main`** (§6, merge rule). Self-review the diff before asking for review.
 - **Merge with "Rebase and merge"**, so every meaningful commit lands on `main` as-is. Don't squash well-structured branches.
 - **Never push directly to `main`.**
 
@@ -196,7 +217,7 @@ These rules come on top of everything above. If anything here conflicts with an 
 1. **One task at a time.** Work only on the roadmap task or issue you were given. Don't "fix" unrelated code you notice; open an issue for it instead.
 2. **Read before writing:** the task in `docs/ROADMAP.md`, the referenced `docs/ARCHITECTURE.md` sections, and the existing code in the files you'll touch. Match the surrounding style.
 3. **Tests are part of the task.** Write the tests the roadmap lists, then run the task's Verify step and report its actual output.
-4. **Run `pnpm check` before every commit** and make sure it passes. Never commit with failing tests, and never skip or weaken tests to get green.
+4. **Run `pnpm check` before every commit and `pnpm check:all` before every push**, and make sure they pass. Never commit with failing tests, and never skip or weaken tests to get green.
 5. **Never:**
    - push to `main`, force-push shared branches, or merge your own PR without approval
    - bump the pinned Playwright version, or change `packageManager` / `.nvmrc`
