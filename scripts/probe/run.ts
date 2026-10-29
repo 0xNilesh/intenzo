@@ -16,16 +16,18 @@ import {
   type ModelKey,
   type ProbeResult,
 } from "./lib/results.ts";
+import { probeMuseCode } from "./models/muse-code.ts";
 import { probeSam } from "./models/sam.ts";
 import { probeSparkOpen } from "./models/spark-open.ts";
 import { probeSpark } from "./models/spark.ts";
 import { probeTranscribe } from "./models/transcribe.ts";
 import { probeWonder } from "./models/wonder.ts";
 
-const PROBES: Partial<Record<ModelKey, Probe>> = {
+const PROBES: Record<ModelKey, Probe> = {
   "spark-1.3": probeSpark,
   "spark-open": probeSparkOpen,
   wonder: probeWonder,
+  "muse-code": probeMuseCode,
   "sam-3.1": probeSam,
   "voice-transcribe": probeTranscribe,
 };
@@ -51,10 +53,8 @@ const ctx: ProbeContext = {
 
 for (const model of MODELS) {
   if (wanted.length > 0 && !wanted.includes(model)) continue;
-  const probe = PROBES[model];
   console.log(`\n${model}`);
-  if (probe) await probe(ctx);
-  else console.log("  (no probe yet)");
+  await PROBES[model](ctx);
 }
 
 const existing = existsSync(RESULTS_FILE)
