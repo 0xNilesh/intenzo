@@ -1,0 +1,16 @@
+{
+  "name": "intenzo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Proof your PR did what the ticket asked, on video.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test"
+  }
+}
