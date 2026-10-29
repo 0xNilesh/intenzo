@@ -21,18 +21,18 @@ pnpm check                      # typecheck + lint + format check + unit + contr
 
 If `pnpm check` passes, your environment is ready.
 
-| Command                             | What it does                                                             |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `pnpm typecheck`                    | `tsc --noEmit` in every package                                          |
-| `pnpm lint`                         | ESLint over the repo                                                     |
-| `pnpm format` / `pnpm format:check` | Prettier write / check                                                   |
-| `pnpm test`                         | Unit tests in every package                                              |
-| `pnpm test:contract`                | Contract tests in every package                                          |
-| `pnpm test:browser`                 | Browser tests in every package (needs Playwright Chromium, see below)    |
-| `pnpm test:live`                    | Live model tests (real APIs, costs credits; needs `META_API_KEY` etc.)   |
-| `pnpm check`                        | Typecheck + lint + format + unit + contract. **Run before every commit** |
-| `pnpm check:all`                    | `check` + browser tests: **exactly what CI runs. Run before every push** |
-| `pnpm --filter @intenzo/core test`  | Tests for one package                                                    |
+| Command                             | What it does                                                                                                      |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                    | `tsc --noEmit` in every package                                                                                   |
+| `pnpm lint`                         | ESLint over the repo                                                                                              |
+| `pnpm format` / `pnpm format:check` | Prettier write / check                                                                                            |
+| `pnpm test`                         | Unit tests in every package                                                                                       |
+| `pnpm test:contract`                | Contract tests in every package                                                                                   |
+| `pnpm test:browser`                 | Browser tests in every package (needs Playwright Chromium, see below)                                             |
+| `pnpm test:live`                    | Live model tests: real APIs, spends model credits, **run by hand only** (needs `META_API_KEY`, `BASETEN_API_KEY`) |
+| `pnpm check`                        | Typecheck + lint + format + unit + contract. **Run before every commit**                                          |
+| `pnpm check:all`                    | `check` + browser tests: **exactly what CI runs. Run before every push**                                          |
+| `pnpm --filter @intenzo/core test`  | Tests for one package                                                                                             |
 
 The test layer is picked by file suffix (§6). `test:e2e` and `gate:p<N>` are added as the roadmap reaches them. For browser tests, install Chromium once with `pnpm --filter @intenzo/core exec playwright install chromium`.
 
@@ -141,24 +141,24 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 | Unit        | `*.test.ts`, next to the source           | Fast, no network, no browser, no real time. Table-driven for rule-heavy code                             |
 | Contract    | `*.contract.test.ts`                      | Pin behavior of things we don't own (model response shapes from recorded fixtures, Playwright internals) |
 | Browser     | `*.browser.test.ts`                       | Real Chromium against fixture pages or a local demo-shop; no external network                            |
-| Live        | `*.live.test.ts` (`@live` in the roadmap) | Real Meta / Baseten calls. Cost credits, so they never gate a PR                                         |
+| Live        | `*.live.test.ts` (`@live` in the roadmap) | Real Meta / Baseten calls. They spend model credits, so they're run by hand and never in CI (for now)    |
 | E2E / gates | `scripts/`                                | Real GitHub → Cloud → Modal flows, run per the roadmap                                                   |
 
 ### What runs where
 
-| What                    | Every PR: the `check` CI job (must pass to merge) | Nightly / on demand: `live.yml`                |
-| ----------------------- | ------------------------------------------------- | ---------------------------------------------- |
-| Typecheck, lint, format | ✅                                                |                                                |
-| Unit tests              | ✅                                                |                                                |
-| Contract tests          | ✅                                                |                                                |
-| Browser tests           | ✅ (as soon as any `*.browser.test.ts` exists)    |                                                |
-| Live model tests        |                                                   | ✅ nightly, manual run, or `run-live` PR label |
-| E2E / phase gates       |                                                   | run at the end of each phase (roadmap)         |
+| What                    | Every PR: the `check` CI job (must pass to merge) | By hand                                                       |
+| ----------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| Typecheck, lint, format | ✅                                                |                                                               |
+| Unit tests              | ✅                                                |                                                               |
+| Contract tests          | ✅                                                |                                                               |
+| Browser tests           | ✅ (as soon as any `*.browser.test.ts` exists)    |                                                               |
+| Live model tests        |                                                   | ✅ `pnpm test:live` (not in CI for now: spends model credits) |
+| E2E / phase gates       |                                                   | run at the end of each phase (roadmap)                        |
 
 - **Every PR runs the whole offline suite for the whole workspace**, not only the packages it touches, so a change can't quietly break something that already works.
 - **Merge rule:** a PR merges only when `check` is green **and** the branch is up to date with `main` (rebase onto `main` and let CI run again if it's behind). This will be enforced by branch protection on `main` (requires a public repo or GitHub Pro); until then it's a hard rule for everyone, agents included.
 - **New tests run in CI from the PR that adds them.** Use the file suffixes above. A new package with tests adds `test` / `test:<layer>` scripts (copy `packages/core/vitest.config.ts`). If a test needs something CI doesn't have yet (the demo-shop app, Python), wire it into `.github/workflows/ci.yml` in the same PR.
-- **Live tests on a PR:** add the `run-live` label (runs once per labeling). Repository secrets: `META_API_KEY`, `BASETEN_API_KEY`.
+- **Live tests are run by hand.** Run `pnpm test:live` when you change prompts, model clients or judge rules, and paste the result in the PR. They're deliberately not in CI for now because every run spends model credits.
 - **`.only` fails in CI** (Vitest's default). Don't commit `.skip` without a linked issue.
 
 - **Write the failing case first** for rules from the architecture doc (e.g. `5.00` must not match `$45.00`).

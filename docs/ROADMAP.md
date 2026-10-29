@@ -26,7 +26,7 @@
 | End-to-end | script | `pnpm test:e2e` | a real PR on `demo-shop` through GitHub → Cloud → Modal |
 | Phase gate | script | `pnpm gate:p<N>` | everything a phase promises, plus all earlier gates |
 
-- **CI on every PR:** the required `check` job runs typecheck, lint, format, unit, contract and browser tests for the whole workspace, so no PR can break earlier work. Live tests run nightly or with the `run-live` PR label. See [CONTRIBUTING.md §6](../CONTRIBUTING.md#6-testing-guidelines).
+- **CI on every PR:** the required `check` job runs typecheck, lint, format, unit, contract and browser tests for the whole workspace, so no PR can break earlier work. Live tests are run by hand (`pnpm test:live`) and stay out of CI for now, because they spend model credits. See [CONTRIBUTING.md §6](../CONTRIBUTING.md#6-testing-guidelines).
 - **Regression rule:** every gate script runs `pnpm check:all` first. Gates from Phase 2 on also run the previous phase's gate.
 
 ## Milestones at a glance
