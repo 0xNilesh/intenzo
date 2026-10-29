@@ -1,5 +1,9 @@
 name: CI
 
+# The `check` job is the required status check for merging into main. It runs every offline
+# test layer across the whole workspace, so a PR can't merge if it breaks anything that already
+# works. Live model tests run separately (live.yml) because they cost credits and need secrets.
+
 on:
   push:
     branches: [main]
@@ -14,9 +18,9 @@ permissions:
 
 jobs:
   check:
-    name: typecheck · lint · format · test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    name: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -40,3 +44,28 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+      - name: Contract tests
+        run: pnpm test:contract
+
+      - name: Detect browser tests
+        id: layers
+        run: |
+          count=$(git ls-files '*.browser.test.ts' | wc -l | tr -d ' ')
+          echo "browser=$([ "$count" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "browser test files: $count"
+
+      - name: Cache Playwright browsers
+        if: steps.layers.outputs.browser == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright Chromium
+        if: steps.layers.outputs.browser == 'true'
+        run: pnpm --filter @intenzo/core exec playwright install --with-deps chromium
+
+      - name: Browser tests
+        if: steps.layers.outputs.browser == 'true'
+        run: pnpm test:browser
