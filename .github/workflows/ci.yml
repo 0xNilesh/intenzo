@@ -2,7 +2,8 @@ name: CI
 
 # The `check` job is the required status check for merging into main. It runs every offline
 # test layer across the whole workspace, so a PR can't merge if it breaks anything that already
-# works. Live model tests run separately (live.yml) because they cost credits and need secrets.
+# works. Live model tests (*.live.test.ts) are not run in CI for now: they cost model credits,
+# so they're run by hand with `pnpm test:live`.
 
 on:
   push:
