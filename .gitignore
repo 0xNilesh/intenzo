@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.next/
+.env
+.env.*
+!.env.example
+.vercel/
+.DS_Store
+coverage/
+playwright-report/
+test-results/
+*.log
+probes/results.json
+bench/results/raw/
+__pycache__/
+.venv/
