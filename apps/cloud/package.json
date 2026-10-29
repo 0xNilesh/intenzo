@@ -1,0 +1,14 @@
+{
+  "name": "@intenzo/cloud",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Intenzo Cloud: GitHub webhooks, run orchestration, outbox and report pages (Next.js on Vercel).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@intenzo/core": "workspace:*"
+  }
+}
