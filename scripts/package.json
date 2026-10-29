@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
     "test:contract": "vitest run --project contract --passWithNoTests",
-    "probe:all": "node probe/run.ts"
+    "probe:all": "node probe/run.ts",
+    "probe:assert": "node probe/assert.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
