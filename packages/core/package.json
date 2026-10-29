@@ -9,7 +9,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --project unit",
+    "test:contract": "vitest run --project contract --passWithNoTests",
+    "test:browser": "vitest run --project browser --passWithNoTests",
+    "test:live": "vitest run --project live --passWithNoTests"
   },
   "devDependencies": {
     "vitest": "5.0.5"
