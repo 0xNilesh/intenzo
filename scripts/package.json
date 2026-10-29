@@ -1,0 +1,18 @@
+{
+  "name": "@intenzo/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Developer scripts: model capability probes, go/no-go and demo tooling.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "5.0.5"
+  }
+}

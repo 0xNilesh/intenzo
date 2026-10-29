@@ -10,7 +10,7 @@ coverage/
 playwright-report/
 test-results/
 *.log
-probes/results.json
+probes/
 bench/results/raw/
 __pycache__/
 .venv/
