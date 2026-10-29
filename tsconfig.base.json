@@ -10,6 +10,8 @@
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "rewriteRelativeImportExtensions": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
