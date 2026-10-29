@@ -60,14 +60,14 @@
 - [x] **Done when:** a fresh clone builds and tests with no manual steps.
 
 ### T0.2 Model access and capability probes (`scripts/probe/`)
-- [ ] **Build:** one small script per model. Each records the request shape, response shape, latency (p50 over 5 calls), limits and errors in `probes/results.json`:
+- [x] **Build:** one small script per model. Each records the request shape, response shape, latency (p50 over 5 calls), limits and errors in `probes/results.json`:
   - **Spark 1.3:** text, image, **MP4 video** input; JSON-mode support
   - **Spark Open (Baseten `meta-models/muse-spark-open-1026`):** video vs frames; cold start time
   - **Wonder:** text call latency; computer-use request/response shape
   - **Muse Code:** is there an API model? If not, can its CLI run headless in a container or Actions runner?
   - **SAM 3.1:** text, box and point prompts on a 50-frame clip; mask format
   - **Voice Transcribe:** can a recorded file be streamed over the WebSocket? Word timestamps?
-- [ ] **Tests:** `scripts/probe/assert.ts` validates that `results.json` has an entry for every model with `ok | unsupported | error` and a latency.
+- [x] **Tests:** `scripts/probe/assert.ts` validates that `results.json` has an entry for every model with `ok | unsupported | error` and a latency.
 - [ ] **Verify:** `pnpm probe:all && pnpm probe:assert`. Read every entry.
 - [ ] **Done when:** every model has a definite capability answer.
 
