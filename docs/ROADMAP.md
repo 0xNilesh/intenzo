@@ -13,7 +13,7 @@
 - A task is checked off only when its tests pass **and** the verify step has been run and its output looked at.
 - Every phase ends with a **phase gate**, an end-to-end check of everything built so far (earlier phases included). **Don't start the next phase until the gate passes.** If a gate fails, fix the problem first or use the cut list (bottom of this file).
 - Every phase lists **what we have after it**, so it's always clear what's demoable.
-- Commit after every task: `git commit -m "T2.4: outbox drainer with SKIP LOCKED"`.
+- Commit in small, meaningful steps using Conventional Commits (e.g. `feat(cloud): add outbox drainer with SKIP LOCKED`). The PR is titled with the task: `T2.4: Outbox and drainer`. See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Test layers and commands
 
