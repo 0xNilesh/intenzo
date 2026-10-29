@@ -20,7 +20,8 @@
     "test:live": "pnpm -r --if-present test:live",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:contract",
     "check:all": "pnpm check && pnpm test:browser",
-    "probe:all": "pnpm --filter @intenzo/scripts probe:all"
+    "probe:all": "pnpm --filter @intenzo/scripts probe:all",
+    "probe:assert": "pnpm --filter @intenzo/scripts probe:assert"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
