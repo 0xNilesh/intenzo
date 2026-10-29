@@ -16,14 +16,18 @@ import {
   type ModelKey,
   type ProbeResult,
 } from "./lib/results.ts";
+import { probeSam } from "./models/sam.ts";
 import { probeSparkOpen } from "./models/spark-open.ts";
 import { probeSpark } from "./models/spark.ts";
+import { probeTranscribe } from "./models/transcribe.ts";
 import { probeWonder } from "./models/wonder.ts";
 
 const PROBES: Partial<Record<ModelKey, Probe>> = {
   "spark-1.3": probeSpark,
   "spark-open": probeSparkOpen,
   wonder: probeWonder,
+  "sam-3.1": probeSam,
+  "voice-transcribe": probeTranscribe,
 };
 
 const wanted = process.argv.slice(2);
