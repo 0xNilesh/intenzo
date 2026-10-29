@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --project unit"
+    "test": "vitest run --project unit",
+    "probe:all": "node probe/run.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
