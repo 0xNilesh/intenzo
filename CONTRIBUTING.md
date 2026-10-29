@@ -17,6 +17,7 @@ nvm install && nvm use          # Node 24 from .nvmrc
 corepack enable pnpm            # pnpm version comes from package.json "packageManager"
 pnpm install
 pnpm check                      # typecheck + lint + format check + unit + contract tests
+cp .env.example .env            # only for live tests and model probes: add your API keys (never commit .env)
 ```
 
 If `pnpm check` passes, your environment is ready.
@@ -33,6 +34,8 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm check`                        | Typecheck + lint + format + unit + contract. **Run before every commit**                                          |
 | `pnpm check:all`                    | `check` + browser tests: **exactly what CI runs. Run before every push**                                          |
 | `pnpm --filter @intenzo/core test`  | Tests for one package                                                                                             |
+| `pnpm probe:all [model…]`           | Model capability probes (T0.2): real, billed API calls, results in `probes/results.json`                          |
+| `pnpm probe:assert`                 | Fails until every probed capability has a definite answer                                                         |
 
 The test layer is picked by file suffix (§6). `test:e2e` and `gate:p<N>` are added as the roadmap reaches them. For browser tests, install Chromium once with `pnpm --filter @intenzo/core exec playwright install chromium`.
 
@@ -50,6 +53,7 @@ apps/worker/         VerifyJob entry point (Modal) + the local `intenzo` CLI
 apps/cloud/          Next.js on Vercel: webhooks, orchestrator, outbox, report pages
 agents/muse-fixer/   reference coding agent (GitHub Action using Muse Code)
 bench/intentbench/   benchmark cases, recorder, judge runner (+ Python analysis)
+scripts/             developer scripts: model probes (scripts/probe), later go/no-go and demo tools
 modal/               Modal shim (Python)
 docs/                ARCHITECTURE, ROADMAP, DECISIONS
 ```
