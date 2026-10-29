@@ -8,12 +8,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
+    "test:contract": "vitest run --project contract --passWithNoTests",
     "probe:all": "node probe/run.ts"
   },
   "dependencies": {
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "vitest": "5.0.5"
+    "@types/ws": "8.18.2",
+    "vitest": "5.0.5",
+    "ws": "8.22.0"
   }
 }
