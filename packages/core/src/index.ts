@@ -1,1 +1,1 @@
-export { formatDuration } from "./report/duration.js";
+export { formatDuration } from "./report/duration.ts";
