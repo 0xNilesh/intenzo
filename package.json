@@ -12,5 +12,9 @@
   "scripts": {
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3"
   }
 }
