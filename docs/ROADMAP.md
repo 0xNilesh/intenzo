@@ -49,14 +49,14 @@
 **Goal:** remove every unknown that could invalidate the design before writing pipeline code, and stand up the repo and the demo target.
 
 ### T0.1 Repo scaffold
-- [ ] **Build:**
+- [x] **Build:**
   - pnpm workspace (`packages/core`, `apps/worker`, `apps/cloud`, `agents/muse-fixer`, `bench/`)
   - Node 24, TS strict, ESM, Vitest, ESLint + Prettier
   - Playwright pinned to an exact version (no caret)
   - GitHub Actions CI: typecheck, lint, unit
-- [ ] **Tests:** one sample unit test in `core`; CI runs on push.
-- [ ] **Verify:** `pnpm install && pnpm typecheck && pnpm test` passes locally; CI is green on GitHub.
-- [ ] **Done when:** a fresh clone builds and tests with no manual steps.
+- [x] **Tests:** one sample unit test in `core`; CI runs on push.
+- [x] **Verify:** `pnpm install && pnpm typecheck && pnpm test` passes locally; CI is green on GitHub.
+- [x] **Done when:** a fresh clone builds and tests with no manual steps.
 
 ### T0.2 Model access and capability probes (`scripts/probe/`)
 - [ ] **Build:** one small script per model. Each records the request shape, response shape, latency (p50 over 5 calls), limits and errors in `probes/results.json`:
