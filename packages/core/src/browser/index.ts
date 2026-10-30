@@ -11,3 +11,13 @@ export {
   type Lane,
   type LaneOptions,
 } from "./lane.ts";
+export { alignVideo, firstScreencastWallTime, type AlignInput, type Alignment } from "./align.ts";
+export { MARKER_MS, now, pageNow, showSyncMarker } from "./clock.ts";
+export {
+  findFirstFrameMs,
+  frameTimesMs,
+  isMarkerGreen,
+  pixelShare,
+  tinyFrames,
+  type Rgb,
+} from "./ffmpeg.ts";
