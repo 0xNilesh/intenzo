@@ -59,6 +59,14 @@ describe("checkResults", () => {
     expect(checkResults(results)).toEqual(["sam-3.1/video_box: ok but no latency recorded"]);
   });
 
+  it("checks only the given models when asked", () => {
+    const withoutSparkOpen = complete().filter((r) => r.model !== "spark-open");
+    expect(checkResults(withoutSparkOpen, ["spark-1.3", "wonder"])).toEqual([]);
+    expect(checkResults(withoutSparkOpen, ["spark-open"])).toHaveLength(
+      REQUIRED["spark-open"].length,
+    );
+  });
+
   it("reports every gap at once on an empty file", () => {
     const total = MODELS.reduce((n, model) => n + REQUIRED[model].length, 0);
     expect(checkResults([])).toHaveLength(total);
