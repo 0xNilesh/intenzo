@@ -171,17 +171,17 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 |---|---|---|---|---|
 | Spoken intent | **Voice Transcribe** | 16 kHz WAV from the ticket's video/voice note (file endpoint) | transcript (no timings) | 1 when the ticket has media |
 | Visual intent | **Spark 1.3** (video) | the PM's screen recording (≤ 2 min, 2 fps) + transcript + ticket text + images | `CriterionSet` incl. **repro steps** (start route, setup hints) | 1 |
-| Coverage | **Muse Code** (API) · **Spark 1.3** if Muse Code is CLI-only | criteria + PR diff | `CoverageMap` (criterion → files/hunks, candidate routes) | 1 per run |
+| Coverage | **Spark 1.3** (Muse Code is CLI-only, T0.2) | criteria + PR diff | `CoverageMap` (criterion → files/hunks, candidate routes) | 1 per run |
 | Navigation | **Wonder** | outline with element ids + goal + history | `NavAction` | 5–25 per new path; 0 when cached |
 | Vision fallback | **Spark 1.3 computer use** (Wonder rejects the tool, T0.2) | screenshot + goal | point action | canvas/unlabeled widgets only |
 | Judge A | **Spark Open** (Baseten) | §22.2 bundle | `JudgeOutput` | 1 per criterion |
 | Judge B | **Spark 1.3** | same bundle | `JudgeOutput` | 1 per criterion (always) |
 | Visual evidence | **SAM 3.1** | ≥ 50 frames + text concept or box | masks | 1 per `ui_visual` criterion or vision-fallback target |
 | Change classification | **Spark 1.3** | aria-diff hunks + crops + criteria | `ChangeClassification[]` | 0–1 |
-| Test generation (stretch) | **Muse Code** (in the worker if API; in muse-fixer if CLI-only) | saved path + passing readings + criterion | Playwright spec | 1 per passing criterion |
+| Test generation (stretch) | **Muse Code**, inside muse-fixer (CLI-only, T0.2) | saved path + passing readings + criterion | Playwright spec | 1 per passing criterion |
 | Fixer (reference agent) | **Muse Code** | sanitized structured failure + repo checkout | commit | per "Send to agent", ≤ 3 attempts |
 
-**Muse Code decision tree (day 1):**
+**Muse Code decision tree (day 1), resolved by T0.2: CLI only.** The second branch applies: Muse Code runs in muse-fixer, and coverage uses Spark 1.3.
 - **API model exists:** use it for coverage, testgen and the fixer, as in the table.
 - **CLI/IDE only:** Muse Code runs where a repo checkout naturally exists, which is **muse-fixer** (the fix, plus a proposed test). Coverage moves to Spark 1.3, and the README says so. The worker never gets a repo checkout.
 
@@ -1201,7 +1201,7 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | R2 | Baseten Spark Open may not accept video | Then Spark Open judges frames and Spark 1.3 judges video; agreement still required; the bench reports it |
 | R3 | Judge latency | 4 fps, short windows, parallel judges, verdicts streamed |
 | R4 | Wonder computer-use API | **Resolved (T0.2):** Wonder rejects the tool; Spark 1.3 runs the loop correctly and is the fallback |
-| R5 | **Muse Code has no programmatic API** | Decision tree in §4: CLI only → Muse Code lives in muse-fixer (fix + proposed test), and coverage moves to Spark 1.3. If even the CLI can't run headless in Actions, the fixer uses Wonder and says so plainly. The worker never gets a repo checkout |
+| R5 | **Muse Code has no programmatic API** | **Resolved (T0.2):** confirmed CLI-only. `muse exec --json` completed a task headless on macOS in 24 s; Linux/Actions (bubblewrap) is checked in T5.3. Decision tree in §4: CLI only → Muse Code lives in muse-fixer (fix + proposed test), and coverage moves to Spark 1.3. If even the CLI can't run headless in Actions, the fixer uses Wonder and says so plainly. The worker never gets a repo checkout |
 | R13 | **Mostly-inconclusive output** (agreement rule + citation rule) | Measure the inconclusive rate on the day-1 clips. Live-region readings and token matching are designed to keep it down. If it's above about 30% on clear cases, loosen the rule to "agreement for fail; for pass, the primary judge plus a clean readings check" and report that change |
 | R14 | Internal `_snapshotForAI` API changes | Exact version pin + contract test; `data-iz-ref` tagging fallback (§20.1) |
 | R6 | Exploration on deep flows | `repro.startPath` from the PM video, route candidates, `trigger_absent` handling, a path cache within the run group |
