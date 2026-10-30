@@ -36,6 +36,7 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm --filter @intenzo/core test`  | Tests for one package                                                                                             |
 | `pnpm probe:all [model…]`           | Model capability probes (T0.2): real, billed API calls, results in `probes/results.json`                          |
 | `pnpm probe:assert`                 | Fails until every probed capability has a definite answer                                                         |
+| `pnpm gonogo [--dry-run]`           | Judge go/no-go (T0.3): records 10 fixture clips, both judges judge them (billed, ~$0.20; cached), GO / NO-GO      |
 
 The test layer is picked by file suffix (§6). `test:e2e` and `gate:p<N>` are added as the roadmap reaches them. For browser tests, install Chromium once with `pnpm --filter @intenzo/core exec playwright install chromium`.
 
@@ -53,7 +54,7 @@ apps/worker/         VerifyJob entry point (Modal) + the local `intenzo` CLI
 apps/cloud/          Next.js on Vercel: webhooks, orchestrator, outbox, report pages
 agents/muse-fixer/   reference coding agent (GitHub Action using Muse Code)
 bench/intentbench/   benchmark cases, recorder, judge runner (+ Python analysis)
-scripts/             developer scripts: model probes (scripts/probe), later go/no-go and demo tools
+scripts/             developer scripts: model probes (scripts/probe), judge go/no-go (scripts/gonogo), later demo tools
 modal/               Modal shim (Python)
 docs/                ARCHITECTURE, ROADMAP, DECISIONS
 ```

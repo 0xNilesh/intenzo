@@ -78,11 +78,11 @@
 - [x] **Done when:** all five Spark Open checks have a definite answer, Spark Open's judge input mode (native video or frames, R2) is in `docs/DECISIONS.md`, and the full `pnpm probe:assert` passes.
 
 ### T0.3 Judge go/no-go under the agreement rule (`scripts/gonogo/`)
-- [ ] **Build:**
-  - 10 hand-recorded MP4 clips of UI behavior with known ground truth: 4 correct, 4 almost-right (stale total, off-by-a-cent, wrong %, error missing), 2 ambiguous
+- [x] **Build:**
+  - 10 MP4 clips of UI behavior with known ground truth: 4 correct, 4 almost-right (stale total, off-by-a-cent, wrong %, error missing), 2 ambiguous. *Recorded reproducibly with Playwright from a local fixture shop instead of by hand; a browser test proves each planted behavior.*
   - for each clip: a criterion, readings JSON and a step log
   - run both judges (Spark Open + Spark 1.3) with the `judge.v1` prompt draft and apply the §22.3 combination
-- [ ] **Tests:** the scoring script has unit tests (confusion matrix, inconclusive rate).
+- [x] **Tests:** the scoring script has unit tests (confusion matrix, inconclusive rate).
 - [ ] **Verify:** `pnpm gonogo` prints per-clip results, accuracy, false-fail/false-pass counts, inconclusive rate and latency per judge.
 - [ ] **Done when** the go/no-go decision is written down:
   - **GO:** accuracy ≥ 80% on decided clips, 0 false fails on correct clips, inconclusive ≤ 30% on clear clips, verdict < 60 s
