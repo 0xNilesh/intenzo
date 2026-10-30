@@ -1,0 +1,23 @@
+{
+  "query": "closingIssuesReferences (ARCHITECTURE §17.2 step 1), asked with the App installation token",
+  "case": "PR into the default branch (main) with \"Fixes #1\"",
+  "response": {
+    "data": {
+      "repository": {
+        "pullRequest": {
+          "number": 2,
+          "baseRefName": "main",
+          "body": "Fixes #1",
+          "closingIssuesReferences": {
+            "nodes": [
+              {
+                "number": 1,
+                "title": "Discount codes"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
