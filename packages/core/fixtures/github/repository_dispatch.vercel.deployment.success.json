@@ -1,0 +1,23 @@
+{
+  "event": "repository_dispatch",
+  "action": "vercel.deployment.success",
+  "source": "github.event.client_payload as printed by the sandbox vercel-dispatch workflow; not an App webhook delivery",
+  "client_payload": {
+    "alias": ["intenzo-t04-sandbox-git-feat-discount-sumithprabhus-projects.vercel.app"],
+    "environment": "preview",
+    "git": {
+      "ref": "feat/discount",
+      "sha": "39eed67b0ce64a98c3da2f723f7ec61f663d0076",
+      "shortSha": "39eed67"
+    },
+    "id": "dpl_8vJFS9uxA2cDtEYgRJ9ZX2Nik6Es",
+    "project": {
+      "id": "prj_Wc3wmIXfX4SOtwDNWg550EKf6FGG",
+      "name": "intenzo-t04-sandbox"
+    },
+    "state": {
+      "type": "success"
+    },
+    "url": "https://intenzo-t04-sandbox-hnx4nfyzw-sumithprabhus-projects.vercel.app"
+  }
+}

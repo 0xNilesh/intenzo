@@ -1,0 +1,89 @@
+{
+  "event": "installation",
+  "action": "created",
+  "deliveryId": "ad663970-d461-11f1-8f9f-7d74b2687134",
+  "payload": {
+    "action": "created",
+    "installation": {
+      "id": 176892286,
+      "client_id": "Iv23lile9UA5has9Vqva",
+      "account": {
+        "login": "sumithprabhu",
+        "id": 91826109,
+        "node_id": "U_kgDOBXknvQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/91826109?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/sumithprabhu",
+        "html_url": "https://github.com/sumithprabhu",
+        "followers_url": "https://api.github.com/users/sumithprabhu/followers",
+        "following_url": "https://api.github.com/users/sumithprabhu/following{/other_user}",
+        "gists_url": "https://api.github.com/users/sumithprabhu/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/sumithprabhu/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/sumithprabhu/subscriptions",
+        "organizations_url": "https://api.github.com/users/sumithprabhu/orgs",
+        "repos_url": "https://api.github.com/users/sumithprabhu/repos",
+        "events_url": "https://api.github.com/users/sumithprabhu/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/sumithprabhu/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "repository_selection": "selected",
+      "access_tokens_url": "https://api.github.com/app/installations/176892286/access_tokens",
+      "repositories_url": "https://api.github.com/installation/repositories",
+      "html_url": "https://github.com/settings/installations/176892286",
+      "app_id": 5541686,
+      "app_slug": "intenzo-demo",
+      "target_id": 91826109,
+      "target_type": "User",
+      "permissions": {
+        "checks": "write",
+        "contents": "read",
+        "deployments": "read",
+        "issues": "write",
+        "metadata": "read",
+        "pull_requests": "write",
+        "statuses": "write"
+      },
+      "events": ["check_run", "deployment_status", "issues", "issue_comment", "pull_request"],
+      "created_at": "2026-10-30T18:29:00.000+05:30",
+      "updated_at": "2026-10-30T18:29:01.000+05:30",
+      "single_file_name": null,
+      "has_multiple_single_files": false,
+      "single_file_paths": [],
+      "suspended_by": null,
+      "suspended_at": null
+    },
+    "repositories": [
+      {
+        "id": 1439727984,
+        "node_id": "R_kgDOVdCBcA",
+        "name": "intenzo-t04-sandbox",
+        "full_name": "sumithprabhu/intenzo-t04-sandbox",
+        "private": true
+      }
+    ],
+    "requester": null,
+    "sender": {
+      "login": "sumithprabhu",
+      "id": 91826109,
+      "node_id": "U_kgDOBXknvQ",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91826109?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sumithprabhu",
+      "html_url": "https://github.com/sumithprabhu",
+      "followers_url": "https://api.github.com/users/sumithprabhu/followers",
+      "following_url": "https://api.github.com/users/sumithprabhu/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sumithprabhu/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sumithprabhu/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sumithprabhu/subscriptions",
+      "organizations_url": "https://api.github.com/users/sumithprabhu/orgs",
+      "repos_url": "https://api.github.com/users/sumithprabhu/repos",
+      "events_url": "https://api.github.com/users/sumithprabhu/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sumithprabhu/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    }
+  }
+}

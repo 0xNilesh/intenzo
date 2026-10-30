@@ -1,0 +1,26 @@
+{
+  "event": "ping",
+  "action": null,
+  "deliveryId": "9b201cae-d461-11f1-84a7-18ddda72c41c",
+  "payload": {
+    "zen": "Mind your words, they are important.",
+    "hook_id": 705186067,
+    "hook": {
+      "type": "App",
+      "id": 705186067,
+      "name": "web",
+      "active": true,
+      "events": ["check_run", "deployment_status", "issues", "issue_comment", "pull_request"],
+      "config": {
+        "content_type": "json",
+        "secret": "********",
+        "url": "https://example.com/intenzo-webhook",
+        "insecure_ssl": "0"
+      },
+      "updated_at": "2026-10-30T12:58:30Z",
+      "created_at": "2026-10-30T12:58:30Z",
+      "app_id": 5541686,
+      "deliveries_url": "https://api.github.com/app/hook/deliveries"
+    }
+  }
+}

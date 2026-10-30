@@ -1,0 +1,18 @@
+{
+  "query": "closingIssuesReferences (ARCHITECTURE §17.2 step 1), asked with the App installation token",
+  "case": "PR into develop (not the default branch) with \"Fixes #1\"",
+  "response": {
+    "data": {
+      "repository": {
+        "pullRequest": {
+          "number": 3,
+          "baseRefName": "develop",
+          "body": "Fixes #1",
+          "closingIssuesReferences": {
+            "nodes": []
+          }
+        }
+      }
+    }
+  }
+}
