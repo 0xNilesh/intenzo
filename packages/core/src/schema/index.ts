@@ -11,3 +11,4 @@ export {
 } from "./navigation.ts";
 export { LaneResult, LaneStatus, Reading, StepLogEntry } from "./lane.ts";
 export { JudgeOutput, ReasonCode, RunOutcome, Verdict, VerdictValue } from "./verdict.ts";
+export { DEFAULT_DENY_TEXT, IntenzoConfig, type IntenzoConfigInput } from "./config.ts";
