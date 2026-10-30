@@ -62,7 +62,7 @@
 ### T0.2 Model access and capability probes (`scripts/probe/`)
 - [x] **Build:** one small script per model. Each records the request shape, response shape, latency (1 call by default to save credits; `PROBE_SAMPLES=5` for a p50), limits and errors in `probes/results.json`:
   - **Spark 1.3:** text, image, **MP4 video** input; JSON-mode support
-  - **Spark Open (Baseten `meta-models/muse-spark-open-1026`):** video vs frames; cold start time. *Probe built here; its run moved to T0.2b while credits are pending.*
+  - **Spark Open (Baseten; the guide's `meta-models/muse-spark-open-1026` id doesn't exist, the real one is `meta-models/muse-spark-open`):** video vs frames; cold start time. *Probe built here; run in T0.2b.*
   - **Wonder:** text call latency; computer-use request/response shape
   - **Muse Code:** is there an API model? If not, can its CLI run headless in a container or Actions runner?
   - **SAM 3.1:** text, box and point prompts on a 50-frame clip; mask format
@@ -72,10 +72,10 @@
 - [x] **Done when:** every Meta API model has a definite capability answer (Spark Open: T0.2b).
 
 ### T0.2b Spark Open capability probes (waiting for credits)
-- [ ] **Build:** put a key for a Spark Open host in `.env`: `BASETEN_API_KEY`, or `SPARK_OPEN_BASE_URL` + `SPARK_OPEN_API_KEY` (e.g. Fireworks). No code changes are expected: the T0.2 probe takes any OpenAI-compatible host.
-- [ ] **Tests:** none new (T0.2's unit and contract tests cover the probe).
-- [ ] **Verify:** `pnpm probe:all spark-open && pnpm probe:assert`. Read every entry, especially `video` vs `frames`.
-- [ ] **Done when:** all five Spark Open checks have a definite answer, Spark Open's judge input mode (native video or frames, R2) is in `docs/DECISIONS.md`, and the full `pnpm probe:assert` passes.
+- [x] **Build:** put a key for a Spark Open host in `.env`: `BASETEN_API_KEY`, or `SPARK_OPEN_BASE_URL` + `SPARK_OPEN_API_KEY` (e.g. Fireworks). No code changes are expected: the T0.2 probe takes any OpenAI-compatible host.
+- [x] **Tests:** none new (T0.2's unit and contract tests cover the probe).
+- [x] **Verify:** `pnpm probe:all spark-open && pnpm probe:assert`. Read every entry, especially `video` vs `frames`.
+- [x] **Done when:** all five Spark Open checks have a definite answer, Spark Open's judge input mode (native video or frames, R2) is in `docs/DECISIONS.md`, and the full `pnpm probe:assert` passes.
 
 ### T0.3 Judge go/no-go under the agreement rule (`scripts/gonogo/`)
 - [ ] **Build:**
@@ -514,7 +514,7 @@
 - [ ] **Verify:** `pnpm test:faults`.
 
 ### T7.2 Pre-warm and demo scripts
-- [ ] **Build:** `scripts/demo/prewarm.sh` (Baseten min replicas 1, Modal `min_containers=1`, the path cache seeded); `scripts/demo/reset.sh` (new demo PR from the almost-right branch).
+- [ ] **Build:** `scripts/demo/prewarm.sh` (Modal `min_containers=1`, the path cache seeded; Baseten Model APIs need no pre-warming, T0.2b); `scripts/demo/reset.sh` (new demo PR from the almost-right branch).
 - [ ] **Tests:** none.
 - [ ] **Verify:** prewarm → the first run's time is within the §27 warm target.
 
