@@ -797,7 +797,7 @@ Wait until **both** conditions hold, capped at 2 s:
 - no DOM mutations for 300 ms (a `MutationObserver` injected through `addInitScript`)
 - no pending `document`/`xhr`/`fetch` requests **to the preview origin**
 
-Third-party requests, WebSockets, EventSource and beacons are ignored.
+Third-party requests, WebSockets, EventSource and beacons are ignored, and so are Intenzo's own DOM writes (the sync marker, `data-iz-ref` ids). The quiet window never starts before the call: an action's effects can reach Node a moment after the action resolves (T1.6).
 
 ### 20.4 From element ids to durable targets (code, not model)
 ```
@@ -887,13 +887,18 @@ await context.route("**/*", (route, req) => {
      element: innerText, or kind=absent if it doesn't resolve
      region and live regions: ariaSnapshot → line diff vs PRE → kind=region_diff
                               ("+ alert 'This code has expired'")
-9. plain screenshot at Tt+1000 (annotation is drawn OFFLINE afterwards from the recorded bboxes with
-   sharp, so nothing is ever drawn into the page or the video)
+9. plain screenshot at Tt+1000 (annotation is drawn OFFLINE afterwards from the recorded bboxes,
+   rendered by Chromium in a separate page, so nothing is ever drawn into the page or the video)
 10. if criterion.persistence: reload → settle → after_reload readings
 11. close → video; tracing.stop → trace.zip
 ```
 - **Framework live regions count too.** Next.js keeps an empty body-level `role="alert" aria-live="assertive"` route announcer (`#__next-route-announcer__`) on every page, and it reads out the page title on client-side navigations. Its title announcements aren't app feedback, so the live-region readings leave it out (found in T0.6, done in T1.5).
 - **Portals** are body-level children outside `<main>` that are fixed or absolutely positioned (where toast libraries mount). A live region inside a portal is read once, through the portal (T1.5).
+- **Built in T1.6** (`core/browser/record.ts`):
+  - the start page is the first setup step's `goto` (else `/`); every step waits up to 5 s for its target
+  - lane status: a setup step failing → `setup_failed`; a trigger control that never shows up → `trigger_absent`; anything else, including the main frame leaving the app's origin → `error`
+  - the **trigger window** for console errors and failed requests (§22.2) runs from the first trigger step to the last POST reading
+  - the annotation is drawn by Chromium, like the T0.3 clips (no image library, no ffmpeg `drawtext`)
 
 ### 21.4 One canonical clock
 - **Canonical time** = **epoch milliseconds** (`performance.timeOrigin + performance.now()`), used in both Node and the page. They share a host, so the two agree to under 1 ms, and page navigations don't reset it. Every step, reading and box sample is stamped with it. Reports show it relative to the lane start.

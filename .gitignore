@@ -11,6 +11,8 @@ playwright-report/
 test-results/
 *.log
 probes/
+# local recordings (pnpm intenzo record)
+out/
 bench/results/raw/
 __pycache__/
 .venv/
