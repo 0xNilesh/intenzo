@@ -422,6 +422,12 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **Webhook delivery ids are 64-bit:** `JSON.parse` rounds them. Use `parseKeepingBigIds` (`scripts/github-app/lib/fixtures.ts`).
 - **An App's webhook URL doesn't have to answer.** GitHub keeps every delivery's payload, so `GET /app/hook/deliveries/{id}` reads it back.
 
+**Next.js (demo-shop, T0.5–T0.6)**
+
+- **A Server Action that sets a cookie re-renders the route.** Server components re-run and client components get new props, but keep their state. A bug that hides in a prop can heal itself a moment later (DECISIONS 2026-10-30 · Seeded demo branches).
+- **Every Next.js page has an empty `role="alert"` route announcer**, so `getByRole("alert")` is ambiguous. Find a toast by its text.
+- **Vercel: create the production branch before selecting it, and redeploy after changing an env var.** A sensitive env value can't be read back, so keep it in a local env file.
+
 **Env var names**
 
 - `META_API_KEY` is the Meta key (Muse Code reads the same name; `MODEL_API_KEY` is accepted as a fallback).

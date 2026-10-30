@@ -110,12 +110,12 @@
 - [x] **Done when:** the `main` preview deploys and passes its e2e test (9/9 on `demo-shop-git-main-…vercel.app`; DECISIONS 2026-10-30 · demo-shop).
 
 ### T0.6 Seeded demo branches
-- [ ] **Build:**
+- [x] **Build:** (demo-shop branches, one commit each, the same message a real implementing agent would write)
   - `pr/discount-correct`: the discount feature on `/cart` (a discount input, a discount **line item**, the total, an **expired-code toast**, and the chart's discount slice), with the Playwright e2e of the correct flow moved here from T0.5 (apply SAVE10 → line −$5.00, total $45.00, chart slice; OLD5 → toast)
   - `pr/discount-almost-right`: the line item and chart update immediately, the **total** stays stale until reload, and the cart "Checkout" button is relabelled "Continue"
-- [ ] **Tests:** a deterministic Playwright **ground-truth test** per branch that asserts the planted behavior (this is how we know the labels are right).
-- [ ] **Verify:** the ground-truth tests pass on both branch previews.
-- [ ] **Done when:** both branches have previews and the ground truth is proven.
+- [x] **Tests:** a deterministic Playwright **ground-truth test** per branch that asserts the planted behavior (this is how we know the labels are right). *`pnpm demo:ground-truth` in this repo, so demo-shop carries no answer key (DECISIONS 2026-10-30 · Seeded demo branches).*
+- [x] **Verify:** the ground-truth tests pass on both branch previews.
+- [x] **Done when:** both branches have previews and the ground truth is proven (3 runs in a row on each preview).
 
 ### T0.7 Demo PM video ticket and golden comment
 - [ ] **Build:**

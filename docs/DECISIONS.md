@@ -5,6 +5,45 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · Seeded demo branches (T0.6, #7)
+
+Two branches in `sumithprabhu/demo-shop` implement ticket #42 (discount codes):
+- `pr/discount-correct` (`4c64ff0`)
+- `pr/discount-almost-right` (`2be4341`)
+
+Each is one commit with the same message, `feat: add discount codes to the cart`, the way a real implementing agent would write it, and neither names the defect. Both deploy as Vercel **Preview**. `pnpm demo:ground-truth` (`scripts/demo/`) proved each branch's ground truth on its live preview, from fresh shoppers made by the signed session hook, **3 runs in a row each, identical every time**.
+
+### What we found
+
+| Criterion | `pr/discount-correct` | `pr/discount-almost-right` |
+|---|---|---|
+| C1: discount line at Tt+0 | `Discount (SAVE10) −$5.00` | same |
+| C2: total at Tt+0 / +1 s / +3 s; after reload | `$45.00` ×3; `$45.00` | **`$50.00` ×3; `$45.00`** |
+| C3: OLD5 toast within 1 s | `This code has expired` | same |
+| C4: chart at 344°, before → Tt+1 s | `#f59e0b` → `#16a34a` (the discount slice) | same |
+| Cart button (§24) | `Checkout` | **`Continue`** |
+| The branch's own tests (local, 5 repeats) | 39 unit, 15 e2e, all green | **all green too**: its tests don't check the total's timing, and its "Continue" rename updated the tests |
+
+**Two surprises:**
+- **The first planted bug healed itself.** The total was computed from the page's `initialCode` prop. But the cart's background save sets a cookie, and when a Server Action does that, Next.js re-renders the route. CartView got a fresh `initialCode`, and the total corrected itself about 100 ms later (locally). On Vercel that would have landed before or after +1 s depending on latency, so the label wouldn't have been deterministic. The e2e suite caught it: the "total at once" test passed on the almost-right branch.
+- **Next.js puts an empty `role="alert" aria-live="assertive"` route announcer (`#__next-route-announcer__`) on every page.** It announces the page title on client-side navigations, and it made `getByRole("alert")` ambiguous in the tests. §21.3's live-region readings will see it too.
+
+### Decisions
+
+1. **The planted bug is a `useMemo` missing the discount code as a dependency.**
+   - *Why:* it survives Next.js's re-render, so the total stays `$50.00` until a reload, every time. Quantity changes still update the total, so `main`'s tests pass. It's also a believable slip for an agent to make.
+   - *Alternatives:* a stale prop, which healed itself (above); a total snapshotted at mount, which would also break quantity changes and so `main`'s tests.
+2. **The almost-right PR keeps CI green.**
+   - *Why:* the demo's point is "CI passes, and the ticket isn't done", which is the gap Intenzo exists for. Its own discount test checks the line, the toast, the chart and the total after a reload, but not the total right away. The unrequested "Continue" rename updates the two tests it would break.
+3. **The ground truth lives in Intenzo (`scripts/demo/`), not in demo-shop.**
+   - *Why:* the repo under test carries no answer key for its planted bug, so the fixer agent and IntentBench's diff-only arm can't read one. It's also where the P1 gate's ground-truth table and IntentBench's per-case ground-truth checks will live.
+   - *Alternatives:* a `ground-truth/` folder on demo-shop's `main`. It would stay out of the PR diffs, but anyone with the repo could read it.
+4. **Discount codes are checked in the browser, then again on the server before saving.**
+   - *Why:* the correct branch's total changes with no network round trip, so a cold start can't push C2 past 1 s and cause a false fail.
+5. **The live-region readings must expect framework route announcers (T1.5).** §21.3 now says so.
+
+---
+
 ## 2026-10-30 · demo-shop (T0.5, #6)
 
 **What was built:**
