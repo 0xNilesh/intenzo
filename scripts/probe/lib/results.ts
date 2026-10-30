@@ -14,7 +14,7 @@ export type ModelKey = z.infer<typeof ModelKey>;
 
 /** The capabilities each model is probed for (ROADMAP T0.2). */
 export const REQUIRED: Record<ModelKey, readonly string[]> = {
-  "spark-1.3": ["text", "json_schema", "image", "video_inline", "video_file"],
+  "spark-1.3": ["text", "json_schema", "image", "video_inline", "video_file", "computer_use"],
   "spark-open": ["models_list", "text", "image", "video", "frames"],
   wonder: ["text", "computer_use"],
   "muse-code": ["api_model", "cli_headless"],

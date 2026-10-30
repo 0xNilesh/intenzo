@@ -50,6 +50,25 @@ describe("capability", () => {
   });
 });
 
+describe("only", () => {
+  it("skips capabilities that aren't listed, without running them", async () => {
+    const { ctx, recorded } = context();
+    let ran = false;
+    await capability({ ...ctx, only: ["text"] }, "wonder", "computer_use", async () => {
+      ran = true;
+      return { status: "ok", latencyMs: null, correct: null };
+    });
+    expect(ran).toBe(false);
+    expect(recorded).toEqual([]);
+  });
+
+  it("also limits missing-key results to the listed capabilities", () => {
+    const { ctx, recorded } = context();
+    missingKey({ ...ctx, only: ["video"] }, "spark-open", ["text", "video"], "BASETEN_API_KEY");
+    expect(recorded.map((r) => r.capability)).toEqual(["video"]);
+  });
+});
+
 describe("missingKey", () => {
   it("records every capability as error, naming the variable", () => {
     const { ctx, recorded } = context();
