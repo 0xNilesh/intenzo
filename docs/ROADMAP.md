@@ -167,16 +167,16 @@
 - [x] **Verify:** `pnpm --filter @intenzo/core test:browser lane`.
 
 ### T1.4 Canonical clock, marker and video alignment (`core/browser/clock.ts`, `ffmpeg.ts`)
-- [ ] **Build:**
+- [x] **Build:**
   - epoch-ms stamps in Node and the page
   - the 300 ms green marker
   - ffmpeg marker detection with tolerance → `videoOffsets`
   - trace-timestamp fallback; `infra_error` if both fail
-- [ ] **Tests:**
+- [x] **Tests:**
   - a synthetic page that changes color at known times → detected offset within ±50 ms
   - a marker-free video → the fallback path is used
   - both fail → `infra_error`
-- [ ] **Verify:** `pnpm --filter @intenzo/core test:browser clock`. Open one video and check by eye that the burned timestamp matches the step log.
+- [x] **Verify:** `pnpm --filter @intenzo/core test:browser align` (the alignment tests live in `align.browser.test.ts`). The by-eye check of the burned timestamp against the step log moves to T1.7, which burns the timestamps.
 
 ### T1.5 Readings, regions and live regions (`core/browser/readings.ts`)
 - [ ] **Build:**
