@@ -13,7 +13,9 @@
     "probe:all": "node probe/run.ts",
     "probe:assert": "node probe/assert.ts",
     "gonogo": "node gonogo/run.ts",
-    "github-app:create": "node github-app/create-app.ts"
+    "github-app:create": "node github-app/create-app.ts",
+    "github-app:sandbox": "node github-app/sandbox.ts",
+    "github-app:fixtures": "node github-app/deliveries.ts"
   },
   "dependencies": {
     "playwright": "1.64.1",

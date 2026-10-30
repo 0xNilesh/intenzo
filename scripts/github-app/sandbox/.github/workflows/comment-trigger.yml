@@ -1,0 +1,26 @@
+# ROADMAP T0.4 (a), ARCHITECTURE B-7: does a comment posted with the App's installation token start
+# an issue_comment workflow, and does the §26.4 muse-fixer guard match the App's bot login?
+# __APP_SLUG__ is replaced with the App's slug when this file is pushed to the sandbox.
+name: comment-trigger
+on:
+  issue_comment:
+    types: [created]
+permissions: {}
+jobs:
+  who:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print who commented
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+          TYPE: ${{ github.event.comment.user.type }}
+          VIA_APP: ${{ github.event.comment.performed_via_github_app.slug }}
+          ACTOR: ${{ github.actor }}
+          ON_PR: ${{ github.event.issue.pull_request != null }}
+        run: echo "login=$LOGIN type=$TYPE via_app=$VIA_APP actor=$ACTOR on_pr=$ON_PR"
+  fixer-guard:
+    # The muse-fixer guard from ARCHITECTURE §26.4, with this App's bot login for intenzo[bot].
+    if: github.event.comment.user.login == '__APP_SLUG__[bot]' && contains(github.event.comment.body, '@intenzo-fixer')
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "the muse-fixer guard matched"
