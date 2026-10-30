@@ -42,20 +42,36 @@ describe("fixtureName", () => {
     [
       "check_run",
       "requested_action",
-      { requested_action: { identifier: "approve" } },
-      "check_run.requested_action.approve",
+      { requested_action: { identifier: "approve" }, check_run: { status: "in_progress" } },
+      "check_run.requested_action.approve.in-progress",
     ],
-    ["check_run", "created", {}, "check_run.created"],
+    [
+      "check_run",
+      "created",
+      { check_run: { app: { slug: "github-actions" } } },
+      "check_run.created.github-actions",
+    ],
     [
       "issue_comment",
       "created",
-      { comment: { user: { type: "Bot" } } },
-      "issue_comment.created.bot",
+      {
+        comment: {
+          user: { type: "Bot", login: "intenzo-demo[bot]" },
+          performed_via_github_app: { slug: "intenzo-demo" },
+        },
+      },
+      "issue_comment.created.bot-intenzo-demo",
     ],
     [
       "issue_comment",
       "created",
-      { comment: { user: { type: "User" } } },
+      { comment: { user: { type: "Bot", login: "vercel[bot]" } } },
+      "issue_comment.created.bot-vercel-bot",
+    ],
+    [
+      "issue_comment",
+      "created",
+      { comment: { user: { type: "User", login: "octocat" } } },
       "issue_comment.created.user",
     ],
     ["pull_request", "opened", {}, "pull_request.opened"],
