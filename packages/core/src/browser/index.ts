@@ -32,3 +32,4 @@ export {
   type Phase,
 } from "./readings.ts";
 export { diffLines, NO_CHANGE, snapshotLines } from "./regions.ts";
+export { QUIET_MS, SETTLE_CAP_MS, Settler, type Settled, type SettleOptions } from "./settle.ts";
