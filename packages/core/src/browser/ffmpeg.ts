@@ -1,4 +1,5 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { promisify } from "node:util";
 
 // Thin ffmpeg/ffprobe wrappers. Only decoding and encoding: text is never drawn with ffmpeg's
 // drawtext, since some builds (Homebrew's) lack freetype (ARCHITECTURE §21.4).
@@ -84,4 +85,71 @@ export function findFirstFrameMs(video: string, test = isMarkerGreen, share = 0.
     if (pixelShare(frames[i]!, test) >= share) return times[i]!;
   }
   return null;
+}
+
+const execFileAsync = promisify(execFile);
+
+/**
+ * ffmpeg() without blocking the event loop. Encodes take seconds, and another lane may be
+ * recording in the same process meanwhile, where a frozen event loop would skew its timings.
+ */
+export async function ffmpegAsync(...args: string[]): Promise<void> {
+  await execFileAsync("ffmpeg", ["-y", "-hide_banner", "-loglevel", "error", ...args], {
+    maxBuffer: 16 * 1024 * 1024,
+  });
+}
+
+export interface VideoProbe {
+  codec: string;
+  width: number;
+  height: number;
+  pixFmt: string;
+  /** Frames per second, from the stream's frame rate ("25/1" → 25). */
+  fps: number;
+  durationMs: number;
+}
+
+/** The first video stream's codec, size, pixel format, frame rate and the file's duration. */
+export function probeVideo(video: string): VideoProbe {
+  const out = execFileSync(
+    "ffprobe",
+    [
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=codec_name,width,height,pix_fmt,r_frame_rate:format=duration",
+      "-of",
+      "json",
+      video,
+    ],
+    { encoding: "utf8" },
+  );
+  const json = JSON.parse(out) as {
+    streams?: {
+      codec_name: string;
+      width: number;
+      height: number;
+      pix_fmt: string;
+      r_frame_rate: string;
+    }[];
+    format?: { duration?: string };
+  };
+  const stream = json.streams?.[0];
+  if (!stream) throw new Error(`no video stream in ${video}`);
+  return {
+    codec: stream.codec_name,
+    width: stream.width,
+    height: stream.height,
+    pixFmt: stream.pix_fmt,
+    fps: parseRate(stream.r_frame_rate),
+    durationMs: Math.round(Number(json.format?.duration ?? Number.NaN) * 1000),
+  };
+}
+
+/** ffprobe's rational frame rates: "25/1" → 25, "30000/1001" → 29.97… */
+export function parseRate(rate: string): number {
+  const [num, den = "1"] = rate.split("/");
+  return Number(num) / Number(den);
 }

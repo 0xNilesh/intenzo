@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isMarkerGreen, pixelShare } from "./ffmpeg.ts";
+import { isMarkerGreen, parseRate, pixelShare } from "./ffmpeg.ts";
 
 const frame = (...pixels: [number, number, number][]) => Buffer.from(pixels.flat());
 
@@ -21,5 +21,13 @@ describe("pixelShare", () => {
   it("is the fraction of pixels passing the test", () => {
     const f = frame([0, 255, 0], [0, 255, 0], [0, 255, 0], [255, 255, 255]);
     expect(pixelShare(f, isMarkerGreen)).toBe(0.75);
+  });
+});
+
+describe("parseRate", () => {
+  it("reads ffprobe's rational frame rates", () => {
+    expect(parseRate("25/1")).toBe(25);
+    expect(parseRate("4/1")).toBe(4);
+    expect(parseRate("30000/1001")).toBeCloseTo(29.97, 2);
   });
 });
