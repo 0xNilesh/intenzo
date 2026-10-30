@@ -70,13 +70,19 @@ export const probeMuseCode: Probe = async (ctx) => {
         .split("\n")
         .filter(Boolean)
         .map((line) => parseJson(line));
-      const types = [...new Set(events.map((e) => asString(dig(e, "type"))).filter(Boolean))];
+      const types = [
+        ...new Set(
+          events
+            .map((e) => asString(dig(e, "payload_type")) || asString(dig(e, "type")))
+            .filter(Boolean),
+        ),
+      ];
       const file = join(dir, "probe.txt");
       const wrote = existsSync(file) ? readFileSync(file, "utf8").trim() : null;
       const notes = [
         `muse ${version.stdout.trim()}`,
         `exit ${run.status ?? run.signal}`,
-        `${events.length} JSONL events (${types.join(", ") || "no typed events"})`,
+        `${events.length} JSONL events (payload types: ${types.join(", ") || "none"})`,
         wrote === null ? "probe.txt not created" : `probe.txt = ${quote(wrote)}`,
         "Linux sandbox needs bubblewrap (docs)",
       ].join("; ");
