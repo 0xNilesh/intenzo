@@ -245,6 +245,15 @@ export interface Liveness     { alive(): Promise<boolean> }                     
 
 ## 7. Core schemas (`core/schema`)
 
+**Implemented in `packages/core/src/schema` (T1.1).** The code is the source of truth. It adds a few things to the sketch below:
+- `ArtifactRef` (store + relative path + content type)
+- `LoggedStep` (navigator steps plus the recorder's `reload` probe)
+- a `trigger` flag on step-log entries (the last one is Tt)
+- `LaneResult.laneStartMs` (epoch ms)
+- `ContextBundle.mediaUnavailable`
+- the invariants each schema enforces: absent readings have null values, pass and fail need reason `agreed`, saved paths watch a region, credentials only by secret name, and more
+
+
 ```ts
 export const Criterion = z.object({
   id: z.string().regex(/^C\d+$/),
