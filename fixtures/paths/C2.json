@@ -1,0 +1,21 @@
+{
+  "criterionId": "C2",
+  "setup": [{ "op": "goto", "path": "/cart" }],
+  "trigger": [
+    {
+      "op": "fill",
+      "target": { "by": "role", "role": "textbox", "name": "Discount code" },
+      "value": "SAVE10"
+    },
+    { "op": "click", "target": { "by": "role", "role": "button", "name": "Apply" } }
+  ],
+  "watch": [
+    { "label": "order total", "scope": "element", "target": { "by": "testId", "id": "total" } },
+    {
+      "label": "order summary",
+      "scope": "region",
+      "target": { "by": "role", "role": "region", "name": "Order summary" }
+    }
+  ],
+  "portable": true
+}

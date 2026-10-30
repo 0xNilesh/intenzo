@@ -5,6 +5,36 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · Video outputs (T1.7, #16)
+
+Measured on 5 synthetic lanes (the cart page, a fill and a click, then the page painted red at a known canonical time), recorded with `openLane`, aligned with `alignVideo` and rendered with `renderVideos`. `video.browser.test.ts` runs the same check on every PR.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| `human.mp4` | H.264, 1280×720, yuv420p, 25 fps (the raw rate), faststart |
+| `judge.mp4` | H.264, 960×580 (540 + the 40 px band), yuv420p, 4 fps |
+| Red frame vs `redAt + offsetMs`, human | −19 to +13 ms (the raw video's 40 ms frames) |
+| Red frame vs `redAt + offsetMs`, judge | +161 to +231 ms: always in [0, 250), the first 250 ms slot at or after the paint |
+| Frame for frame (browser test) | the human red frame is the raw one shifted by the cut, and the judge's is the first grid slot at or after it, both to ±1 ms |
+| Marker green left in either video | none (even at a 5 % pixel share) |
+| Render time, both videos | 1.1–1.5 s for a 5 s lane, with Chromium already running |
+| Raw recording | **VP9**, not VP8 as §21.4 said: 25 fps constant, starting at 0 (Playwright 1.64). Nothing depends on the codec |
+
+### Decisions
+
+1. **Both videos start after the marker; the judge video samples a 250 ms grid counted from the lane start.**
+   - *Why:* the green flash and the blank frames before it are noise to a judge. On the grid the stamps are round (`t=12.250s`), and with ffmpeg's `fps=4:round=up` each frame shows the last raw frame at or before its stamped time, so a judge's `atMs` never points before what it saw.
+   - *Alternatives:* `fps`'s default `round=near` shows frames up to 125 ms *after* their stamp; stamping the raw video's own times gives ragged stamps.
+2. **Only the text is drawn with Chromium: one PNG per judge band and one per caption stack, overlaid by ffmpeg.**
+   - *Why:* no `drawtext` (§13), and the T0.3 prototype screenshotted whole frames, which is slower than drawing the 960×40 band.
+3. **Captions stack (1.5 s each, at most three) in the human video's bottom-left corner, over the page.**
+   - *Why:* the human video stays 1280×720 (§21.4) and is for people, not the judges. A fill and a click 80 ms apart each stay readable. Values typed into secret-looking fields are masked, since videos are shared.
+4. **`renderVideos` takes an optional second argument `{ browser }`** to reuse a running Chromium; without it, it launches one.
+
+---
+
 ## 2026-10-30 · Phase 0 gate: PASS (#9)
 
 `pnpm gate:p0` (`scripts/gates/p0.ts`) passed **8 of 8** checks:

@@ -32,3 +32,41 @@ export {
   type Phase,
 } from "./readings.ts";
 export { diffLines, NO_CHANGE, snapshotLines } from "./regions.ts";
+export { QUIET_MS, SETTLE_CAP_MS, Settler, type Settled, type SettleOptions } from "./settle.ts";
+export {
+  annotateHtml,
+  annotateShot,
+  LABEL_COLUMN,
+  labelSlots,
+  type LabelledBox,
+} from "./annotate.ts";
+export {
+  POST_OFFSETS_MS,
+  postOffsets,
+  recordCriterion,
+  SHOT_OFFSET_MS,
+  STEP_TIMEOUT_MS,
+  type RecordOptions,
+  type Recording,
+} from "./record.ts";
+export { ffmpegAsync, parseRate, probeVideo, type VideoProbe } from "./ffmpeg.ts";
+export {
+  CAPTION_MS,
+  captionSpans,
+  captionText,
+  cutAfterMarker,
+  describeStep,
+  describeTarget,
+  formatStamp,
+  HUMAN_VIDEO,
+  JUDGE_VIDEO,
+  judgeTimeline,
+  MAX_CAPTION_LINES,
+  nextTakeDir,
+  renderVideos,
+  type CaptionLine,
+  type CaptionSpan,
+  type JudgeTimeline,
+  type VideoInput,
+  type VideoOutputs,
+} from "./video.ts";

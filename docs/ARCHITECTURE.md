@@ -797,7 +797,7 @@ Wait until **both** conditions hold, capped at 2 s:
 - no DOM mutations for 300 ms (a `MutationObserver` injected through `addInitScript`)
 - no pending `document`/`xhr`/`fetch` requests **to the preview origin**
 
-Third-party requests, WebSockets, EventSource and beacons are ignored.
+Third-party requests, WebSockets, EventSource and beacons are ignored, and so are Intenzo's own DOM writes (the sync marker, `data-iz-ref` ids). The quiet window never starts before the call: an action's effects can reach Node a moment after the action resolves (T1.6).
 
 ### 20.4 From element ids to durable targets (code, not model)
 ```
@@ -887,22 +887,28 @@ await context.route("**/*", (route, req) => {
      element: innerText, or kind=absent if it doesn't resolve
      region and live regions: ariaSnapshot → line diff vs PRE → kind=region_diff
                               ("+ alert 'This code has expired'")
-9. plain screenshot at Tt+1000 (annotation is drawn OFFLINE afterwards from the recorded bboxes with
-   sharp, so nothing is ever drawn into the page or the video)
+9. plain screenshot at Tt+1000 (annotation is drawn OFFLINE afterwards from the recorded bboxes,
+   rendered by Chromium in a separate page, so nothing is ever drawn into the page or the video)
 10. if criterion.persistence: reload → settle → after_reload readings
 11. close → video; tracing.stop → trace.zip
 ```
 - **Framework live regions count too.** Next.js keeps an empty body-level `role="alert" aria-live="assertive"` route announcer (`#__next-route-announcer__`) on every page, and it reads out the page title on client-side navigations. Its title announcements aren't app feedback, so the live-region readings leave it out (found in T0.6, done in T1.5).
 - **Portals** are body-level children outside `<main>` that are fixed or absolutely positioned (where toast libraries mount). A live region inside a portal is read once, through the portal (T1.5).
+- **Built in T1.6** (`core/browser/record.ts`):
+  - the start page is the first setup step's `goto` (else `/`); every step waits up to 5 s for its target
+  - lane status: a setup step failing → `setup_failed`; a trigger control that never shows up → `trigger_absent`; anything else, including the main frame leaving the app's origin → `error`
+  - the **trigger window** for console errors and failed requests (§22.2) runs from the first trigger step to the last POST reading
+  - the annotation is drawn by Chromium, like the T0.3 clips (no image library, no ffmpeg `drawtext`)
 
 ### 21.4 One canonical clock
 - **Canonical time** = **epoch milliseconds** (`performance.timeOrigin + performance.now()`), used in both Node and the page. They share a host, so the two agree to under 1 ms, and page navigations don't reset it. Every step, reading and box sample is stamped with it. Reports show it relative to the lane start.
-- **Video offset:** ffmpeg finds the marker frame: ≥ 90% of pixels with G > 200 and R, B < 80, which tolerates VP8 color shifts. `offset = markerVideoTime − markerCanonicalTime`.
+- **Video offset:** ffmpeg finds the marker frame: ≥ 90% of pixels with G > 200 and R, B < 80, which tolerates VP8/VP9 color shifts (Playwright 1.64 records VP9). `offset = markerVideoTime − markerCanonicalTime`.
   - If no marker is detected, the fallback is the trace's screencast frame timestamps, matched to the marker's canonical time.
   - If both fail → the lane is marked `infra_error` (never judged on a misaligned video).
 - **Produced files:**
   - `humanVideo`: 1280×720 H.264, marker cut out, step captions burned in from the step log
   - `judgeVideo`: 960×540, 4 fps, **canonical timestamp burned in** using the offset, so the judge's `atMs` is already canonical. The time goes in a 40 px band *under* the frame (960×580), never over the page: in T0.3 a corner stamp covered the toast area. Don't rely on ffmpeg's `drawtext` for it: Homebrew's ffmpeg is built without freetype (T0.3 draws text with Chromium)
+  - **How (T1.7, `core/browser/video.ts`):** both videos start on the first frame after the marker. The judge video samples canonical time on a 250 ms grid counted from the lane start, so stamps read `t=12.250s`, and each frame shows the last raw frame at or before its stamped time: what was on screen then, never something later. Captions (1.5 s each, stacked up to three) sit in the human video's bottom-left corner; values typed into secret-looking fields are masked. Text is drawn with Chromium and overlaid with ffmpeg. Takes go to `take-{n}` folders (§28).
   - each file stores its own offset in `videoOffsets`
 - All report links and GIF windows convert canonical → file time at the very end.
 

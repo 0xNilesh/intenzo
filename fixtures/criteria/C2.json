@@ -1,0 +1,13 @@
+{
+  "id": "C2",
+  "text": "The total drops 10% to $45.00 right away, with no refresh",
+  "trigger": "Apply the discount code SAVE10 on the cart",
+  "setup": ["a new shopper's cart: the tote and the mug, $50.00 in total"],
+  "expected": "The order total changes from $50.00 to $45.00 within 1 s of applying SAVE10, without reloading the page, and still shows $45.00 after a reload",
+  "watch": ["order total"],
+  "kind": "ui_behavior",
+  "persistence": true,
+  "timingMs": 1000,
+  "inferred": false,
+  "sourceQuote": "On the cart, when I apply SAVE10 the total should drop 10% right away, no refresh."
+}
