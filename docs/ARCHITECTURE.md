@@ -878,6 +878,7 @@ await context.route("**/*", (route, req) => {
 10. if criterion.persistence: reload → settle → after_reload readings
 11. close → video; tracing.stop → trace.zip
 ```
+- **Framework live regions count too.** Next.js keeps an empty body-level `role="alert" aria-live="assertive"` route announcer (`#__next-route-announcer__`) on every page, and it reads out the page title on client-side navigations. The live-region readings include it, so T1.5 should expect it, and possibly drop its title announcements (found in T0.6).
 
 ### 21.4 One canonical clock
 - **Canonical time** = **epoch milliseconds** (`performance.timeOrigin + performance.now()`), used in both Node and the page. They share a host, so the two agree to under 1 ms, and page navigations don't reset it. Every step, reading and box sample is stamped with it. Reports show it relative to the lane start.
@@ -1153,7 +1154,7 @@ This becomes 4 **decoupled** criteria:
 
 **The almost-right PR** (the implementation written by Muse Code, the defect hand-seeded):
 - The discount line item and the chart update immediately from the line items, so C1 ✅ and C4 ✅.
-- The **order total** is computed from a stale cart snapshot and only corrects on reload, so C2 ❌.
+- The **order total** is computed from a stale cart snapshot and only corrects on reload, so C2 ❌. Concretely (`pr/discount-almost-right`), the total is a `useMemo` missing the discount code as a dependency. It survives Next.js's re-render after the background save, and quantity changes still update it, so the PR's CI stays green (T0.6).
 - The **cart page's** "Checkout" button is relabelled "Continue". It's on the trigger route, so §24 sees it → ⚠️ unrequested.
 
 **Golden file first:** `demo/expected-comment.md` (the comment exactly as it should look) is written on Thursday. From Saturday on, every pipeline change is checked against it.
