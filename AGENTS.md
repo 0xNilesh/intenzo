@@ -397,6 +397,7 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 
 **Shell and CI**
 
+- **`pnpm test -- <name>` doesn't filter**: pnpm forwards the `--` and Vitest then runs every test. Use `pnpm --filter <package> test <name>`.
 - **zsh has no `PIPESTATUS`**, and macOS ships bash 3.2 (no `globstar`). Check exit codes without pipes, and keep CI shell steps portable. `git ls-files '*.x.ts'` is a good way to detect tracked files.
 - **Force-push is blocked** in this environment. Rewrite nothing that's pushed; add forward commits.
 

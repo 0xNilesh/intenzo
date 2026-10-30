@@ -144,15 +144,15 @@
 **Goal:** given a hand-written `SavedPath`, record clean, aligned, trustworthy evidence on the PR and base apps, locally.
 
 ### T1.1 Schemas (`core/schema`)
-- [ ] **Build:** the zod schemas from §7 to §9 (Criterion, CriterionSet, Target, WatchTarget, Step, SavedPath, Reading, LaneResult, JudgeOutput, Verdict, WorkerEvent, VerifyJob, IntenzoConfig).
-- [ ] **Tests:** valid fixtures parse; invalid ones fail with clear paths (e.g. `nth` has no default, `Step.wait ≤ 3000`, a criterion id pattern).
-- [ ] **Verify:** `pnpm test -- schema`.
-- [ ] **Done when:** every type used later comes from these schemas.
+- [x] **Build:** the zod schemas from §7 to §9 (Criterion, CriterionSet, Target, WatchTarget, Step, SavedPath, Reading, LaneResult, JudgeOutput, Verdict, WorkerEvent, VerifyJob, IntenzoConfig).
+- [x] **Tests:** valid fixtures parse; invalid ones fail with clear paths (e.g. `nth` has no default, `Step.wait ≤ 3000`, a criterion id pattern).
+- [x] **Verify:** `pnpm --filter @intenzo/core test schema`.
+- [x] **Done when:** every type used later comes from these schemas.
 
 ### T1.2 Config loader (`core/config`)
 - [ ] **Build:** `.intenzo.yml` parse + defaults + validation; unknown keys are errors.
 - [ ] **Tests:** the demo-shop config parses; unknown key → error naming the key; missing isolation → `none` level.
-- [ ] **Verify:** `pnpm test -- config`.
+- [ ] **Verify:** `pnpm --filter @intenzo/core test config`.
 
 ### T1.3 Lane and network safety (`core/browser/lane.ts`)
 - [ ] **Build:**
@@ -241,7 +241,7 @@
   - a deployment for a SHA with no open PR (ignored)
   - a new SHA supersedes the active run
   - a 20-minute timeout, then a late deployment re-opens the run
-- [ ] **Verify:** `pnpm test -- transition`; `pnpm db:migrate` against Neon.
+- [ ] **Verify:** `pnpm --filter @intenzo/cloud test transition`; `pnpm db:migrate` against Neon.
 
 ### T2.3 Deployments and baseline resolution
 - [ ] **Build:**
@@ -266,7 +266,7 @@
   - **two drainers run concurrently** → exactly one comment POST and one check-run POST (msw counts)
   - a newer comment version supersedes an older pending one
   - a crash after the lease → re-executed after the lease expires
-- [ ] **Verify:** `pnpm test -- outbox` (against a local Postgres in Docker).
+- [ ] **Verify:** `pnpm --filter @intenzo/cloud test outbox` (against a local Postgres in Docker).
 
 ### T2.5 Modal worker shim and job protocol
 - [ ] **Build:**
@@ -318,7 +318,7 @@
 ### T3.2 Action guard
 - [ ] **Build:** `NavAction` validation; guards for same-origin `goto`, refs that exist, `deny_text`, the allowed op set.
 - [ ] **Tests:** off-origin goto rejected; "Delete account" rejected; an unknown ref rejected with a useful message back to the model.
-- [ ] **Verify:** `pnpm test -- guard`.
+- [ ] **Verify:** `pnpm --filter @intenzo/core test guard`.
 
 ### T3.3 Durable targets
 - [ ] **Build:** `durableTarget()` with the candidate order and **same-element verification** (§20.4).
@@ -381,7 +381,7 @@
   - agreed fail → re-record → agreed pass → `flaky`
   - `trigger_absent` can never give `pass`
   - `no_isolation` caps the verdict
-- [ ] **Verify:** `pnpm test -- judge`.
+- [ ] **Verify:** `pnpm --filter @intenzo/core test judge`.
 
 ### T4.6 Live judges and the judge queue
 - [ ] **Build:** Spark Open + Spark 1.3 clients through `ModelPort`; recording slots (2) + judge queue (4); liveness checks.
@@ -452,7 +452,7 @@
 ### T5.7 Billing meter
 - [ ] **Build:** the §16.3 rule in the same transaction; displayed in the comment footer.
 - [ ] **Tests:** a run group with only `setup_failed` → not billed; the first judged run → billed once; the 6th judged run → a second unit.
-- [ ] **Verify:** `pnpm test -- billing`.
+- [ ] **Verify:** `pnpm --filter @intenzo/cloud test billing`.
 
 ### ✅ Phase 5 gate: `pnpm gate:p5` + full manual demo run
 - `gate:p4` passes, plus all P5 tests.

@@ -34,6 +34,7 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm check`                                        | Typecheck + lint + format + unit + contract. **Run before every commit**                                          |
 | `pnpm check:all`                                    | `check` + browser tests: **exactly what CI runs. Run before every push**                                          |
 | `pnpm --filter @intenzo/core test`                  | Tests for one package                                                                                             |
+| `pnpm --filter @intenzo/core test schema`           | One package's tests whose file path matches `schema`. Not `pnpm test -- schema`, which runs everything            |
 | `pnpm probe:all [model…]`                           | Model capability probes (T0.2): real, billed API calls, results in `probes/results.json`                          |
 | `pnpm probe:assert`                                 | Fails until every probed capability has a definite answer                                                         |
 | `pnpm gonogo [--dry-run]`                           | Judge go/no-go (T0.3): records 10 fixture clips, both judges judge them (billed, ~$0.20; cached), GO / NO-GO      |
