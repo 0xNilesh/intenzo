@@ -174,8 +174,8 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 | Coverage | **Spark 1.3** (Muse Code is CLI-only, T0.2) | criteria + PR diff | `CoverageMap` (criterion → files/hunks, candidate routes) | 1 per run |
 | Navigation | **Wonder** | outline with element ids + goal + history | `NavAction` | 5–25 per new path; 0 when cached |
 | Vision fallback | **Spark 1.3 computer use** (Wonder rejects the tool, T0.2) | screenshot + goal | point action | canvas/unlabeled widgets only |
-| Judge A | **Spark Open** (Baseten; native MP4 video confirmed, T0.2b) | §22.2 bundle | `JudgeOutput` | 1 per criterion |
-| Judge B | **Spark 1.3** | same bundle | `JudgeOutput` | 1 per criterion (always) |
+| Judge A | **Spark Open** (Baseten; native MP4 video confirmed, T0.2b; `reasoning_effort: low`, T0.3) | §22.2 bundle | `JudgeOutput` (by prompt: no structured outputs on Baseten) | 1 per criterion |
+| Judge B | **Spark 1.3** (`reasoning_effort: low`, T0.3) | same bundle | `JudgeOutput` (strict `json_schema`) | 1 per criterion (always) |
 | Visual evidence | **SAM 3.1** | ≥ 50 frames + text concept or box | masks | 1 per `ui_visual` criterion or vision-fallback target |
 | Change classification | **Spark 1.3** | aria-diff hunks + crops + criteria | `ChangeClassification[]` | 0–1 |
 | Test generation (stretch) | **Muse Code**, inside muse-fixer (CLI-only, T0.2) | saved path + passing readings + criterion | Playwright spec | 1 per passing criterion |
@@ -511,9 +511,10 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
 ## 14. Model client
 - **Request:** `stage`, `model`, `promptVersion`, `messages` (text/image/video parts), `schema`, `timeoutMs`, `cacheKey`.
 - **Structured output:** JSON mode if supported. On a parse failure, one retry with the zod error appended.
+  - Spark 1.3 takes a strict `json_schema` (nullable fields as `anyOf`). Baseten serves Spark Open **without** structured outputs, so it's asked by prompt and its reply is extracted and zod-checked; in T0.3 it answered valid JSON 20/20 times (DECISIONS 2026-10-30).
 - **Retries:** 429/5xx → backoff 0.5 s / 1.5 s / 4 s, within `timeoutMs`.
 - **`MediaEncoder` modes:**
-  - `video`: MP4 H.264, 960×540, 4 fps
+  - `video`: MP4 H.264, 960×540, 4 fps (plus a 40 px time band under the frame for judge clips, §21.4)
   - `frames`: JPEG 2 fps, timestamps burned in
 
   The mode comes from the registry. The day-1 go/no-go sets it per model.
@@ -882,7 +883,7 @@ await context.route("**/*", (route, req) => {
   - If both fail → the lane is marked `infra_error` (never judged on a misaligned video).
 - **Produced files:**
   - `humanVideo`: 1280×720 H.264, marker cut out, step captions burned in from the step log
-  - `judgeVideo`: 960×540, 4 fps, **canonical timestamp burned in** (`drawtext` using the offset), so the judge's `atMs` is already canonical
+  - `judgeVideo`: 960×540, 4 fps, **canonical timestamp burned in** using the offset, so the judge's `atMs` is already canonical. The time goes in a 40 px band *under* the frame (960×580), never over the page: in T0.3 a corner stamp covered the toast area. Don't rely on ffmpeg's `drawtext` for it: Homebrew's ffmpeg is built without freetype (T0.3 draws text with Chromium)
   - each file stores its own offset in `videoOffsets`
 - All report links and GIF windows convert canonical → file time at the very end.
 
@@ -926,6 +927,7 @@ final = A'.verdict == B'.verdict ∈ {pass, fail}  → that verdict (reason agre
   - If `citedValue` contains numbers, **every number must equal a whole numeric token** of a cited reading (`5.00` does not match `45.00`).
   - Otherwise the normalized cited string must **equal** a whole line of the reading, or a `region_diff` line (`+ alert "This code has expired"`).
   - An empty or null `citedValue` with non-empty `watch` → no match.
+  - An `absent` reading has no value to cite. A live-region diff with nothing in it reads `no change`, which is citable: that's how a missing toast or error is cited (both judges did exactly this in T0.3).
 - **Live-region readings count as citable.** A toast or portal error cited from the live-region diff satisfies the rule.
 - Re-record behavior is defined in §19 step e: at most one re-record, and no judge-shopping.
 - For `ui_visual` criteria, readings are optional: the judges decide from the video and annotated frames, with agreement still required.
@@ -1057,7 +1059,7 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 | Scenario | Target | Where the time goes |
 |---|---|---|
 | Criteria posted | 20–40 s after the preview is ready (intent is reused on later runs) | Transcribe + Spark video, first run only |
-| **Warm, cached path, all pass**, 4 criteria | **verdicts ≈ 90–120 s** after the preview is ready | 2 recording slots: 4 criteria × (PR + base ≈ 25 s) / 2 ≈ 50 s; the judge queue overlaps recording, and the last judge finishes about 30 s after the last recording; coverage overlaps |
+| **Warm, cached path, all pass**, 4 criteria | **verdicts ≈ 90–120 s** after the preview is ready | 2 recording slots: 4 criteria × (PR + base ≈ 25 s) / 2 ≈ 50 s; the judge queue overlaps recording, and the last judge finishes about 10 s after the last recording (T0.3, `low` effort: slowest of both judges p50 6.4 s, max 9.4 s); coverage overlaps |
 | **First run with a failure** | verdicts ≈ 3–5 min; evidence streams 30–60 s later | exploration (5–25 Wonder calls per criterion) + intent + re-recording the failing lane + SAM |
 | Fix loop (button → agent → Vercel rebuild → new run) | ≈ 3–4 min | the agent ≈ 60–90 s, the Vercel build ≈ 60 s, the new run reuses intent and paths |
 
@@ -1199,10 +1201,10 @@ Backup: a recorded take of the full run, in case anything is down during judging
 |---|---|---|
 | R1 | Meta API video input format and limits | **Resolved (T0.2):** inline MP4 `video_url` works on Spark 1.3 (5 s clip ≈ 1.3k prompt tokens, 2.9 s p50); Files API upload works too. Size limit still unpublished |
 | R2 | Baseten Spark Open may not accept video | **Resolved (T0.2b):** it does. Native `video_url` MP4 read correctly in 2.8 s (946 prompt tokens) vs frames mode 5.3 s (3,460). Both judges take the same inline video |
-| R3 | Judge latency | 4 fps, short windows, parallel judges, verdicts streamed |
+| R3 | Judge latency | **Measured (T0.3):** with `reasoning_effort: low`, both judges in parallel took p50 6.4 s, max 9.4 s per criterion (default effort: p50 10.1 s, max 33.1 s, all Spark 1.3 reasoning). 4 fps, short windows, verdicts streamed |
 | R4 | Wonder computer-use API | **Resolved (T0.2):** Wonder rejects the tool; Spark 1.3 runs the loop correctly and is the fallback |
 | R5 | **Muse Code has no programmatic API** | **Resolved (T0.2):** confirmed CLI-only. `muse exec --json` completed a task headless on macOS in 24 s; Linux/Actions (bubblewrap) is checked in T5.3. Decision tree in §4: CLI only → Muse Code lives in muse-fixer (fix + proposed test), and coverage moves to Spark 1.3. If even the CLI can't run headless in Actions, the fixer uses Wonder and says so plainly. The worker never gets a repo checkout |
-| R13 | **Mostly-inconclusive output** (agreement rule + citation rule) | Measure the inconclusive rate on the day-1 clips. Live-region readings and token matching are designed to keep it down. If it's above about 30% on clear cases, loosen the rule to "agreement for fail; for pass, the primary judge plus a clean readings check" and report that change |
+| R13 | **Mostly-inconclusive output** (agreement rule + citation rule) | **Measured (T0.3): 0 of 8 clear clips inconclusive** at both efforts, every citation matched, so the strict rule stays. Re-check on IntentBench (P6). The fallback, if it's ever above about 30% on clear cases: "agreement for fail; for pass, the primary judge plus a clean readings check" |
 | R14 | Internal `_snapshotForAI` API changes | Exact version pin + contract test; `data-iz-ref` tagging fallback (§20.1) |
 | R6 | Exploration on deep flows | `repro.startPath` from the PM video, route candidates, `trigger_absent` handling, a path cache within the run group |
 | R7 | Customer test isolation | Isolation levels; `no_isolation` cap; hook reference implementation |
@@ -1210,4 +1212,4 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | R9 | Private-repo media and GIFs | `body_html` signed URLs; `/g/` proxy (roadmap) |
 | R10 | Voice Transcribe is realtime-only | **Resolved (T0.2):** a file endpoint exists and is accurate; neither mode returns timings |
 | R11 | Vercel environment naming in `deployment_status` | Prefix match; verify with logged payloads on day 1 |
-| R12 | Judges agree on the wrong answer (correlated errors) | Readings checks + annotated-target check; bench reports false-pass rate per arm |
+| R12 | Judges agree on the wrong answer (correlated errors) | Readings checks + annotated-target check; bench reports false-pass rate per arm. T0.3: the judges also agree on how to read a *vague* criterion (both passed both ambiguous clips), so the intent step must make criteria concrete (T4.1) |

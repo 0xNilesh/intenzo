@@ -5,6 +5,58 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · Judge go/no-go: GO (T0.3, #4)
+
+Measured with `pnpm gonogo` (see `scripts/gonogo/README.md`):
+
+- **Clips:** 10, recorded with Playwright from a local fixture shop whose planted behaviors are proven by browser tests. 4 correct, 4 almost-right (stale total, off by a cent, wrong %, missing error) and 2 ambiguous ("clear confirmation", "updates quickly").
+- **Bundle:** both judges get the same `judge.v1` input: the criterion, the step log with Tt, the readings, the annotated Tt+1000 still, and the 4 fps judge clip.
+- **Rule:** §22.3 decides.
+- **Takes:** one per clip, no baseline.
+
+The run was done twice: at each model's default reasoning effort, and with `reasoning_effort: "low"`. That makes 40 calls, with no retries and no parse failures. Raw answers are in `probes/gonogo/` (gitignored).
+
+### What we found
+
+| Effort | Accuracy (decided) | False fails | False passes | Inconclusive (clear) | Verdict p50 / max | Spark Open p50 / max | Spark 1.3 p50 / max | Cost per criterion |
+|---|---|---|---|---|---|---|---|---|
+| default | 8/8 = 100% | 0 | 0 | 0/8 | 10.1 / 33.1 s | 6.4 / 11.7 s | 10.1 / 33.1 s | $0.020 |
+| `low` | 8/8 = 100% | 0 | 0 | 0/8 | 6.4 / 9.4 s | 3.1 / 4.1 s | 6.4 / 9.4 s | $0.013 |
+
+- **Each judge alone** was also 8/8 at both efforts.
+- **Citations:** every pass and fail cited a reading whose value matched (`valueMatches`), with 0 wrong targets. The R13 what-if therefore changes nothing.
+- **Missing error:** both judges cited the live-region diff value `no change`. An `absent` reading has no value to cite, so this is how the §22.3 rule handles a missing element.
+- **Ambiguous clips:** both judges passed both, at both efforts, and agreed with each other:
+  - "updates quickly" was judged at Tt+3000, the prompt's rule when there's no `timingMs`.
+  - A grey "Applied" button counted as a clear confirmation.
+- **Output format:** Spark Open on Baseten, which has no structured outputs, returned a valid `JudgeOutput` from the prompt alone 20/20 times. Spark 1.3 accepted the strict `json_schema` with `anyOf` nullables.
+- **Latency:** Spark 1.3's default effort is the outlier. The stale-total clip took 4,132 reasoning tokens and 33 s; at `low`, 819 tokens and 8.8 s.
+- **ffmpeg:** Homebrew's ffmpeg 8.1.1 has no `drawtext` (it's built without freetype). The judge clip's time band and the labels are drawn with Chromium.
+- **Spend:** $0.328 in total. $0.139 was Baseten (Spark Open), at list price ($1.25 / $0.15 / $4.25 per million input / cached / output tokens), out of about $1 of Baseten credit. The other $0.189 was Meta (Spark 1.3).
+
+### Decisions
+
+1. **GO. The two judges and the strict §22.3 rule stay as designed; R13 isn't needed.**
+   - *Why:* every GO threshold holds with room to spare at both efforts: 100% accuracy (need ≥ 80%), 0 false fails, 0% inconclusive (need ≤ 30%), slowest verdict 33 s (need < 60 s).
+   - *Caveat:* small n. These are 10 clips on one simple page, and they were easy for both models. IntentBench (P6) is the real measure, including the false-pass rate (R12).
+2. **Both judges run with `reasoning_effort: "low"`.**
+   - *Why:* accuracy is the same (8/8), the slowest verdict drops from 33.1 s to 9.4 s, and cost per criterion drops 38% ($0.020 → $0.013). Spark Open, on scarce Baseten credits, costs 47% less.
+   - *Alternatives:* the default effort gained nothing here. Revisit if IntentBench shows misses on harder cases, where more reasoning might help.
+   - *Next:* T4.6 puts the effort in the model registry, and T6.3 can report both levels.
+3. **The intent step must make vague criteria concrete, because the judges don't hedge.**
+   - *Why:* the two ambiguous clips came back as an agreed pass, not inconclusive. The agreement rule catches disagreement, not shared interpretation (R12).
+   - *Next:* T4.1 turns vague timing words ("quickly", "right away") into a `timingMs`, as §7 already does for "instantly" → 1000. It marks subjective words ("clear", "nice") as `inferred` or raises them as a question for the PM.
+4. **An empty live-region diff reads `no change`; keep it (T1.5).**
+   - *Why:* it's the citable value for "nothing appeared", which keeps missing-element bugs decided instead of inconclusive. ARCHITECTURE §22.3 now says so.
+5. **Overlays never cover the page, and text isn't drawn with ffmpeg's `drawtext`.**
+   - *Why:* a timestamp in the top-right corner covered the toast area, and Homebrew's ffmpeg has no `drawtext`.
+   - *Decision:* the judge clip carries the time in a 40 px band under the frame (960×580), and the annotation labels sit in a column beside the screenshot.
+   - *Next:* T1.4 and T1.7 follow this, and §21.4 is updated.
+6. **Spark Open is asked for JSON by prompt; Spark 1.3 uses a strict `json_schema`.**
+   - *Why:* Baseten's docs say "All except Muse Spark Open support structured outputs and JSON mode". §14's "JSON mode if supported" covers this; it's recorded so T4.6 doesn't expect structured output from Baseten.
+
+---
+
 ## 2026-10-30 · Spark Open on Baseten (T0.2b, #64)
 
 Measured with `pnpm probe:all spark-open` (one call per check) against Baseten Model APIs, using the

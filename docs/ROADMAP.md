@@ -83,8 +83,8 @@
   - for each clip: a criterion, readings JSON and a step log
   - run both judges (Spark Open + Spark 1.3) with the `judge.v1` prompt draft and apply the §22.3 combination
 - [x] **Tests:** the scoring script has unit tests (confusion matrix, inconclusive rate).
-- [ ] **Verify:** `pnpm gonogo` prints per-clip results, accuracy, false-fail/false-pass counts, inconclusive rate and latency per judge.
-- [ ] **Done when** the go/no-go decision is written down:
+- [x] **Verify:** `pnpm gonogo` prints per-clip results, accuracy, false-fail/false-pass counts, inconclusive rate and latency per judge.
+- [x] **Done when** the go/no-go decision is written down (**GO**, DECISIONS 2026-10-30; judges run at `reasoning_effort: low`):
   - **GO:** accuracy ≥ 80% on decided clips, 0 false fails on correct clips, inconclusive ≤ 30% on clear clips, verdict < 60 s
   - **Fallback:** if Spark Open can't take video → frames mode for Spark Open; if inconclusive > 30% → the R13 rule
 
