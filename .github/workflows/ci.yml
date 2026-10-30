@@ -67,6 +67,10 @@ jobs:
         if: steps.layers.outputs.browser == 'true'
         run: pnpm --filter @intenzo/core exec playwright install --with-deps chromium
 
+      - name: Install ffmpeg
+        if: steps.layers.outputs.browser == 'true'
+        run: command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg)
+
       - name: Browser tests
         if: steps.layers.outputs.browser == 'true'
         run: pnpm test:browser
