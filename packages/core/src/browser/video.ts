@@ -1,8 +1,12 @@
-import { mkdirSync, readdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { chromium, type Browser, type Page } from "playwright";
 
 import { CriterionId, type LoggedStep, type StepLogEntry, type Target } from "../schema/index.ts";
 import { MARKER_MS } from "./clock.ts";
+import { ffmpegAsync, frameTimesMs, isMarkerGreen, pixelShare, tinyFrames } from "./ffmpeg.ts";
 
 // The two videos a lane leaves behind (ARCHITECTURE §21.4), cut and encoded from Playwright's raw
 // 1280×720 recording:
@@ -21,10 +25,81 @@ export const CAPTION_MS = 1500;
 /** At most this many captions are stacked at once (the newest at the bottom). */
 export const MAX_CAPTION_LINES = 3;
 const JUDGE_FRAME_MS = 1000 / JUDGE_VIDEO.fps;
+const CAPTION_MARGIN = 24;
 /** A frame with less marker green than this is past the marker. */
 const MARKER_GONE = 0.05;
 /** Give up looking for the marker's end this long after it started, and cut by the clock. */
 const MARKER_SEARCH_MS = 3000;
+
+export interface VideoInput {
+  /** The lane's raw 1280×720 webm (Playwright recordVideo). */
+  rawVideo: string;
+  /** Canonical ms → raw video ms (alignVideo's offsetMs). */
+  rawOffsetMs: number;
+  /** Canonical ms the sync marker was first painted, if it was shown: it's cut from both videos. */
+  markerShownAt: number | null;
+  /** Step captions; tMs is canonical. */
+  stepLog: readonly StepLogEntry[];
+  /** Canonical; the judge video's timestamps count from here. */
+  laneStartMs: number;
+  /** The take directory; gets human.mp4 and judge.mp4. */
+  outDir: string;
+}
+
+export interface VideoOutputs {
+  /** offsetMs: canonical ms → this file's ms (lane.videoOffsets.human). */
+  human: { path: string; offsetMs: number };
+  /** offsetMs: canonical ms → this file's ms (lane.videoOffsets.judge). */
+  judge: { path: string; offsetMs: number };
+}
+
+/** Renders human.mp4 and judge.mp4 into outDir. Pass a browser to reuse it for drawing the text. */
+export async function renderVideos(
+  input: VideoInput,
+  options: { browser?: Browser } = {},
+): Promise<VideoOutputs> {
+  const { rawVideo, rawOffsetMs, markerShownAt, stepLog, laneStartMs, outDir } = input;
+  const times = frameTimesMs(rawVideo);
+  if (times.length === 0) throw new Error(`the raw video has no frames: ${rawVideo}`);
+  const markerVideoMs = markerShownAt === null ? null : markerShownAt + rawOffsetMs;
+  const greens =
+    markerVideoMs === null ? [] : tinyFrames(rawVideo).map((f) => pixelShare(f, isMarkerGreen));
+  const cutMs = cutAfterMarker(times, greens, markerVideoMs);
+
+  const humanOffsetMs = rawOffsetMs - cutMs;
+  const timeline = judgeTimeline(cutMs - rawOffsetMs, laneStartMs);
+  const judgeRawStartMs = timeline.startCanonical + rawOffsetMs;
+  const lastFrameMs = times.at(-1)! + (times.length > 1 ? times.at(-1)! - times.at(-2)! : 40);
+  const judgeFrames = Math.max(1, Math.ceil((lastFrameMs - judgeRawStartMs) / JUDGE_FRAME_MS) + 2);
+
+  mkdirSync(outDir, { recursive: true });
+  const work = mkdtempSync(join(tmpdir(), "intenzo-video-"));
+  const browser = options.browser ?? (await chromium.launch());
+  try {
+    const spans = captionSpans(stepLog, humanOffsetMs);
+    const page = await browser.newPage({ viewport: HUMAN_VIDEO, deviceScaleFactor: 1 });
+    let captions: string[];
+    try {
+      captions = await drawCaptions(page, spans, work);
+      await drawStamps(page, timeline.firstSlot, judgeFrames, work);
+    } finally {
+      await page.close();
+    }
+    const human = join(outDir, "human.mp4");
+    const judge = join(outDir, "judge.mp4");
+    await Promise.all([
+      encodeHuman(rawVideo, cutMs, spans, captions, human),
+      encodeJudge(rawVideo, judgeRawStartMs, join(work, "stamp-%05d.png"), judge),
+    ]);
+    return {
+      human: { path: human, offsetMs: humanOffsetMs },
+      judge: { path: judge, offsetMs: timeline.offsetMs },
+    };
+  } finally {
+    if (!options.browser) await browser.close();
+    rmSync(work, { recursive: true, force: true });
+  }
+}
 
 /** Creates and returns root/{criterionId}/{side}/take-{n} with the next free n (§28). */
 export function nextTakeDir(root: string, criterionId: string, side: "pr" | "base"): string {
@@ -194,4 +269,86 @@ function typed(target: Target, value: string): string {
 
 function clip(text: string, max = 48): string {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
+// ── Drawing (Chromium) and encoding (ffmpeg) ────────────────────────────────────────────────────
+
+/** One transparent PNG per caption span, sized to its stack of captions. */
+async function drawCaptions(page: Page, spans: readonly CaptionSpan[], work: string) {
+  const files: string[] = [];
+  for (const [n, span] of spans.entries()) {
+    await page.setContent(
+      '<body style="margin:0; background:transparent"><div id="c"></div></body>',
+    );
+    await page.evaluate(
+      ({ lines, maxWidth }) => {
+        const stack = document.getElementById("c")!;
+        stack.style.cssText = `display:inline-flex; flex-direction:column; align-items:flex-start; gap:6px; max-width:${maxWidth}px`;
+        lines.forEach((line, i) => {
+          const tag = document.createElement("div");
+          tag.textContent = line.text; // text, never HTML: step values come from the page
+          const accent = !line.ok ? "#ef4444" : line.trigger ? "#f59e0b" : "#60a5fa";
+          tag.style.cssText = `font:600 26px/38px Arial, Helvetica, sans-serif; color:#fff; background:rgba(17,24,39,.88); border-left:6px solid ${accent}; border-radius:8px; padding:2px 16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; box-sizing:border-box; opacity:${i === lines.length - 1 ? 1 : 0.75}`;
+          stack.append(tag);
+        });
+      },
+      { lines: span.lines, maxWidth: HUMAN_VIDEO.width - 2 * CAPTION_MARGIN },
+    );
+    const file = join(work, `caption-${n}.png`);
+    await page.locator("#c").screenshot({ path: file, omitBackground: true });
+    files.push(file);
+  }
+  return files;
+}
+
+/** stamp-00000.png…: the band under judge frame n, with its time since the lane start. */
+async function drawStamps(page: Page, firstSlot: number, count: number, work: string) {
+  const { width, band } = JUDGE_VIDEO;
+  await page.setViewportSize({ width, height: band });
+  await page.setContent(
+    `<body style="margin:0; background:#000"><div id="t" style="width:${width}px; height:${band}px; font:600 24px/${band}px Menlo, Consolas, 'DejaVu Sans Mono', monospace; color:#fff; text-align:center"></div></body>`,
+  );
+  for (let n = 0; n < count; n++) {
+    const stamp = formatStamp((firstSlot + n) * JUDGE_FRAME_MS);
+    await page.evaluate((text) => (document.getElementById("t")!.textContent = text), stamp);
+    await page.screenshot({ path: join(work, `stamp-${String(n).padStart(5, "0")}.png`) });
+  }
+}
+
+const seconds = (ms: number) => (ms / 1000).toFixed(6);
+/** Shifts a stream so raw ms `ms` becomes 0, rounded to the nearest tick (setpts truncates). */
+const shiftTo = (ms: number) => `setpts=round(PTS-${seconds(ms)}/TB)`;
+const H264 = ["-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p"];
+// Keep every frame's timestamp as the filters set it: the offsets depend on it.
+const MP4 = ["-fps_mode", "passthrough", "-movflags", "+faststart"];
+
+function encodeHuman(
+  raw: string,
+  cutMs: number,
+  spans: readonly CaptionSpan[],
+  captions: readonly string[],
+  out: string,
+): Promise<void> {
+  const graph = [`[0:v]${shiftTo(cutMs)},trim=start=0[v0]`];
+  spans.forEach((span, i) => {
+    const on = `gte(t,${seconds(span.fromMs)})*lt(t,${seconds(span.toMs)})`;
+    const at = `x=${CAPTION_MARGIN}:y=main_h-overlay_h-${CAPTION_MARGIN}`;
+    graph.push(`[v${i}][${i + 1}:v]overlay=${at}:enable='${on}'[v${i + 1}]`);
+  });
+  graph.push(`[v${spans.length}]format=yuv420p[out]`);
+  const inputs = captions.flatMap((file) => ["-i", file]);
+  // prettier-ignore
+  return ffmpegAsync("-i", raw, ...inputs, "-filter_complex", graph.join(";"), "-map", "[out]", ...H264, ...MP4, out);
+}
+
+function encodeJudge(raw: string, startMs: number, stamps: string, out: string): Promise<void> {
+  const { width, height, band, fps } = JUDGE_VIDEO;
+  // fps with round=up shows, at each slot, the last raw frame at or before the slot's time:
+  // exactly what was on screen at that canonical time.
+  const graph = [
+    `[0:v]${shiftTo(startMs)},fps=fps=${fps}:start_time=0:round=up,scale=${width}:${height},pad=${width}:${height + band}:0:0:color=black[page]`,
+    `[page][1:v]overlay=x=0:y=${height}:shortest=1,format=yuv420p[out]`,
+  ];
+  // prettier-ignore
+  return ffmpegAsync("-i", raw, "-framerate", String(fps), "-start_number", "0", "-i", stamps, "-filter_complex", graph.join(";"), "-map", "[out]", ...H264, ...MP4, out);
 }
