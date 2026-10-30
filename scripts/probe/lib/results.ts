@@ -16,7 +16,7 @@ export type ModelKey = z.infer<typeof ModelKey>;
 export const REQUIRED: Record<ModelKey, readonly string[]> = {
   "spark-1.3": ["text", "json_schema", "image", "video_inline", "video_file", "computer_use"],
   "spark-open": ["models_list", "text", "image", "video", "frames"],
-  wonder: ["text", "computer_use"],
+  wonder: ["text", "video_inline", "computer_use"],
   "muse-code": ["api_model", "cli_headless"],
   "sam-3.1": ["image_text", "video_text", "video_box", "video_point"],
   "voice-transcribe": ["file", "realtime"],

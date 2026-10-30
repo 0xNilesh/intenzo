@@ -33,6 +33,7 @@ pnpm probe:assert             # exits 1 until every capability has a definite an
 |                                     | `video`                                  | native `video_url`. Whether this works decides the judge mode (R2)                                        |
 |                                     | `frames`                                 | five timestamped stills: the frames-mode fallback (ARCHITECTURE §14)                                      |
 | `wonder` (`muse-wonder-1.0`)        | `text`                                   | Chat Completions                                                                                          |
+|                                     | `video_inline`                           | the same clip and question as Spark: the fallback second judge if no Spark Open host                      |
 |                                     | `computer_use`                           | Responses + `{type: "computer"}` on the checkout screenshot; does the click land on Apply?                |
 | `muse-code`                         | `api_model`                              | is there a Model API model id? (expected: no, it's a product)                                             |
 |                                     | `cli_headless`                           | `muse exec --json` in a temp dir: does the agent write `probe.txt = OK`?                                  |
