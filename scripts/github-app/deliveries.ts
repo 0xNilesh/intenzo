@@ -9,7 +9,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { REPO_ROOT } from "../probe/lib/env.ts";
 import { asArray, asString, dig } from "../probe/lib/json.ts";
 import { appJwt, ensureOk, github, loadApp } from "./lib/app.ts";
-import { fixtureName, redact } from "./lib/fixtures.ts";
+import { fixtureName, parseKeepingBigIds, redact } from "./lib/fixtures.ts";
 
 const OUT = `${REPO_ROOT}packages/core/fixtures/github/`;
 const list = process.argv.includes("--list");
@@ -18,14 +18,17 @@ const all = process.argv.includes("--all");
 const app = loadApp();
 const jwt = appJwt(app.id, app.privateKey);
 const deliveries = asArray(
-  ensureOk(await github(jwt, "/app/hook/deliveries?per_page=100"), "listing deliveries").body,
+  parseKeepingBigIds(
+    ensureOk(await github(jwt, "/app/hook/deliveries?per_page=100"), "listing deliveries").text,
+  ),
 ).sort((a, b) => asString(dig(a, "delivered_at")).localeCompare(asString(dig(b, "delivered_at"))));
 
 const written = new Map<string, number>();
 mkdirSync(OUT, { recursive: true });
 for (const summary of deliveries) {
   const id = dig(summary, "id");
-  const detail = ensureOk(await github(jwt, `/app/hook/deliveries/${id}`), `delivery ${id}`).body;
+  const res = ensureOk(await github(jwt, `/app/hook/deliveries/${id}`), `delivery ${id}`);
+  const detail = parseKeepingBigIds(res.text);
   const event = asString(dig(detail, "event"));
   const action = asString(dig(detail, "action")) || null;
   const payload = dig(detail, "request", "payload");
