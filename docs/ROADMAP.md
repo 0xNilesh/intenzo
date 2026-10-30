@@ -150,9 +150,9 @@
 - [x] **Done when:** every type used later comes from these schemas.
 
 ### T1.2 Config loader (`core/config`)
-- [ ] **Build:** `.intenzo.yml` parse + defaults + validation; unknown keys are errors.
-- [ ] **Tests:** the demo-shop config parses; unknown key → error naming the key; missing isolation → `none` level.
-- [ ] **Verify:** `pnpm --filter @intenzo/core test config`.
+- [x] **Build:** `.intenzo.yml` parse + defaults + validation; unknown keys are errors.
+- [x] **Tests:** the demo-shop config parses; unknown key → error naming the key; missing isolation → `none` level.
+- [x] **Verify:** `pnpm --filter @intenzo/core test config`.
 
 ### T1.3 Lane and network safety (`core/browser/lane.ts`)
 - [ ] **Build:**

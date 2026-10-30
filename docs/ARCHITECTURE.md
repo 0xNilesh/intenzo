@@ -458,6 +458,10 @@ policy:
   allow_forks: false
 tests: { export: suggest, dir: tests/intenzo }
 ```
+- **Loader:** `packages/core/src/config` (T1.2).
+  - `parseConfig()` never throws. Each problem has a path and a line, e.g. `.intenzo.yml:4: policy.auto_merge: unknown key`.
+  - `readConfig()` uses the defaults when there's no file, and refuses two config files.
+  - `isolationLevel()` applies §21.1: a `reset_hook` only counts with a `users` pool.
 - There is no `production` baseline option. §29 refuses any URL on the project's production domain, for both the PR and base sides.
 - Secrets are never in the file. They live in Cloud (encrypted).
 
