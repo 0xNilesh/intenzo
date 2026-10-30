@@ -1,0 +1,13 @@
+{
+  "id": "C3",
+  "text": "The expired code OLD5 shows \"This code has expired\"",
+  "trigger": "On the cart, enter OLD5 in the discount code field and press Apply",
+  "setup": ["the cart page is open", "the cart is the $50.00 seed cart (tote + mug)"],
+  "expected": "The message \"This code has expired\" is shown",
+  "watch": ["expired-code message", "discount form", "order summary"],
+  "kind": "ui_behavior",
+  "persistence": false,
+  "inferred": false,
+  "sourceQuote": "OLD5 is expired, so applying it should show: This code has expired.",
+  "sourceMediaAt": 24400
+}
