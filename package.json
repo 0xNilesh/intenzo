@@ -21,7 +21,8 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:contract",
     "check:all": "pnpm check && pnpm test:browser",
     "probe:all": "pnpm --filter @intenzo/scripts probe:all",
-    "probe:assert": "pnpm --filter @intenzo/scripts probe:assert"
+    "probe:assert": "pnpm --filter @intenzo/scripts probe:assert",
+    "gonogo": "pnpm --filter @intenzo/scripts gonogo"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
