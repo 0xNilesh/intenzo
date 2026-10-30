@@ -1,0 +1,17 @@
+# ROADMAP T0.4 (b): does Vercel send repository_dispatch events (vercel.deployment.*) for this
+# project, and what's in client_payload? Vercel's docs offer them as the replacement for
+# deployment_status (vercel.com/docs/git/vercel-for-github#repository-dispatch-events).
+name: vercel-dispatch
+on: repository_dispatch
+permissions: {}
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print the dispatch
+        env:
+          TYPE: ${{ github.event.action }}
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: |
+          echo "type=$TYPE"
+          echo "$PAYLOAD"

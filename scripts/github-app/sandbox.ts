@@ -2,6 +2,7 @@
 //   pnpm github-app:sandbox whoami <owner/repo>
 //   pnpm github-app:sandbox comment <owner/repo> <issue-or-pr-number> <body>
 //   pnpm github-app:sandbox check-run <owner/repo> <head-sha> [--in-progress]
+//   pnpm github-app:sandbox closing <owner/repo> <pr-number>   (prints the GraphQL response)
 // Credentials come from .env.github-app (see create-app.ts); tokens are never printed.
 import { dig } from "../probe/lib/json.ts";
 import { appJwt, ensureOk, github, installationToken, loadApp } from "./lib/app.ts";
@@ -43,6 +44,33 @@ switch (command) {
       type: dig(res.body, "user", "type"),
       viaApp: dig(res.body, "performed_via_github_app", "slug"),
     });
+    break;
+  }
+  case "closing": {
+    // §17.2 step 1, queried as the App, the way Intenzo will query it.
+    const [number] = rest;
+    if (!number) usage();
+    const [owner, name] = repo.split("/");
+    const token = await installationToken(app, repo);
+    const res = ensureOk(
+      await github(token, "/graphql", {
+        json: {
+          query: `query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      number
+      baseRefName
+      body
+      closingIssuesReferences(first: 10) { nodes { number title } }
+    }
+  }
+}`,
+          variables: { owner, name, number: Number(number) },
+        },
+      }),
+      "querying closingIssuesReferences",
+    );
+    console.log(JSON.stringify(res.body, null, 2));
     break;
   }
   case "check-run": {
