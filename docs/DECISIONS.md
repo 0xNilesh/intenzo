@@ -61,5 +61,5 @@ Rate limits match the docs: `x-ratelimit-limit-requests: 3000`, `x-ratelimit-lim
    - *Why:* On the video question, 1,227 of Spark's 1,247 output tokens were reasoning. Spark at 5 calls per check (25 calls) cost about $0.09. Probes now default to one call per check (`PROBE_SAMPLES` raises it).
    - *Next:* T0.3 should test a lower reasoning effort for the judge if accuracy holds.
 
-### Still open for T0.2
+### Moved to T0.2b (#64)
 - `spark-open/*` (5 checks): waiting for Baseten or Fireworks credits. Then add the key to `.env` and run `pnpm probe:all spark-open`.
