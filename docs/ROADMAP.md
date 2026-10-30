@@ -99,15 +99,15 @@
 - [x] **Done when:** R11 and the B-7 trigger question are answered (DECISIONS 2026-10-30: B-7 yes; R11 resolved, but Vercel's "deployment_status Events" toggle must be on).
 
 ### T0.5 demo-shop app (separate repo `demo-shop`)
-- [ ] **Build:**
+- [x] **Build:**
   - Next.js shop **without discount codes** on `main` (`sumithprabhu/demo-shop`): `/products`, `/cart`, line items, an order **total**, a body-level toast region, a **canvas savings chart** fed by the line items, and a "Checkout" button. *Discount codes are what ticket #42 asks for, so the demo PRs add them (T0.6). See DECISIONS 2026-10-30 · demo-shop.*
   - test hooks `/api/test/session` and `/api/test/reset`: HMAC-signed, timestamp checked, refuse when `VERCEL_ENV === "production"`
   - Vercel project with **production branch = `release`**, so `main` and PRs get preview deployments, and **Settings → Git → "deployment_status Events" on** (it was off on a new project in T0.4; without it GitHub never sends `deployment_status`)
-- [ ] **Tests:**
+- [x] **Tests:**
   - Playwright e2e of `main`'s flows: a new shopper's $50.00 cart, the chart drawn from the line items (canvas pixels), add to cart → toast, quantity and removal changes that survive a reload, checkout, and both hooks over HTTP. *The SAVE10/OLD5 e2e moves to T0.6's `pr/discount-correct`.*
   - hook unit tests: valid signature OK; bad signature 401; stale timestamp 401; production 403; each call returns a **new** user
-- [ ] **Verify:** `pnpm test:e2e` in demo-shop locally and against its `main` preview URL.
-- [ ] **Done when:** the `main` preview deploys and passes its e2e test.
+- [x] **Verify:** `pnpm test:e2e` in demo-shop locally and against its `main` preview URL.
+- [x] **Done when:** the `main` preview deploys and passes its e2e test (9/9 on `demo-shop-git-main-…vercel.app`; DECISIONS 2026-10-30 · demo-shop).
 
 ### T0.6 Seeded demo branches
 - [ ] **Build:**
