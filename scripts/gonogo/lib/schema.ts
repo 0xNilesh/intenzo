@@ -60,3 +60,16 @@ export const Reading = z.object({
   bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]).nullable(),
 });
 export type Reading = z.infer<typeof Reading>;
+
+/** A recorded lane: the parts of §7 LaneResult the judge bundle needs. All times are epoch ms. */
+export const Lane = z.object({
+  clipId: z.string(),
+  /** When the page, and so its video, started: video time ≈ canonical time − laneStartMs. */
+  laneStartMs: z.number(),
+  tTriggerMs: z.number(),
+  stepLog: z.array(StepLogEntry),
+  readings: z.array(Reading),
+  consoleErrorCount: z.number().int(),
+  failedRequestCount: z.number().int(),
+});
+export type Lane = z.infer<typeof Lane>;
