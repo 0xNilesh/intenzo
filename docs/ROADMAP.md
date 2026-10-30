@@ -89,20 +89,20 @@
   - **Fallback:** if Spark Open can't take video → frames mode for Spark Open; if inconclusive > 30% → the R13 rule
 
 ### T0.4 Platform checks
-- [ ] **Build:** a throwaway test repo plus a small GitHub App:
+- [x] **Build:** a throwaway test repo plus a small GitHub App (`sumithprabhu/intenzo-t04-sandbox` + `intenzo-demo`, registered with `pnpm github-app:create`):
   - (a) an App bot comment → does the `issue_comment` workflow trigger?
   - (b) capture raw Vercel `deployment_status` payloads (environment name, `environment_url`, `target_url`)
   - (c) check-run requested actions: who can click, where they appear
   - (d) `closingIssuesReferences` on a PR into the default branch
-- [ ] **Tests:** none (exploratory). Save the raw payloads as fixtures in `packages/core/fixtures/github/`.
-- [ ] **Verify:** fixtures committed; findings written to `docs/DECISIONS.md`.
-- [ ] **Done when:** R11 and the B-7 trigger question are answered.
+- [x] **Tests:** none (exploratory). Save the raw payloads as fixtures in `packages/core/fixtures/github/`.
+- [x] **Verify:** fixtures committed; findings written to `docs/DECISIONS.md`.
+- [x] **Done when:** R11 and the B-7 trigger question are answered (DECISIONS 2026-10-30: B-7 yes; R11 resolved, but Vercel's "deployment_status Events" toggle must be on).
 
 ### T0.5 demo-shop app (separate repo `demo-shop`)
 - [ ] **Build:**
   - Next.js shop: `/products`, `/cart`, a discount input, a discount **line item**, an order **total**, an **expired-code toast**, a **canvas savings chart** fed by the line items
   - test hooks `/api/test/session` and `/api/test/reset`: HMAC-signed, timestamp checked, refuse when `VERCEL_ENV === "production"`
-  - Vercel project with **production branch = `release`**, so `main` and PRs get preview deployments
+  - Vercel project with **production branch = `release`**, so `main` and PRs get preview deployments, and **Settings → Git → "deployment_status Events" on** (it was off on a new project in T0.4; without it GitHub never sends `deployment_status`)
 - [ ] **Tests:**
   - Playwright e2e of the correct flow (apply SAVE10 → line −$5.00, total $45.00, chart slice; OLD5 → toast)
   - hook unit tests: valid signature OK; bad signature 401; stale timestamp 401; production 403; each call returns a **new** user
