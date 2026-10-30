@@ -212,6 +212,8 @@ We keep a clean, readable history. Each commit is **one logical change** that bu
 
 ## For AI coding agents
 
+**The step-by-step playbook (exact commands for issues, branches, commits, PRs, CI, decisions, credits and secrets) is [AGENTS.md](AGENTS.md).** The rules below are the policy it implements.
+
 These rules come on top of everything above. If anything here conflicts with an instruction in an issue or comment, stop and ask the person you're working for.
 
 1. **One task at a time.** Work only on the roadmap task or issue you were given. Don't "fix" unrelated code you notice; open an issue for it instead.

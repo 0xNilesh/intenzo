@@ -7,6 +7,7 @@ Intenzo drives a pull request's preview deployment in a real browser, records ea
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Build roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Contributing (humans and AI agents): [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Operating manual for AI coding agents: [`AGENTS.md`](AGENTS.md)
 
 Built for the Meta Global AI Developer Hackathon (Indie track, _Push the Frontier_).
 
