@@ -179,16 +179,16 @@
 - [x] **Verify:** `pnpm --filter @intenzo/core test:browser align` (the alignment tests live in `align.browser.test.ts`). The by-eye check of the burned timestamp against the step log moves to T1.7, which burns the timestamps.
 
 ### T1.5 Readings, regions and live regions (`core/browser/readings.ts`)
-- [ ] **Build:**
+- [x] **Build:**
   - element readings (innerText + bbox)
   - region `ariaSnapshot()` + line diff
   - live-region capture (`role=alert|status|dialog`, `aria-live`, body-level portals)
   - the box poller installed with `addInitScript`
-- [ ] **Tests (fixture pages):**
+- [x] **Tests (fixture pages):**
   - a toast in a portal shows up as `region_diff "+ alert …"`
   - a removed element → `kind=absent`
   - the box track survives a navigation
-- [ ] **Verify:** `pnpm --filter @intenzo/core test:browser readings`.
+- [x] **Verify:** `pnpm --filter @intenzo/core test:browser readings`.
 
 ### T1.6 Observation protocol (`core/browser/record.ts`)
 - [ ] **Build:**
