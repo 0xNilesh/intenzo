@@ -1,7 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // Code passed to page.evaluate() runs in the browser, so core also needs the DOM types.
+    "lib": ["ES2023", "DOM"]
   },
   "include": ["src"]
 }
