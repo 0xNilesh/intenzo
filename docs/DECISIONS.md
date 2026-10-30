@@ -5,6 +5,46 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · Phase 0 gate: PASS (#9)
+
+`pnpm gate:p0` (`scripts/gates/p0.ts`) passed **8 of 8** checks:
+
+| Check | Result |
+|---|---|
+| `pnpm check:all` | passed |
+| CI on `main` | green (`c07c735`, with T0.7 merged) |
+| `probe:assert` | all 22 capability checks answered (20 ok, 2 unsupported, 0 errors) |
+| Ground truth on demo-shop's `pr/discount-correct` preview | C1–C4 pass |
+| Ground truth on `pr/discount-almost-right` | C1, C3, C4 pass; C2 fails as planted; ⚠️ "Continue" |
+| DECISIONS.md | records the go/no-go and the five P0 choices |
+| `demo/expected-comment.md` | covers C1–C4, C2's readings and ⚠️ |
+| The demo ticket (demo-shop #5) | carries its video |
+
+**The probes were re-run on a second machine for the gate, by the owner's choice.** All 22 reproduced the T0.2/T0.2b answers:
+- Spark 1.3: 6/6 correct (computer use clicked inside the Apply button)
+- Spark Open: 5/5 correct, native video included
+- Wonder: text and video work; it still rejects the `computer` tool
+- Muse Code: still no API model; the CLI headless run took 28 s, Muse Code 1.4.14
+- SAM 3.1: 50/50 frames at IoU ≥ 0.7 for every prompt type
+- Voice Transcribe: correct in both modes, still without timings
+
+**Spend:** about $0.10–0.15.
+- *Token-priced, from the responses' usage:* $0.053 (Spark 1.3 $0.027, Spark Open on Baseten $0.014, Wonder $0.012).
+- *Per frame:* SAM about $0.03.
+- *Not itemized:* the Muse Code run and the transcription.
+
+**Setup on this machine:** the Muse Code CLI was installed with the official installer. The installer and launcher scripts were read first, the launcher's sha256 matched the advertised one, and shell profiles were left untouched (`MUSE_NO_MODIFY_PATH=1`). The probe gets `~/.local/bin` on PATH for its run.
+
+### Decisions
+
+1. **Phase 0 is done; Phase 1 can start**, per the roadmap's gate rule.
+2. **Probe media are rendered with Chromium, not ffmpeg's `drawtext`.**
+   - *Why:* this machine's Homebrew ffmpeg has no `drawtext`, so the probe media couldn't be generated at all. The ground truth is unchanged (totals, change time, box and button pixels), and a browser test pins the pixels.
+3. **The gate checks documents by exact decision sentences.**
+   - *Why:* DECISIONS entries are dated history that's never edited, so a missing sentence means a missing decision, not a rewording.
+
+---
+
 ## 2026-10-30 · The demo ticket and the golden comment (T0.7, #8)
 
 - **The ticket** is [demo-shop #5 "Discount codes"](https://github.com/sumithprabhu/demo-shop/issues/5). Its text only says "the details are in the screen recording below", so the criteria must come from the video.
