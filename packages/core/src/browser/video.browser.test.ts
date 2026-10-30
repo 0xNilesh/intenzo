@@ -145,7 +145,8 @@ describe("renderVideos", () => {
     expect(humanRed).not.toBeNull();
     expect(judgeRed).not.toBeNull();
     expect(Math.abs(humanRed! - (lane.redAt + videos.human.offsetMs))).toBeLessThanOrEqual(50);
-    expect(Math.abs(judgeRed! - (lane.redAt + videos.judge.offsetMs))).toBeLessThanOrEqual(250);
+    // One 4 fps frame (250 ms) plus the marker alignment's own error (±50 ms, as above).
+    expect(Math.abs(judgeRed! - (lane.redAt + videos.judge.offsetMs))).toBeLessThanOrEqual(300);
     // And exactly: the human video is the raw one shifted by the cut, frame for frame…
     const cutMs = rawOffsetMs - videos.human.offsetMs;
     expect(Math.abs(humanRed! - (rawRed - cutMs))).toBeLessThanOrEqual(1);
