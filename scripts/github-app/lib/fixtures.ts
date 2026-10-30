@@ -3,6 +3,18 @@ import { dig } from "../../probe/lib/json.ts";
 const TOKEN = /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g;
 
 /**
+ * JSON.parse, except integers beyond 2^53 keep their exact digits as strings. GitHub's webhook
+ * delivery ids are that big, and plain JSON.parse rounds them, so the lookup hits the wrong id.
+ */
+export function parseKeepingBigIds(text: string): unknown {
+  return JSON.parse(text, (_key, value: unknown, context?: { source?: string }) =>
+    typeof value === "number" && Number.isInteger(value) && !Number.isSafeInteger(value)
+      ? (context?.source ?? String(value))
+      : value,
+  );
+}
+
+/**
  * A copy of a webhook payload that's safe to commit: values under an `email` key become
  * user@example.com, and anything shaped like a GitHub token is removed. Logins and ids are kept;
  * they're public and the tests need real shapes.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fixtureName, redact } from "./fixtures.ts";
+import { fixtureName, parseKeepingBigIds, redact } from "./fixtures.ts";
 
 describe("redact", () => {
   it("replaces emails under email keys, keeps logins, ids and ssh URLs", () => {
@@ -62,5 +62,17 @@ describe("fixtureName", () => {
     ["ping", null, {}, "ping.none"],
   ])("%s %s → %s", (event, action, payload, name) => {
     expect(fixtureName(event, action, payload)).toBe(name);
+  });
+});
+
+describe("parseKeepingBigIds", () => {
+  it("keeps delivery ids beyond 2^53 exact, where JSON.parse would round them", () => {
+    const text = '{"id":3851222250984308717,"installation":176892286,"ratio":1.5}';
+    expect(String(JSON.parse(text).id)).not.toBe("3851222250984308717"); // the bug
+    expect(parseKeepingBigIds(text)).toEqual({
+      id: "3851222250984308717",
+      installation: 176892286,
+      ratio: 1.5,
+    });
   });
 });
