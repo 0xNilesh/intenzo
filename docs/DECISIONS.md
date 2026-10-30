@@ -5,6 +5,33 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · Spark Open on Baseten (T0.2b, #64)
+
+Measured with `pnpm probe:all spark-open` (one call per check) against Baseten Model APIs, using the
+same ground-truth media as T0.2. With this, `pnpm probe:assert` passes for all six models (22 checks).
+
+| Check | Result | p50 | Notes |
+|---|---|---|---|
+| models_list | ok | 2.2 s | `meta-models/muse-spark-open` (1 match among 20 models); no `-1026` id exists |
+| text | ok, correct | 1.7 s | first call 1.3 s: no cold start on the shared Model API |
+| image | ok, correct | 3.0 s | "50.00" |
+| video (native MP4, `video_url`) | ok, correct | 2.8 s | "start=$50.00, end=$45.00"; 946 prompt / 560 output tokens |
+| frames (5 timestamped stills) | ok, correct | 5.3 s | same answer; 3,460 prompt tokens |
+
+Cost: about $0.016 of Baseten credits for the run.
+
+### Decisions
+
+1. **Spark Open judges native video, the same inline MP4 Spark 1.3 gets (R2 resolved).**
+   - *Why:* It read the clip correctly via `video_url`. Frames mode was also right, but slower (5.3 s vs 2.8 s) and 3.7× the prompt tokens.
+   - *Alternatives:* Frames mode stays as the fallback in `MediaEncoder` (§14) if a clip is ever rejected.
+2. **The two judges are Spark Open (A) + Spark 1.3 (B), as designed.**
+   - *Why:* Both read the judge clip correctly. This supersedes the 2026-10-30 T0.2 entry's item 6 (wait for credits); Wonder stays a tested fallback, not needed now.
+3. **Use the discovered model id `meta-models/muse-spark-open` on Baseten Model APIs; no pre-warming.**
+   - *Why:* The hackathon guide's `-1026` id isn't served. The first call took 1.3 s, so there's no cold start to pre-warm on the shared Model API (ARCHITECTURE §3 and T7.2 updated).
+
+---
+
 ## 2026-10-30 · Model capabilities from the T0.2 probes (#3)
 
 Measured with `pnpm probe:all` against the live APIs, one call per check unless noted. Raw results
@@ -62,4 +89,4 @@ Rate limits match the docs: `x-ratelimit-limit-requests: 3000`, `x-ratelimit-lim
    - *Next:* T0.3 should test a lower reasoning effort for the judge if accuracy holds.
 
 ### Moved to T0.2b (#64)
-- `spark-open/*` (5 checks): waiting for Baseten or Fireworks credits. Then add the key to `.env` and run `pnpm probe:all spark-open`.
+- `spark-open/*` (5 checks): done; see the T0.2b entry above.
