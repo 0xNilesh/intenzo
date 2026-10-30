@@ -25,13 +25,17 @@ export interface LabelledBox {
 /** Where each label sits in the column: level with its box, pushed down so tags never overlap. */
 export function labelSlots(boxes: readonly LabelledBox[]): { box: LabelledBox; top: number }[] {
   let free = 0;
-  return [...boxes]
-    .sort((a, b) => a.bbox[1] - b.bbox[1])
-    .map((box) => {
-      const top = Math.max(free, Math.round(box.bbox[1] + box.bbox[3] / 2 - TAG_HEIGHT / 2));
-      free = top + TAG_HEIGHT + TAG_GAP;
-      return { box, top };
-    });
+  return (
+    [...boxes]
+      // By centre, so a box nested in a taller one (a total inside its summary) gets its tag first
+      // when its centre is higher, and the leader lines don't cross.
+      .sort((a, b) => a.bbox[1] + a.bbox[3] / 2 - (b.bbox[1] + b.bbox[3] / 2))
+      .map((box) => {
+        const top = Math.max(free, Math.round(box.bbox[1] + box.bbox[3] / 2 - TAG_HEIGHT / 2));
+        free = top + TAG_HEIGHT + TAG_GAP;
+        return { box, top };
+      })
+  );
 }
 
 /** The page that draws the annotation: the screenshot, red boxes, leader lines and tags. */

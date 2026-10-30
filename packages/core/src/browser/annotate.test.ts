@@ -18,6 +18,15 @@ describe("labelSlots", () => {
     expect(slots.map((s) => s.top)).toEqual([293, 333]);
   });
 
+  it("orders tags by box centre, so a box nested in a taller one doesn't cross its lines", () => {
+    const summary: LabelledBox = { label: "order summary", bbox: [780, 150, 340, 550] };
+    const total: LabelledBox = { label: "order total", bbox: [1020, 256, 91, 38] };
+    expect(labelSlots([summary, total]).map((s) => s.box.label)).toEqual([
+      "order total",
+      "order summary",
+    ]);
+  });
+
   it("never places a tag above the top edge", () => {
     expect(labelSlots([box("header", 0, 4)])[0]!.top).toBe(0);
   });
