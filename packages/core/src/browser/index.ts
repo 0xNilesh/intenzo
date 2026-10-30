@@ -49,3 +49,24 @@ export {
   type RecordOptions,
   type Recording,
 } from "./record.ts";
+export { ffmpegAsync, parseRate, probeVideo, type VideoProbe } from "./ffmpeg.ts";
+export {
+  CAPTION_MS,
+  captionSpans,
+  captionText,
+  cutAfterMarker,
+  describeStep,
+  describeTarget,
+  formatStamp,
+  HUMAN_VIDEO,
+  JUDGE_VIDEO,
+  judgeTimeline,
+  MAX_CAPTION_LINES,
+  nextTakeDir,
+  renderVideos,
+  type CaptionLine,
+  type CaptionSpan,
+  type JudgeTimeline,
+  type VideoInput,
+  type VideoOutputs,
+} from "./video.ts";

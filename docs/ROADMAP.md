@@ -205,12 +205,12 @@
   The readings must show **$50.00 at +0 s, +1 s and +3 s, and $45.00 after reload**. *3 runs in a row: exactly that, alignment ok (marker) on both sides; the base (`main`, no discount codes) ends `trigger_absent`.*
 
 ### T1.7 Video outputs (`core/browser/ffmpeg.ts`)
-- [ ] **Build:**
+- [x] **Build:**
   - `humanVideo`: 1280×720 H.264, marker cut, step captions
   - `judgeVideo`: 960×540, 4 fps, canonical timestamps burned in
   - `take-{n}` folder layout
-- [ ] **Tests:** `ffprobe` checks resolution, fps, codec and duration; a second take doesn't overwrite the first.
-- [ ] **Verify:** watch both videos for one criterion.
+- [x] **Tests:** `ffprobe` checks resolution, fps, codec and duration; a second take doesn't overwrite the first. (`video.browser.test.ts` also checks the offsets frame for frame against a red page painted at a known canonical time, and that no marker frame survives.)
+- [ ] **Verify:** watch both videos for one criterion. (T1.7 checked extracted frames by eye: the step captions on `human.mp4` and the time band under the page on `judge.mp4`, on a synthetic lane. A person still has to watch both videos, ideally of a real criterion once T1.6 records one.)
 
 ### ✅ Phase 1 gate: `pnpm gate:p1`
 - Unit + browser tests green.

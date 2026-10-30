@@ -902,12 +902,13 @@ await context.route("**/*", (route, req) => {
 
 ### 21.4 One canonical clock
 - **Canonical time** = **epoch milliseconds** (`performance.timeOrigin + performance.now()`), used in both Node and the page. They share a host, so the two agree to under 1 ms, and page navigations don't reset it. Every step, reading and box sample is stamped with it. Reports show it relative to the lane start.
-- **Video offset:** ffmpeg finds the marker frame: ≥ 90% of pixels with G > 200 and R, B < 80, which tolerates VP8 color shifts. `offset = markerVideoTime − markerCanonicalTime`.
+- **Video offset:** ffmpeg finds the marker frame: ≥ 90% of pixels with G > 200 and R, B < 80, which tolerates VP8/VP9 color shifts (Playwright 1.64 records VP9). `offset = markerVideoTime − markerCanonicalTime`.
   - If no marker is detected, the fallback is the trace's screencast frame timestamps, matched to the marker's canonical time.
   - If both fail → the lane is marked `infra_error` (never judged on a misaligned video).
 - **Produced files:**
   - `humanVideo`: 1280×720 H.264, marker cut out, step captions burned in from the step log
   - `judgeVideo`: 960×540, 4 fps, **canonical timestamp burned in** using the offset, so the judge's `atMs` is already canonical. The time goes in a 40 px band *under* the frame (960×580), never over the page: in T0.3 a corner stamp covered the toast area. Don't rely on ffmpeg's `drawtext` for it: Homebrew's ffmpeg is built without freetype (T0.3 draws text with Chromium)
+  - **How (T1.7, `core/browser/video.ts`):** both videos start on the first frame after the marker. The judge video samples canonical time on a 250 ms grid counted from the lane start, so stamps read `t=12.250s`, and each frame shows the last raw frame at or before its stamped time: what was on screen then, never something later. Captions (1.5 s each, stacked up to three) sit in the human video's bottom-left corner; values typed into secret-looking fields are masked. Text is drawn with Chromium and overlaid with ffmpeg. Takes go to `take-{n}` folders (§28).
   - each file stores its own offset in `videoOffsets`
 - All report links and GIF windows convert canonical → file time at the very end.
 
