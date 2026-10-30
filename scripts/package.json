@@ -12,7 +12,8 @@
     "test:browser": "vitest run --project browser --passWithNoTests",
     "probe:all": "node probe/run.ts",
     "probe:assert": "node probe/assert.ts",
-    "gonogo": "node gonogo/run.ts"
+    "gonogo": "node gonogo/run.ts",
+    "github-app:create": "node github-app/create-app.ts"
   },
   "dependencies": {
     "playwright": "1.64.1",
