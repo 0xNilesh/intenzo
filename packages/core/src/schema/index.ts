@@ -12,3 +12,5 @@ export {
 export { LaneResult, LaneStatus, Reading, StepLogEntry } from "./lane.ts";
 export { JudgeOutput, ReasonCode, RunOutcome, Verdict, VerdictValue } from "./verdict.ts";
 export { DEFAULT_DENY_TEXT, IntenzoConfig, type IntenzoConfigInput } from "./config.ts";
+export { GeneratedTest, UnrequestedChange, WorkerEvent } from "./events.ts";
+export { ContextBundle, IntenzoHints, VerifyJob } from "./job.ts";
