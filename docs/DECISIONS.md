@@ -5,6 +5,35 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · The demo ticket and the golden comment (T0.7, #8)
+
+- **The ticket** is [demo-shop #5 "Discount codes"](https://github.com/sumithprabhu/demo-shop/issues/5). Its text only says "the details are in the screen recording below", so the criteria must come from the video.
+- **The video** is a 36.5 s narrated screen recording of demo-shop's cart on `main`, made by `pnpm demo:pm-video`. The repo owner attached it.
+- **The golden comment**, `demo/expected-comment.md`, is taken from `pr/discount-almost-right`'s proven ground truth (T0.6).
+
+### What we found
+
+| Check | Result |
+|---|---|
+| The video plays from the issue | The attachment downloads as H.264 + AAC, 36.52 s, **byte-identical** to the recorded file |
+| How the URL appears (private repo) | In `body_html`: a plain `https://github.com/user-attachments/assets/<uuid>` link, **not** the signed `private-user-images…?jwt=` URL §8 expected. An authenticated GET with a user token returned 200 `video/mp4`; an App installation token is untested. |
+| The golden file covers C1–C4 + ⚠️ | C1 ✅, C2 ❌ with the readings line (+0 s / +1 s / +3 s $50.00, after reload $45.00), C3 ✅, C4 ✅, and ⚠️ link "Checkout" → "Continue" on /cart |
+
+### Decisions
+
+1. **The PM video is generated, not recorded live.**
+   - *How:* a Playwright recording of the real cart, with a drawn cursor and address bar, and narration from macOS `say` (Samantha). Each line is scheduled against the cursor's gesture.
+   - *Why:* it's reproducible, so it can be re-made if the cart changes. The narration says exactly what §32 needs, with criteria spoken at known times, so `demo/README.md`'s timeline is the ground truth for each criterion's `sourceMediaAt` (T4.2). A PM recording live would add no information and couldn't be re-made.
+   - *Caveat:* a TTS voice is cleaner than a real PM. T4.2 may want one human-recorded take as a robustness check.
+2. **The demo ticket is #5, not #42.**
+   - *Why:* issues and PRs share numbering in a repo, and reaching #42 would take about 37 throwaway issues. The owner agreed. The golden comment and §32 use #5.
+3. **The golden comment is matched on what's deterministic.**
+   - *What:* the outcome, each verdict by criterion number, the C2 readings line and the ⚠️ line. Criterion wording comes from the intent step, and links, times, SHAs and cost vary, so they're `{placeholders}` (rules in `demo/README.md`). Prettier skips the file so its bytes stay exact.
+4. **§8 is updated for user-attachment URLs, and T4.2 must check that an App installation token can download them.**
+   - *Why:* §8 expected signed `?jwt=` URLs in `body_html`, but this private repo gave a plain link. A public demo repo avoids the question (§8).
+
+---
+
 ## 2026-10-30 · Seeded demo branches (T0.6, #7)
 
 Two branches in `sumithprabhu/demo-shop` implement ticket #42 (discount codes):

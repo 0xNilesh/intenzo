@@ -392,6 +392,7 @@ export const VerifyJob = JobBase.extend({
   hints: IntenzoHints | null }
 ```
 - **Attachments:** the ticket is fetched with `Accept: application/vnd.github.full+json`. Image and video URLs are taken from `body_html` (signed `private-user-images…?jwt=` URLs for private repos) and **downloaded immediately** in the same function (verify on day 1).
+  - **Seen in T0.7, private repo:** a video's URL in `body_html` was a plain `https://github.com/user-attachments/assets/<uuid>` link, not a signed `?jwt=` URL. An authenticated GET with a user token downloaded it (302 to storage, then 200 `video/mp4`). Whether an App installation token can fetch it is untested; T4.2 must check, unless the demo repo is public by then.
 - If that fails, the bundle records `media_unavailable` and the report says so. The demo repo is public, so this doesn't affect it.
 
 ## 9. Worker events
@@ -1143,7 +1144,7 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
 
 ## 32. Demo storyboard (3 minutes)
 
-**Demo ticket** (#42, filed as a **PM screen recording with narration**, 40 s):
+**Demo ticket** ([demo-shop #5](https://github.com/sumithprabhu/demo-shop/issues/5); "#42" was illustrative. Filed as a **PM screen recording with narration**, 36.5 s, made reproducibly by `pnpm demo:pm-video`, with the timeline in `demo/README.md`):
 > "On the cart, when I apply SAVE10 the total should drop 10% right away, no refresh. OLD5 is expired, so show 'This code has expired'. And the savings chart in the summary should show the discount slice."
 
 This becomes 4 **decoupled** criteria:
