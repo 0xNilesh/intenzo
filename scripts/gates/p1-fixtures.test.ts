@@ -46,8 +46,12 @@ describe("the P1 gate's criteria and paths", () => {
         expect(path.criterionId).toBe(id);
       });
 
-      it("watches only what its criterion names", () => {
-        for (const w of path.watch) expect(criterion.watch).toContain(w.label);
+      // Regions are context the path adds around the trigger (§20.4), so only elements must be
+      // named by the criterion.
+      it("watches only elements its criterion names", () => {
+        for (const w of path.watch.filter((w) => w.scope === "element")) {
+          expect(criterion.watch).toContain(w.label);
+        }
       });
 
       it("starts on the cart and replays anywhere", () => {
