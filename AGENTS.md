@@ -412,6 +412,16 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 
 - Baseten's announcement and the hackathon guide disagree on the model id. The probe discovers it with `GET /v1/models`; `SPARK_OPEN_MODEL` overrides.
 
+**GitHub and Vercel (DECISIONS 2026-10-30, T0.4)**
+
+- **Vercel sends no `deployment_status` until its project toggle is on:** Settings → Git → "deployment_status Events". It was off on a new project, which leaves only a `Vercel` commit status pointing at the dashboard. Vercel's GitHub App may also ask for a permissions update.
+- **Vercel's `Production` deployments have `production_environment: false`.** Recognize production by the environment name. `ref` is the commit SHA, not the branch.
+- **An App receives every app's `check_run` events** (GitHub Actions jobs, Vercel's), and `check_suite.requested` without subscribing to it. Filter on `check_run.app.id`.
+- **Requested-action buttons can be pressed on in-progress check runs**, whatever GitHub's docs say.
+- **Comments posted with an App installation token do start `issue_comment` workflows.** The bot login is `<app slug>[bot]`.
+- **Webhook delivery ids are 64-bit:** `JSON.parse` rounds them. Use `parseKeepingBigIds` (`scripts/github-app/lib/fixtures.ts`).
+- **An App's webhook URL doesn't have to answer.** GitHub keeps every delivery's payload, so `GET /app/hook/deliveries/{id}` reads it back.
+
 **Env var names**
 
 - `META_API_KEY` is the Meta key (Muse Code reads the same name; `MODEL_API_KEY` is accepted as a fallback).

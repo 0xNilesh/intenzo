@@ -643,18 +643,20 @@ pending ─► identity ─► [explore (PR, unrecorded)] ─► record_pr ─�
 | `deployment_status` | `state=success`, environment matches (§17.1) | Upsert `deployments`, then advance waiting runs (§16.2) |
 | `deployment_status` | failure/error for a sha with a waiting run | done/inconclusive ("preview failed to deploy") |
 | `issue_comment.created` on the PR | `/intenzo …` and the **commenter has write access** (checked via the collaborator permission API) | `/intenzo` re-runs; `/intenzo rerun C2`; `/intenzo verified C2 <note>` |
-| `check_run.requested_action` | our check | `approve` → product approval status, **only if `sender` ∈ `approvers` and has write access** (otherwise a reply comment explains why); `rerun`; `fix` → agent mention (if `agent_attempts < max`) |
+| `check_run.requested_action` | our check (`check_run.app.id` is Intenzo's: the App also receives every other app's check runs, T0.4) | `approve` → product approval status, **only if `sender` ∈ `approvers` and has write access** (otherwise a reply comment explains why) **and the run's outcome is `pass`** (buttons can be pressed on runs still in progress, T0.4); `rerun`; `fix` → agent mention (if `agent_attempts < max`) |
 | `issue_comment.created` | `/intenzo approve` | Same checks as the Approve button (a fallback for PMs who can't see the Checks tab) |
 | `check_run.rerequested` | our check | Re-run |
 | `pull_request.closed` | merged | Group → merged; summary comment on the ticket (outbox) |
 
 ### 17.1 Matching the preview deployment
-- **Environment:** case-insensitive prefix `preview.environment_prefix`, plus an optional `project` substring.
-- **URL:** `deployment_status.environment_url`, falling back to `target_url`.
-- Raw payloads are logged on day 1 to confirm Vercel's naming (R11).
+- **Environment:** case-insensitive prefix `preview.environment_prefix`, plus an optional `project` substring. Vercel names them exactly `Preview` and `Production` (T0.4).
+- **Production is recognized by name.** Vercel sends `production_environment: false` even on its `Production` deployments, so that flag is never trusted (T0.4).
+- **URL:** `deployment_status.environment_url`, falling back to `target_url`. For Vercel both are the deployment's unique URL (`<project>-<hash>-<team>.vercel.app`), and `deployment.ref` is the commit SHA, not the branch.
+- **Vercel must send `deployment_status`.** It's a per-project toggle (Settings → Git → "deployment_status Events") that was **off** on a new project in T0.4, which left only a commit status pointing at the Vercel dashboard. Onboarding has to ask for it, and Vercel's GitHub App may need a permissions update. Vercel posts only the final status (`success`; no `pending`).
+- Raw payloads from T0.4 are fixtures in `packages/core/fixtures/github/` (R11 resolved).
 
 ### 17.2 Finding the ticket
-1. GraphQL `closingIssuesReferences`. This only works for PRs into the **default branch**, or links made manually in the sidebar.
+1. GraphQL `closingIssuesReferences`. This only works for PRs into the **default branch**, or links made manually in the sidebar (T0.4: a PR into `develop` saying "Fixes #1" returned nothing).
 2. Otherwise, a regex over the PR body and title: `(fixes|closes|resolves|refs)? #(\d+)`, `owner/repo#n`, issue URLs.
 3. Otherwise `intentSource = pr_body`, and the comment says "intent taken from the PR description (unverified)".
 
@@ -1006,7 +1008,7 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 
 ### 26.2 Check run
 - Name `Intenzo`, `external_id = runId`. The summary is the same table. Up to 50 annotations on the diff lines that coverage maps to failing criteria.
-- **Requested actions** (GitHub limits: max 3, label ≤ 20 chars, description ≤ 40). They appear only on the **completed** check run, in the **Checks tab**.
+- **Requested actions** (GitHub limits: max 3, label ≤ 20 chars, description ≤ 40). They show in the **Checks tab**. Despite GitHub's docs, they can also be pressed on a check run that's still **in progress** (T0.4), so Intenzo attaches them only when it completes the run, and the handler re-checks the outcome. A press changes nothing on the run: it only delivers `check_run.requested_action` with `requested_action.identifier`, `sender`, `check_run.external_id` and `check_run.pull_requests`.
   - outcome `pass` → `Approve (PM)`, `Re-run`
   - outcome `fail` → `Send to agent`, `Re-run`
   - `inconclusive` → `Re-run`
@@ -1031,7 +1033,7 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 ### 26.4 Reference fixer agent (`agents/muse-fixer`)
 - A GitHub Action in the target repo, triggered by `issue_comment`.
 - **Guards:**
-  - `if: github.event.comment.user.login == 'intenzo[bot]' && contains(body, '@intenzo-fixer')`
+  - `if: github.event.comment.user.login == '<app slug>[bot]' && contains(body, '@intenzo-fixer')`, with the slug from config: App names are global, so the bot may not be `intenzo[bot]` (T0.4's was `intenzo-demo[bot]`)
   - `sig` verified with `INTENZO_FIXER_SECRET`
   - the PR must be **same-repo**: `head.repo.full_name == base.repo.full_name`, else exit
   - `concurrency: { group: fixer-${{ issue.number }}, cancel-in-progress: false }`
@@ -1046,7 +1048,7 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
   7. `pnpm typecheck`
   8. Commit and push **with the App token**. Unlike `GITHUB_TOKEN` pushes, this starts the repo's CI.
 - **Known exposure:** the fixer runs PR-branch code (typecheck) in a job holding the Muse Code key. That's acceptable only for same-repo PRs from trusted authors, which is why forks are refused.
-- **Verify on day 1:** that `intenzo[bot]`'s comment (made with the Intenzo App's installation token) triggers the `issue_comment` workflow.
+- **Verified (T0.4, B-7):** a comment made with the App's installation token does start the `issue_comment` workflow, and the guard above matches it. A human comment in the same format starts it too, and the guard skips it.
 - The push triggers Vercel → `deployment_status` → a new Intenzo run.
 - Any other coding agent (Claude Code, Copilot) can consume the same payload.
 
@@ -1085,7 +1087,7 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
 | **Secrets reaching PR code** | Anything sent to a preview (hook signatures, test passwords, bypass header) is **visible to that PR's code**. So: no secrets at all for fork PRs (`allow_forks=false` by default; with forks allowed, only no-secret isolation applies). Test users are disposable, with no real data. The documentation tells customers that the bypass token is project-wide and suggests a dedicated protection-bypass secret for Intenzo, rotated regularly |
 | Bypass header leak | Added only to requests for the lane origin (§21.2) |
 | Test hooks as backdoors | HMAC-signed, with a timestamp; refuse in production; the reference implementation enforces both |
-| Production contact | **The authoritative guard is the deployment environment filter:** only deployments whose GitHub environment is non-production are ever used, for both sides. `prod_domains` is a second line of defence (production deployments also have unique `*.vercel.app` URLs that it can't list). Hooks refuse production themselves |
+| Production contact | **The authoritative guard is the deployment environment filter:** only deployments whose GitHub environment is non-production **by name** are ever used, for both sides (Vercel's `production_environment` flag is `false` even on Production, T0.4). `prod_domains` is a second line of defence (production deployments also have unique `*.vercel.app` URLs that it can't list). Hooks refuse production themselves |
 | Destructive actions | `deny_text` + defaults (delete, remove, cancel subscription, pay, purchase, place order, transfer); the navigator only acts on ids from the outline |
 | Off-site navigation | Main-frame navigations limited to the lane origin + `extra_navigation_origins` |
 | **Prompt injection** (ticket, PR body, page, console) | Untrusted blocks; the navigator never sees `expected`; two independent judges must agree; `citedValue` is checked against readings; `sourceQuote` is shown in the report so people can spot injected criteria; the agent payload is sanitized (§26.3) |
@@ -1211,5 +1213,5 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | R8 | Merge-base preview missing for customers | Drift walk; `baseUrl=null` fallback; v1: trigger a Vercel preview through the API |
 | R9 | Private-repo media and GIFs | `body_html` signed URLs; `/g/` proxy (roadmap) |
 | R10 | Voice Transcribe is realtime-only | **Resolved (T0.2):** a file endpoint exists and is accurate; neither mode returns timings |
-| R11 | Vercel environment naming in `deployment_status` | Prefix match; verify with logged payloads on day 1 |
+| R11 | Vercel environment naming in `deployment_status` | **Resolved (T0.4):** exactly `Preview` / `Production`; `environment_url` = `target_url`; `ref` = SHA; `production_environment` always `false`. The catch: Vercel's per-project "deployment_status Events" toggle was off on a new project, so onboarding must turn it on (§17.1) |
 | R12 | Judges agree on the wrong answer (correlated errors) | Readings checks + annotated-target check; bench reports false-pass rate per arm. T0.3: the judges also agree on how to read a *vague* criterion (both passed both ambiguous clips), so the intent step must make criteria concrete (T4.1) |

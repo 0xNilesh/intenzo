@@ -5,6 +5,53 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · Platform checks: GitHub App, Vercel, check runs (T0.4, #5)
+
+**Setup:**
+- **Repo:** a throwaway private repo, `sumithprabhu/intenzo-t04-sandbox`.
+- **App:** a throwaway App, `intenzo-demo`. It was registered from the §12 manifest (`pnpm github-app:create`), with exactly the §12 permissions and events, and installed on that repo only.
+- **Vercel:** Hobby, deploying the repo.
+
+**How payloads were captured:** read back from the App's delivery log. No webhook server was involved: every delivery got HTTP 502 and GitHub kept the payload anyway. They're in `packages/core/fixtures/github/`, whose README says what each one shows.
+
+### What we found
+
+| Question | Result | Evidence |
+|---|---|---|
+| (a) **B-7:** does a comment posted with the App's installation token start an `issue_comment` workflow? | **Yes.** The run's actor is `intenzo-demo[bot]`, and the §26.4 guard job ran. A human comment in the same format also started the workflow, and the guard skipped it. Vercel's bot comments start it too, and the guard skips those. | Actions runs 41060157000 (bot) and 41060159944 (human); `issue_comment.created.bot-intenzo-demo.json` |
+| (b) **R11:** what does Vercel's `deployment_status` look like? | **It isn't sent until a toggle is on.** On the new Vercel project, Settings → Git → "deployment_status Events" was off, and Vercel's GitHub App wanted a permissions update. Deploys only set a `Vercel` commit status, whose `target_url` is the Vercel dashboard. There was no GitHub Deployment, so no `deployment_status`, and no `repository_dispatch` either. With both fixed, see the next two rows. | commit statuses on the sandbox; the toggle as reported by the owner |
+| | GitHub Deployments with environment exactly `Preview` / `Production` (also in `original_environment` and the status). `environment_url` = `target_url` = `log_url` = the deployment's unique URL. `ref` = the commit SHA. **`production_environment: false` even on `Production`.** `transient_environment: false`, `payload: {}`. Only the final `success` status is delivered, no `pending`. | `deployment_status.success.{preview,production}.json` |
+| | Vercel also sends `repository_dispatch` `vercel.deployment.pending` / `ready` / `success`. The `client_payload` has a lowercase `environment` (`preview`), the branch in `git.ref`, a branch alias URL and the deployment `url`. | `repository_dispatch.vercel.deployment.success.json` |
+| (c) Requested actions: where they appear and who can press them | In the PR's Checks tab. **They can also be pressed on a check run that's still in progress**, contrary to GitHub's docs and §26.2. A press changes nothing on the run. It delivers `check_run.requested_action` with `requested_action.identifier`, `sender` (login, type), `check_run.external_id` and `check_run.pull_requests`. Verified for the repo owner only; a read-only collaborator needs a second account, which T5.5 has. | `check_run.requested_action.approve.{completed,in-progress}.json` |
+| (d) `closingIssuesReferences` on a PR into the default branch | A PR into `main` saying "Fixes #1" → `[#1]`. A PR into `develop` with the same body → `[]`. Both asked with the App's installation token. | `graphql.closing-issues-references.*.json` |
+
+**Also found:**
+- **Other apps' events reach the App.** It receives `check_run` events for every check run on the repo (GitHub Actions jobs and Vercel's), and `check_suite.requested` on every push, without subscribing to it.
+- **Bot logins follow the App's name.** They're `<app slug>[bot]`, and App names are global: this one is `intenzo-demo[bot]`.
+- **Delivery IDs overflow JavaScript numbers.** They're 64-bit (beyond 2^53), so `JSON.parse` rounds them. The export script keeps the exact digits.
+
+### Decisions
+
+1. **Keep `deployment_status` as the trigger, and require Vercel's "deployment_status Events" project toggle (R11 resolved).**
+   - *Why:* with it on, the payload has everything §17.1 needs: the environment name and the preview URL. It was off on a freshly created project, so it's an onboarding step, not a default we can assume.
+   - *Alternatives:* `repository_dispatch` is what Vercel now recommends for Actions, but it's aimed at workflows, has a lowercase environment and isn't in the §12 events. It stays a documented fallback. Commit statuses carry no preview URL (`target_url` is the dashboard).
+   - *Next:* T0.5 turns the toggle on for demo-shop and accepts Vercel's GitHub App permissions. Setup docs tell customers to keep it on. When a PR gets a `Vercel` commit status but no `deployment_status`, the run's waiting state should say why (§16.2).
+2. **Production is recognized by environment name, never by `production_environment`.**
+   - *Why:* Vercel sends `false` on its `Production` deployments. §17.1 and §29 are updated.
+3. **Deployments are keyed on the commit SHA.**
+   - *Why:* `ref` is the SHA, not the branch, so §16.2's SHA → PR lookup stays the way to find the PR.
+4. **The muse-fixer guard reads the bot login from config, as `<app slug>[bot]` (B-7 resolved).**
+   - *Why:* App comments do start `issue_comment` workflows, and App names are global.
+   - *Next:* T5.3 sets the slug in muse-fixer's workflow.
+5. **Requested actions go on completed runs only, Approve on passed runs only, and the handler re-checks the run's outcome.**
+   - *Why:* buttons can be pressed while a run is still in progress, and a press carries the run's `external_id`, which is enough to check.
+   - *Next:* T5.4 and T5.5.
+6. **Webhook intake keeps only `check_run` events whose `check_run.app.id` is Intenzo's, and ignores `check_suite`.**
+   - *Next:* T2.1.
+7. **§17.2 is confirmed: `closingIssuesReferences` first, then the regex fallback for PRs not into the default branch.**
+
+---
+
 ## 2026-10-30 · Judge go/no-go: GO (T0.3, #4)
 
 Measured with `pnpm gonogo` (see `scripts/gonogo/README.md`):
