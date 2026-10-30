@@ -10,6 +10,7 @@ where the answer can be checked, whether the model got it right.
 ```bash
 cp .env.example .env          # once; fill in META_API_KEY and BASETEN_API_KEY
 pnpm probe:all                # every model (or: pnpm probe:all spark-1.3 sam-3.1)
+pnpm probe:all spark-1.3 --only=computer_use   # re-run one check without re-billing the rest
 pnpm probe:assert             # exits 1 until every capability has a definite answer
 ```
 
@@ -26,6 +27,7 @@ pnpm probe:assert             # exits 1 until every capability has a definite an
 |                                | `image`                                  | `image_url` data URL of the cart still → "what total is shown?"                                           |
 |                                | `video_inline`                           | `video_url` data URL of the 5 s MP4 → total at start and end                                              |
 |                                | `video_file`                             | Files API upload + Responses (`input_video`, else `input_file`)                                           |
+|                                | `computer_use`                           | same loop as Wonder's (the docs say Spark runs it more cheaply)                                           |
 | `spark-open` (Baseten)         | `models_list`                            | lists models and picks the `muse-spark-open` id                                                           |
 |                                | `text`, `image`                          | OpenAI-compatible Chat Completions; first call timed separately                                           |
 |                                | `video`                                  | native `video_url`. Whether this works decides the judge mode (R2)                                        |

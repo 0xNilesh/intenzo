@@ -12,6 +12,8 @@ export interface ProbeContext {
   /** Calls per capability for the latency p50. */
   samples: number;
   media: Media;
+  /** When set, only these capability names run (to re-run one check without re-billing others). */
+  only?: readonly string[];
   record(result: Omit<ProbeResult, "at">): void;
 }
 
@@ -24,6 +26,7 @@ export async function capability(
   name: string,
   run: () => Promise<Outcome>,
 ): Promise<void> {
+  if (ctx.only && !ctx.only.includes(name)) return;
   let outcome: Outcome;
   try {
     outcome = await run();
@@ -46,6 +49,7 @@ export function missingKey(
   variable: string,
 ): void {
   for (const name of capabilities) {
+    if (ctx.only && !ctx.only.includes(name)) continue;
     ctx.record({
       model,
       capability: name,

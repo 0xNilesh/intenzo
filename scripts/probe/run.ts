@@ -1,6 +1,7 @@
 // Runs the model capability probes (ROADMAP T0.2) and merges the results into probes/results.json.
 //   pnpm probe:all                    every model
 //   pnpm probe:all spark-1.3 wonder   only these models
+//   pnpm probe:all spark-1.3 --only=computer_use   only these capabilities
 // Makes real, billed API calls: one per capability by default (a few cents for every model);
 // PROBE_SAMPLES=N takes N calls each for a latency p50. Keys come from .env (see .env.example).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -33,7 +34,13 @@ const PROBES: Record<ModelKey, Probe> = {
   "voice-transcribe": probeTranscribe,
 };
 
-const wanted = process.argv.slice(2);
+const args = process.argv.slice(2);
+const only = args
+  .find((a) => a.startsWith("--only="))
+  ?.slice("--only=".length)
+  .split(",")
+  .filter(Boolean);
+const wanted = args.filter((a) => !a.startsWith("--"));
 const unknown = wanted.filter((m) => !(MODELS as readonly string[]).includes(m));
 if (unknown.length > 0) {
   console.error(`Unknown model(s): ${unknown.join(", ")}. Choose from: ${MODELS.join(", ")}`);
@@ -45,6 +52,7 @@ const fresh: ProbeResult[] = [];
 const ctx: ProbeContext = {
   samples: Number(process.env.PROBE_SAMPLES ?? 1),
   media: ensureMedia(),
+  ...(only && { only }),
   record(result) {
     const stamped = { ...result, at: new Date().toISOString() };
     fresh.push(stamped);

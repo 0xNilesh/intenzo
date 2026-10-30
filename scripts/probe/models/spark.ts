@@ -20,6 +20,7 @@ import {
   scoreTotals,
 } from "../lib/questions.ts";
 import { REQUIRED } from "../lib/results.ts";
+import { computerUse } from "./computer-use.ts";
 import { META_BASE, bearer, chatText, dataUrl, responsesText } from "./meta-api.ts";
 
 const MODEL = "muse-spark-1.3";
@@ -141,4 +142,7 @@ export const probeSpark: Probe = async (ctx) => {
       await request(`${META_BASE}/files/${fileId}`, { method: "DELETE", headers });
     }
   });
+
+  // The docs say Spark 1.3 can run the computer-use loop more cheaply than Wonder.
+  await capability(ctx, "spark-1.3", "computer_use", () => computerUse(ctx, key, MODEL));
 };
