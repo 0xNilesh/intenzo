@@ -1,4 +1,4 @@
-import { basetenKey } from "../lib/env.ts";
+import { sparkOpenEndpoint } from "../lib/env.ts";
 import { pickLimits, request } from "../lib/http.ts";
 import { asArray, asString, dig } from "../lib/json.ts";
 import {
@@ -24,18 +24,25 @@ import { shapeOf } from "../lib/shape.ts";
 import { latency } from "../lib/stats.ts";
 import { chatText, dataUrl } from "./meta-api.ts";
 
-// Muse Spark Open on Baseten Model APIs (OpenAI-compatible Chat Completions). Baseten's
-// announcement uses "meta-models/muse-spark-open"; the hackathon guide says "...-1026", so the
-// probe lists the models this key can see instead of guessing. SPARK_OPEN_MODEL overrides.
-const BASE = "https://inference.baseten.co/v1";
+// Muse Spark Open through any OpenAI-compatible host: Baseten Model APIs by default, or
+// SPARK_OPEN_BASE_URL + SPARK_OPEN_API_KEY (e.g. Fireworks: https://api.fireworks.ai/inference/v1).
+// Model ids differ per host (and Baseten's announcement and the hackathon guide disagree), so the
+// probe lists the host's models and picks the muse-spark-open one. SPARK_OPEN_MODEL overrides.
 const FALLBACK_MODEL = "meta-models/muse-spark-open";
 const MAX_TOKENS = 2048;
 
 export const probeSparkOpen: Probe = async (ctx) => {
-  const key = basetenKey();
-  if (!key) return missingKey(ctx, "spark-open", REQUIRED["spark-open"], "BASETEN_API_KEY");
+  const { baseUrl, key } = sparkOpenEndpoint();
+  if (!key) {
+    return missingKey(
+      ctx,
+      "spark-open",
+      REQUIRED["spark-open"],
+      "SPARK_OPEN_API_KEY (or BASETEN_API_KEY)",
+    );
+  }
   const headers = { Authorization: `Bearer ${key}` };
-  const chat = (body: unknown) => request(`${BASE}/chat/completions`, { headers, json: body });
+  const chat = (body: unknown) => request(`${baseUrl}/chat/completions`, { headers, json: body });
   let model = process.env.SPARK_OPEN_MODEL || FALLBACK_MODEL;
   const ask = (content: unknown) => ({
     model,
@@ -44,7 +51,7 @@ export const probeSparkOpen: Probe = async (ctx) => {
   });
 
   await capability(ctx, "spark-open", "models_list", async () => {
-    const res = await request(`${BASE}/models`, { headers });
+    const res = await request(`${baseUrl}/models`, { headers });
     if (!res.ok) return failed(res);
     const ids = asArray(dig(res.body, "data")).map((m) => asString(dig(m, "id")));
     const matches = ids.filter((id) => /muse-spark-open/i.test(id));
@@ -55,7 +62,7 @@ export const probeSparkOpen: Probe = async (ctx) => {
       correct: null,
       response: shapeOf(res.body),
       limits: pickLimits(res.headers),
-      notes: `using ${model}; matching ids: ${matches.join(", ") || "none"} (of ${ids.length})`,
+      notes: `host ${new URL(baseUrl).host}; using ${model}; matching ids: ${matches.join(", ") || "none"} (of ${ids.length})`,
     };
   });
 

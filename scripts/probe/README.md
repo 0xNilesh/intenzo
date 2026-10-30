@@ -8,7 +8,7 @@ where the answer can be checked, whether the model got it right.
 ## Run
 
 ```bash
-cp .env.example .env          # once; fill in META_API_KEY and BASETEN_API_KEY
+cp .env.example .env          # once; fill in META_API_KEY, and BASETEN_API_KEY or SPARK_OPEN_BASE_URL + SPARK_OPEN_API_KEY
 pnpm probe:all                # every model (or: pnpm probe:all spark-1.3 sam-3.1)
 pnpm probe:all spark-1.3 --only=computer_use   # re-run one check without re-billing the rest
 pnpm probe:assert             # exits 1 until every capability has a definite answer
@@ -21,25 +21,25 @@ pnpm probe:assert             # exits 1 until every capability has a definite an
 
 ## What's probed
 
-| Model                          | Capability                               | How                                                                                                       |
-| ------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `spark-1.3` (`muse-spark-1.3`) | `text`, `json_schema`                    | Chat Completions; strict `json_schema` response format                                                    |
-|                                | `image`                                  | `image_url` data URL of the cart still → "what total is shown?"                                           |
-|                                | `video_inline`                           | `video_url` data URL of the 5 s MP4 → total at start and end                                              |
-|                                | `video_file`                             | Files API upload + Responses (`input_video`, else `input_file`)                                           |
-|                                | `computer_use`                           | same loop as Wonder's (the docs say Spark runs it more cheaply)                                           |
-| `spark-open` (Baseten)         | `models_list`                            | lists models and picks the `muse-spark-open` id                                                           |
-|                                | `text`, `image`                          | OpenAI-compatible Chat Completions; first call timed separately                                           |
-|                                | `video`                                  | native `video_url`. Whether this works decides the judge mode (R2)                                        |
-|                                | `frames`                                 | five timestamped stills: the frames-mode fallback (ARCHITECTURE §14)                                      |
-| `wonder` (`muse-wonder-1.0`)   | `text`                                   | Chat Completions                                                                                          |
-|                                | `computer_use`                           | Responses + `{type: "computer"}` on the checkout screenshot; does the click land on Apply?                |
-| `muse-code`                    | `api_model`                              | is there a Model API model id? (expected: no, it's a product)                                             |
-|                                | `cli_headless`                           | `muse exec --json` in a temp dir: does the agent write `probe.txt = OK`?                                  |
-| `sam-3.1`                      | `image_text`                             | concept "red rectangle" on the still, scored by IoU against the known box                                 |
-|                                | `video_text`, `video_box`, `video_point` | concept, box and point prompts on the 50-frame MP4, IoU checked in every frame                            |
-| `voice-transcribe`             | `file`                                   | multipart WAV upload                                                                                      |
-|                                | `realtime`                               | WebSocket: handshake, 80 ms PCM frames at real-time pace, `endStream`; p50 = endStream → final transcript |
+| Model                               | Capability                               | How                                                                                                       |
+| ----------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `spark-1.3` (`muse-spark-1.3`)      | `text`, `json_schema`                    | Chat Completions; strict `json_schema` response format                                                    |
+|                                     | `image`                                  | `image_url` data URL of the cart still → "what total is shown?"                                           |
+|                                     | `video_inline`                           | `video_url` data URL of the 5 s MP4 → total at start and end                                              |
+|                                     | `video_file`                             | Files API upload + Responses (`input_video`, else `input_file`)                                           |
+|                                     | `computer_use`                           | same loop as Wonder's (the docs say Spark runs it more cheaply)                                           |
+| `spark-open` (Baseten or Fireworks) | `models_list`                            | lists models and picks the `muse-spark-open` id                                                           |
+|                                     | `text`, `image`                          | OpenAI-compatible Chat Completions; first call timed separately                                           |
+|                                     | `video`                                  | native `video_url`. Whether this works decides the judge mode (R2)                                        |
+|                                     | `frames`                                 | five timestamped stills: the frames-mode fallback (ARCHITECTURE §14)                                      |
+| `wonder` (`muse-wonder-1.0`)        | `text`                                   | Chat Completions                                                                                          |
+|                                     | `computer_use`                           | Responses + `{type: "computer"}` on the checkout screenshot; does the click land on Apply?                |
+| `muse-code`                         | `api_model`                              | is there a Model API model id? (expected: no, it's a product)                                             |
+|                                     | `cli_headless`                           | `muse exec --json` in a temp dir: does the agent write `probe.txt = OK`?                                  |
+| `sam-3.1`                           | `image_text`                             | concept "red rectangle" on the still, scored by IoU against the known box                                 |
+|                                     | `video_text`, `video_box`, `video_point` | concept, box and point prompts on the 50-frame MP4, IoU checked in every frame                            |
+| `voice-transcribe`                  | `file`                                   | multipart WAV upload                                                                                      |
+|                                     | `realtime`                               | WebSocket: handshake, 80 ms PCM frames at real-time pace, `endStream`; p50 = endStream → final transcript |
 
 The probe media (`probes/media/`, generated by ffmpeg) has known ground truth:
 
