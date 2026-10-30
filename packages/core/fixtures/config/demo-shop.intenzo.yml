@@ -1,0 +1,29 @@
+# How Intenzo verifies this repo (ARCHITECTURE §10 in github.com/0xNilesh/intenzo).
+version: 1
+preview:
+  provider: vercel
+  environment_prefix: "Preview" # Vercel's exact name; Production is never used
+baseline:
+  mode: merge_base # main deploys as a preview (production branch = release)
+  max_drift_commits: 5
+start: { default: /cart }
+isolation:
+  session_hook: /api/test/session # HMAC-signed; a new shopper with a fresh cart per call
+  reset_hook: /api/test/reset
+data:
+  - "valid discount code: SAVE10"
+  - "expired discount code: OLD5"
+guardrails:
+  deny_text: ["delete account", "cancel subscription", "pay now", "place order"]
+  extra_navigation_origins: []
+judge:
+  require_agreement: true
+policy:
+  run_on: [ready_for_review, preview_ready]
+  inconclusive_conclusion: neutral
+  approvers: ["sumithprabhu"]
+  agent_handle: "@intenzo-fixer"
+  agent_trigger: button
+  max_agent_attempts: 3
+  allow_forks: false
+tests: { export: suggest, dir: tests/intenzo }
