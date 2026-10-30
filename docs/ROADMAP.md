@@ -100,18 +100,18 @@
 
 ### T0.5 demo-shop app (separate repo `demo-shop`)
 - [ ] **Build:**
-  - Next.js shop: `/products`, `/cart`, a discount input, a discount **line item**, an order **total**, an **expired-code toast**, a **canvas savings chart** fed by the line items
+  - Next.js shop **without discount codes** on `main` (`sumithprabhu/demo-shop`): `/products`, `/cart`, line items, an order **total**, a body-level toast region, a **canvas savings chart** fed by the line items, and a "Checkout" button. *Discount codes are what ticket #42 asks for, so the demo PRs add them (T0.6). See DECISIONS 2026-10-30 · demo-shop.*
   - test hooks `/api/test/session` and `/api/test/reset`: HMAC-signed, timestamp checked, refuse when `VERCEL_ENV === "production"`
   - Vercel project with **production branch = `release`**, so `main` and PRs get preview deployments, and **Settings → Git → "deployment_status Events" on** (it was off on a new project in T0.4; without it GitHub never sends `deployment_status`)
 - [ ] **Tests:**
-  - Playwright e2e of the correct flow (apply SAVE10 → line −$5.00, total $45.00, chart slice; OLD5 → toast)
+  - Playwright e2e of `main`'s flows: a new shopper's $50.00 cart, the chart drawn from the line items (canvas pixels), add to cart → toast, quantity and removal changes that survive a reload, checkout, and both hooks over HTTP. *The SAVE10/OLD5 e2e moves to T0.6's `pr/discount-correct`.*
   - hook unit tests: valid signature OK; bad signature 401; stale timestamp 401; production 403; each call returns a **new** user
 - [ ] **Verify:** `pnpm test:e2e` in demo-shop locally and against its `main` preview URL.
 - [ ] **Done when:** the `main` preview deploys and passes its e2e test.
 
 ### T0.6 Seeded demo branches
 - [ ] **Build:**
-  - `pr/discount-correct`
+  - `pr/discount-correct`: the discount feature on `/cart` (a discount input, a discount **line item**, the total, an **expired-code toast**, and the chart's discount slice), with the Playwright e2e of the correct flow moved here from T0.5 (apply SAVE10 → line −$5.00, total $45.00, chart slice; OLD5 → toast)
   - `pr/discount-almost-right`: the line item and chart update immediately, the **total** stays stale until reload, and the cart "Checkout" button is relabelled "Continue"
 - [ ] **Tests:** a deterministic Playwright **ground-truth test** per branch that asserts the planted behavior (this is how we know the labels are right).
 - [ ] **Verify:** the ground-truth tests pass on both branch previews.

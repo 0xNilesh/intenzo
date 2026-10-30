@@ -156,7 +156,7 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 | Worker | Modal: `run_job` function, `spawn`/`cancel` web endpoints, cron | `cpu=4, memory=8192, timeout=900`, `min_containers=1` during demo windows |
 | Sweeper | Modal cron, once a minute → `POST /api/internal/sweep` | Vercel per-minute cron needs Pro |
 | Models | Meta Model API; Spark Open on Baseten **Model APIs** (shared, OpenAI-compatible, `meta-models/muse-spark-open`) | No cold start seen (first call 1.3 s, T0.2b), so no pre-warming needed |
-| Demo app | `intenzo-dev/demo-shop`, Next.js on Vercel. **Production branch = `release`**, so pushes to `main` create *preview* deployments that serve as merge-base baselines | §17.3 |
+| Demo app | `sumithprabhu/demo-shop` (private until the demo needs it public, §8), Next.js on Vercel. **Production branch = `release`**, so pushes to `main` create *preview* deployments that serve as merge-base baselines. `main` has no discount codes; the demo PRs add them (T0.5) | §17.3 |
 
 ### Modal shim behavior (`modal/app.py`)
 - Starts Node with `start_new_session=True` (its own process group) and a wall-clock limit of `timeout − 30 s`.
@@ -826,8 +826,9 @@ isSameElement(a, b) = a.evaluate((x, y) => x === y, await b.elementHandle())
 - If only the **base side** lacks isolation (common right after install, when the merge base predates the hook), the PR verdict is unaffected. Before/after comparison and change detection are skipped, with a note.
 
 **Hook contract (security):**
-- Request header `X-Intenzo-Signature: sha256=HMAC(hookSecret, timestamp + body)`, with the timestamp within 5 min.
-- The hook **must** refuse when `VERCEL_ENV === "production"` (or the equivalent).
+- Request headers `X-Intenzo-Timestamp: <unix seconds>` and `X-Intenzo-Signature: sha256=<hex HMAC-SHA256(hookSecret, timestamp + body)>`, where `timestamp + body` is the timestamp string followed by the raw body. The timestamp must be within 5 min of the server's clock.
+- Answers: 200 (`{"shopper":"…"}` plus `Set-Cookie` for a session), 401 (bad signature, or a missing or stale timestamp), 503 (no secret configured). demo-shop's `lib/hooks.ts` is the reference implementation (T0.5).
+- The hook **must** refuse when `VERCEL_ENV === "production"` (or the equivalent), with 403, before it even checks the signature.
 - A reference implementation of about 15 lines ships in `docs/hooks.md` and demo-shop.
 
 The base side uses the same hook on the merge-base preview.
