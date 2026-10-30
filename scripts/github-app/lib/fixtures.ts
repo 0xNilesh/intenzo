@@ -39,7 +39,7 @@ const slug = (text: unknown): string =>
 
 /**
  * A stable fixture name per kind of delivery, e.g. `deployment_status.success.preview`,
- * `check_run.requested_action.approve` or `issue_comment.created.bot`.
+ * `check_run.requested_action.approve.completed` or `issue_comment.created.bot-intenzo-demo`.
  */
 export function fixtureName(event: string, action: string | null, payload: unknown): string {
   const base = `${event}.${action ?? "none"}`;
@@ -47,11 +47,19 @@ export function fixtureName(event: string, action: string | null, payload: unkno
     case "deployment_status":
       return `${event}.${slug(dig(payload, "deployment_status", "state"))}.${slug(dig(payload, "deployment", "environment"))}`;
     case "check_run": {
+      // An App gets every check run's events, GitHub Actions jobs' included, so the name says
+      // whose run it was. A button press also says whether the run had finished.
       const id = dig(payload, "requested_action", "identifier");
-      return id ? `${base}.${slug(id)}` : base;
+      const status = dig(payload, "check_run", "status");
+      return id
+        ? `${base}.${slug(id)}.${slug(status)}`
+        : `${base}.${slug(dig(payload, "check_run", "app", "slug"))}`;
     }
-    case "issue_comment":
-      return `${base}.${dig(payload, "comment", "user", "type") === "Bot" ? "bot" : "user"}`;
+    case "issue_comment": {
+      const user = dig(payload, "comment", "user");
+      const app = dig(payload, "comment", "performed_via_github_app", "slug");
+      return `${base}.${dig(user, "type") === "Bot" ? `bot-${slug(app ?? dig(user, "login"))}` : "user"}`;
+    }
     default:
       return base;
   }
