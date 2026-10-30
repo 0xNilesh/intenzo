@@ -1,0 +1,186 @@
+<!doctype html>
+<!--
+  Go/no-go fixture shop (ROADMAP T0.3). One cart page whose discount behavior is switched by
+  ?variant=… so each judge clip has a known ground truth. shop.browser.test.ts proves every variant.
+    correct        SAVE10 takes 10% off at once (line −$5.00, total $45.00); OLD5 shows "This code has expired"
+    stale-total    the line updates, the total stays $50.00 until a reload
+    off-by-cent    SAVE10 takes $4.99 off (total $45.01)
+    wrong-percent  SAVE10 takes 15% off (line −$7.50, total $42.50)
+    missing-error  OLD5 shows no error at all
+    quiet-confirm  SAVE10 works, but the only confirmation is the button turning into a grey "Applied"
+    slow-total     the total reads "Updating…" for 2 s before showing $45.00
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo shop · Cart</title>
+    <style>
+      body {
+        margin: 0;
+        font:
+          26px/1.4 system-ui,
+          -apple-system,
+          "Segoe UI",
+          Arial,
+          sans-serif;
+        color: #111;
+        background: #fff;
+      }
+      /* .row's display: flex would otherwise override the hidden attribute. */
+      [hidden] {
+        display: none !important;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px 32px;
+      }
+      h1 {
+        font-size: 40px;
+        margin: 0 0 12px;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 12px;
+      }
+      li,
+      .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+      }
+      form {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin: 12px 0 20px;
+      }
+      input {
+        font: inherit;
+        padding: 6px 10px;
+        width: 200px;
+      }
+      button {
+        font: inherit;
+        padding: 6px 18px;
+        background: #2563eb;
+        color: #fff;
+        border: 0;
+        border-radius: 6px;
+      }
+      button:disabled {
+        background: #d1d5db;
+        color: #6b7280;
+      }
+      section {
+        border-top: 2px solid #111;
+        padding-top: 8px;
+      }
+      .total {
+        font-weight: 700;
+        font-size: 32px;
+      }
+      #toasts {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: grid;
+        gap: 8px;
+      }
+      .toast {
+        padding: 10px 16px;
+        border-radius: 6px;
+        color: #fff;
+        background: #16a34a;
+      }
+      .toast.error {
+        background: #dc2626;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Your cart</h1>
+      <ul aria-label="Cart items">
+        <li><span>Canvas tote bag</span><span>$30.00</span></li>
+        <li><span>Ceramic mug</span><span>$20.00</span></li>
+      </ul>
+      <form aria-label="Discount">
+        <label for="code">Discount code</label>
+        <input id="code" data-testid="discount-input" autocomplete="off" />
+        <button type="submit" data-testid="apply">Apply</button>
+      </form>
+      <section aria-label="Order summary">
+        <div class="row"><span>Subtotal</span><span data-testid="subtotal">$50.00</span></div>
+        <div class="row" data-testid="discount-line" hidden>
+          <span>Discount (<span id="discount-code"></span>)</span
+          ><span data-testid="discount-amount"></span>
+        </div>
+        <div class="row total"><span>Total</span><span data-testid="total">$50.00</span></div>
+      </section>
+    </main>
+    <div id="toasts" aria-live="polite"></div>
+    <script>
+      const variant = new URLSearchParams(location.search).get("variant") ?? "correct";
+      const SUBTOTAL_CENTS = 5000;
+      const CODES = {
+        SAVE10: { percent: variant === "wrong-percent" ? 15 : 10 },
+        OLD5: { expired: true },
+      };
+      const $ = (id) => document.querySelector(`[data-testid="${id}"]`);
+      const money = (cents) => `$${(cents / 100).toFixed(2)}`;
+
+      function discountCents(percent) {
+        const exact = (SUBTOTAL_CENTS * percent) / 100;
+        return variant === "off-by-cent" ? Math.floor(exact) - 1 : Math.round(exact);
+      }
+
+      function toast(text, isError) {
+        const el = document.createElement("div");
+        el.className = isError ? "toast error" : "toast";
+        el.setAttribute("role", isError ? "alert" : "status");
+        el.textContent = text;
+        document.getElementById("toasts").append(el);
+      }
+
+      // `fresh` is true when the shopper just pressed Apply, false when restoring on page load.
+      function showDiscount(code, fresh) {
+        const discount = discountCents(CODES[code].percent);
+        document.getElementById("discount-code").textContent = code;
+        $("discount-amount").textContent = `−${money(discount)}`;
+        $("discount-line").hidden = false;
+        const total = money(SUBTOTAL_CENTS - discount);
+        if (fresh && variant === "stale-total") return; // planted bug: total only recomputed on load
+        if (fresh && variant === "slow-total") {
+          $("total").textContent = "Updating…";
+          setTimeout(() => ($("total").textContent = total), 2000);
+          return;
+        }
+        $("total").textContent = total;
+      }
+
+      document.querySelector("form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const code = $("discount-input").value.trim().toUpperCase();
+        const known = CODES[code];
+        if (!known) return toast("This code is not valid", true);
+        if (known.expired) {
+          if (variant !== "missing-error") toast("This code has expired", true);
+          return;
+        }
+        localStorage.setItem("discount", code);
+        showDiscount(code, true);
+        if (variant === "quiet-confirm") {
+          $("apply").textContent = "Applied";
+          $("apply").disabled = true;
+        } else {
+          toast(`Discount ${code} applied`, false);
+        }
+      });
+
+      const saved = localStorage.getItem("discount");
+      if (saved && CODES[saved]?.percent) showDiscount(saved, false);
+    </script>
+  </body>
+</html>
