@@ -17,7 +17,8 @@
     "github-app:sandbox": "node github-app/sandbox.ts",
     "github-app:fixtures": "node github-app/deliveries.ts",
     "demo:ground-truth": "node demo/ground-truth.ts",
-    "demo:pm-video": "node demo/pm-video.ts"
+    "demo:pm-video": "node demo/pm-video.ts",
+    "gate:p0": "node gates/p0.ts"
   },
   "dependencies": {
     "playwright": "1.64.1",

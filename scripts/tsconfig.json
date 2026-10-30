@@ -3,5 +3,5 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["probe", "gonogo", "github-app", "demo"]
+  "include": ["probe", "gonogo", "github-app", "demo", "gates"]
 }
