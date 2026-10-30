@@ -155,7 +155,7 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 | Blob | Vercel Blob, **two stores**: `intenzo-public` (GIFs/stills for public repos) and `intenzo-private` (videos, traces, bundles) | §28 |
 | Worker | Modal: `run_job` function, `spawn`/`cancel` web endpoints, cron | `cpu=4, memory=8192, timeout=900`, `min_containers=1` during demo windows |
 | Sweeper | Modal cron, once a minute → `POST /api/internal/sweep` | Vercel per-minute cron needs Pro |
-| Models | Meta Model API; Baseten **dedicated** Spark Open deployment, min replicas 1 during demo windows | Pre-warm before recording takes |
+| Models | Meta Model API; Spark Open on Baseten **Model APIs** (shared, OpenAI-compatible, `meta-models/muse-spark-open`) | No cold start seen (first call 1.3 s, T0.2b), so no pre-warming needed |
 | Demo app | `intenzo-dev/demo-shop`, Next.js on Vercel. **Production branch = `release`**, so pushes to `main` create *preview* deployments that serve as merge-base baselines | §17.3 |
 
 ### Modal shim behavior (`modal/app.py`)
@@ -174,7 +174,7 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 | Coverage | **Spark 1.3** (Muse Code is CLI-only, T0.2) | criteria + PR diff | `CoverageMap` (criterion → files/hunks, candidate routes) | 1 per run |
 | Navigation | **Wonder** | outline with element ids + goal + history | `NavAction` | 5–25 per new path; 0 when cached |
 | Vision fallback | **Spark 1.3 computer use** (Wonder rejects the tool, T0.2) | screenshot + goal | point action | canvas/unlabeled widgets only |
-| Judge A | **Spark Open** (Baseten) | §22.2 bundle | `JudgeOutput` | 1 per criterion |
+| Judge A | **Spark Open** (Baseten; native MP4 video confirmed, T0.2b) | §22.2 bundle | `JudgeOutput` | 1 per criterion |
 | Judge B | **Spark 1.3** | same bundle | `JudgeOutput` | 1 per criterion (always) |
 | Visual evidence | **SAM 3.1** | ≥ 50 frames + text concept or box | masks | 1 per `ui_visual` criterion or vision-fallback target |
 | Change classification | **Spark 1.3** | aria-diff hunks + crops + criteria | `ChangeClassification[]` | 0–1 |
@@ -1063,7 +1063,7 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 
 All numbers get re-measured on Friday with the walking skeleton, and this table is updated.
 
-Demo: Baseten and Modal pre-warmed. Demo paths are explored once beforehand, and the video says so. The fix loop is shown with an honest on-screen time-lapse marker.
+Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are explored once beforehand, and the video says so. The fix loop is shown with an honest on-screen time-lapse marker.
 
 ## 28. Artifact storage and privacy
 - **Paths:** `runs/{runId}/{criterion}/{side}/take-{n}/{file}`. Every recording is a new take, so re-records never overwrite the take a verdict cites. Verdicts reference takes explicitly.
@@ -1198,7 +1198,7 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | # | Risk | Plan |
 |---|---|---|
 | R1 | Meta API video input format and limits | **Resolved (T0.2):** inline MP4 `video_url` works on Spark 1.3 (5 s clip ≈ 1.3k prompt tokens, 2.9 s p50); Files API upload works too. Size limit still unpublished |
-| R2 | Baseten Spark Open may not accept video | Then Spark Open judges frames and Spark 1.3 judges video; agreement still required; the bench reports it |
+| R2 | Baseten Spark Open may not accept video | **Resolved (T0.2b):** it does. Native `video_url` MP4 read correctly in 2.8 s (946 prompt tokens) vs frames mode 5.3 s (3,460). Both judges take the same inline video |
 | R3 | Judge latency | 4 fps, short windows, parallel judges, verdicts streamed |
 | R4 | Wonder computer-use API | **Resolved (T0.2):** Wonder rejects the tool; Spark 1.3 runs the loop correctly and is the fallback |
 | R5 | **Muse Code has no programmatic API** | **Resolved (T0.2):** confirmed CLI-only. `muse exec --json` completed a task headless on macOS in 24 s; Linux/Actions (bubblewrap) is checked in T5.3. Decision tree in §4: CLI only → Muse Code lives in muse-fixer (fix + proposed test), and coverage moves to Spark 1.3. If even the CLI can't run headless in Actions, the fixer uses Wonder and says so plainly. The worker never gets a repo checkout |
