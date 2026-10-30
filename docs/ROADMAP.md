@@ -155,16 +155,16 @@
 - [x] **Verify:** `pnpm --filter @intenzo/core test config`.
 
 ### T1.3 Lane and network safety (`core/browser/lane.ts`)
-- [ ] **Build:**
+- [x] **Build:**
   - context factory: viewport, video, tracing, `serviceWorkers: "block"`
   - bypass cookie obtained up front with `maxRedirects: 0`
   - main-frame navigation allowlist
   - identity acquisition through the HMAC session hook
-- [ ] **Tests (browser):**
+- [x] **Tests (browser):**
   - a local mock server logs headers → **no bypass header ever reaches a third-party origin** or a redirect target
   - off-origin main-frame navigation is aborted, while third-party subresources still load
   - every `acquireIdentity()` call returns a different user
-- [ ] **Verify:** `pnpm test:browser -- lane`.
+- [x] **Verify:** `pnpm --filter @intenzo/core test:browser lane`.
 
 ### T1.4 Canonical clock, marker and video alignment (`core/browser/clock.ts`, `ffmpeg.ts`)
 - [ ] **Build:**
@@ -176,7 +176,7 @@
   - a synthetic page that changes color at known times → detected offset within ±50 ms
   - a marker-free video → the fallback path is used
   - both fail → `infra_error`
-- [ ] **Verify:** `pnpm test:browser -- clock`. Open one video and check by eye that the burned timestamp matches the step log.
+- [ ] **Verify:** `pnpm --filter @intenzo/core test:browser clock`. Open one video and check by eye that the burned timestamp matches the step log.
 
 ### T1.5 Readings, regions and live regions (`core/browser/readings.ts`)
 - [ ] **Build:**
@@ -188,7 +188,7 @@
   - a toast in a portal shows up as `region_diff "+ alert …"`
   - a removed element → `kind=absent`
   - the box track survives a navigation
-- [ ] **Verify:** `pnpm test:browser -- readings`.
+- [ ] **Verify:** `pnpm --filter @intenzo/core test:browser readings`.
 
 ### T1.6 Observation protocol (`core/browser/record.ts`)
 - [ ] **Build:**
@@ -326,7 +326,7 @@
   - the target chosen for the 2nd button replays to the **2nd** button
   - a test id is preferred when present
   - a role+name match that resolves to the wrong element is never saved
-- [ ] **Verify:** `pnpm test:browser -- durable`.
+- [ ] **Verify:** `pnpm --filter @intenzo/core test:browser durable`.
 
 ### T3.4 Explore loop (Wonder)
 - [ ] **Build:** `explore()` (§20.3): start route choice, Wonder `navigate.v1`, history window, budget (25 steps / 120 s), `trigger_done` → `SavedPath` with auto region + live-region watch targets; `give_up` → `setup_failed` / `trigger_absent`.
