@@ -118,12 +118,12 @@
 - [x] **Done when:** both branches have previews and the ground truth is proven (3 runs in a row on each preview).
 
 ### T0.7 Demo PM video ticket and golden comment
-- [ ] **Build:**
-  - record the 40 s narrated PM screen recording (§32) and attach it to issue #42 in demo-shop
+- [x] **Build:**
+  - record the 40 s narrated PM screen recording (§32) and attach it to issue #42 in demo-shop. *The ticket is [demo-shop #5](https://github.com/sumithprabhu/demo-shop/issues/5) (#42 was illustrative). The recording (36.5 s) is made by `pnpm demo:pm-video`.*
   - write `demo/expected-comment.md`: the exact comment Intenzo should produce for the almost-right PR
-- [ ] **Tests:** none yet. The golden file becomes a test fixture in P4.
-- [ ] **Verify:** the video plays from the issue; the golden file covers C1–C4 + ⚠️.
-- [ ] **Done when:** both are committed.
+- [x] **Tests:** none yet. The golden file becomes a test fixture in P4.
+- [x] **Verify:** the video plays from the issue; the golden file covers C1–C4 + ⚠️.
+- [x] **Done when:** both are committed.
 
 ### ✅ Phase 0 gate: `pnpm gate:p0`
 - CI green; `probe:assert` passes; the go/no-go result is recorded; demo-shop ground-truth tests pass on both PR previews.
