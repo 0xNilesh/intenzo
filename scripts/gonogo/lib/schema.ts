@@ -61,6 +61,20 @@ export const Reading = z.object({
 });
 export type Reading = z.infer<typeof Reading>;
 
+export const VerdictValue = z.enum(["pass", "fail", "inconclusive"]);
+export type VerdictValue = z.infer<typeof VerdictValue>;
+
+/** What each judge must answer (§7). Times are lane ms, read off the clip's burned-in clock. */
+export const JudgeOutput = z.object({
+  verdict: VerdictValue,
+  targetCorrect: z.boolean(),
+  citedReadings: z.array(z.number().int()),
+  citedValue: z.string().nullable(),
+  atMs: z.number().nullable(),
+  observed: z.string(),
+});
+export type JudgeOutput = z.infer<typeof JudgeOutput>;
+
 /** A recorded lane: the parts of §7 LaneResult the judge bundle needs. All times are epoch ms. */
 export const Lane = z.object({
   clipId: z.string(),
