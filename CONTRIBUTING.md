@@ -22,27 +22,28 @@ cp .env.example .env            # only for live tests and model probes: add your
 
 If `pnpm check` passes, your environment is ready.
 
-| Command                                             | What it does                                                                                                      |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `pnpm typecheck`                                    | `tsc --noEmit` in every package                                                                                   |
-| `pnpm lint`                                         | ESLint over the repo                                                                                              |
-| `pnpm format` / `pnpm format:check`                 | Prettier write / check                                                                                            |
-| `pnpm test`                                         | Unit tests in every package                                                                                       |
-| `pnpm test:contract`                                | Contract tests in every package                                                                                   |
-| `pnpm test:browser`                                 | Browser tests in every package (needs Playwright Chromium, see below)                                             |
-| `pnpm test:live`                                    | Live model tests: real APIs, spends model credits, **run by hand only** (needs `META_API_KEY`, `BASETEN_API_KEY`) |
-| `pnpm check`                                        | Typecheck + lint + format + unit + contract. **Run before every commit**                                          |
-| `pnpm check:all`                                    | `check` + browser tests: **exactly what CI runs. Run before every push**                                          |
-| `pnpm --filter @intenzo/core test`                  | Tests for one package                                                                                             |
-| `pnpm --filter @intenzo/core test schema`           | One package's tests whose file path matches `schema`. Not `pnpm test -- schema`, which runs everything            |
-| `pnpm probe:all [model…]`                           | Model capability probes (T0.2): real, billed API calls, results in `probes/results.json`                          |
-| `pnpm probe:assert`                                 | Fails until every probed capability has a definite answer                                                         |
-| `pnpm gonogo [--dry-run]`                           | Judge go/no-go (T0.3): records 10 fixture clips, both judges judge them (billed, ~$0.20; cached), GO / NO-GO      |
-| `pnpm github-app:create` / `:sandbox` / `:fixtures` | Register a GitHub App from the §12 manifest, act as it on a sandbox repo, export its webhooks as fixtures (T0.4)  |
-| `pnpm demo:ground-truth correct\|almost-right`      | Proves what demo-shop's demo branches do, on their previews (T0.6)                                                |
-| `pnpm demo:pm-video`                                | Records the demo ticket's narrated PM screen recording (T0.7)                                                     |
-| `pnpm gate:p0`                                      | The Phase 0 gate: `check:all`, CI, probes, ground truth, decisions, golden comment, demo ticket                   |
-| `pnpm intenzo record --path … --pr … [--base …]`    | Records a SavedPath with the §21.3 protocol (T1.6) and prints the readings. Takes go to `out/runs/`               |
+| Command                                             | What it does                                                                                                                              |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                                    | `tsc --noEmit` in every package                                                                                                           |
+| `pnpm lint`                                         | ESLint over the repo                                                                                                                      |
+| `pnpm format` / `pnpm format:check`                 | Prettier write / check                                                                                                                    |
+| `pnpm test`                                         | Unit tests in every package                                                                                                               |
+| `pnpm test:contract`                                | Contract tests in every package                                                                                                           |
+| `pnpm test:browser`                                 | Browser tests in every package (needs Playwright Chromium, see below)                                                                     |
+| `pnpm test:live`                                    | Live model tests: real APIs, spends model credits, **run by hand only** (needs `META_API_KEY`, `BASETEN_API_KEY`)                         |
+| `pnpm check`                                        | Typecheck + lint + format + unit + contract. **Run before every commit**                                                                  |
+| `pnpm check:all`                                    | `check` + browser tests: **exactly what CI runs. Run before every push**                                                                  |
+| `pnpm --filter @intenzo/core test`                  | Tests for one package                                                                                                                     |
+| `pnpm --filter @intenzo/core test schema`           | One package's tests whose file path matches `schema`. Not `pnpm test -- schema`, which runs everything                                    |
+| `pnpm probe:all [model…]`                           | Model capability probes (T0.2): real, billed API calls, results in `probes/results.json`                                                  |
+| `pnpm probe:assert`                                 | Fails until every probed capability has a definite answer                                                                                 |
+| `pnpm gonogo [--dry-run]`                           | Judge go/no-go (T0.3): records 10 fixture clips, both judges judge them (billed, ~$0.20; cached), GO / NO-GO                              |
+| `pnpm github-app:create` / `:sandbox` / `:fixtures` | Register a GitHub App from the §12 manifest, act as it on a sandbox repo, export its webhooks as fixtures (T0.4)                          |
+| `pnpm demo:ground-truth correct\|almost-right`      | Proves what demo-shop's demo branches do, on their previews (T0.6)                                                                        |
+| `pnpm demo:pm-video`                                | Records the demo ticket's narrated PM screen recording (T0.7)                                                                             |
+| `pnpm gate:p0`                                      | The Phase 0 gate: `check:all`, CI, probes, ground truth, decisions, golden comment, demo ticket                                           |
+| `pnpm gate:p1`                                      | The Phase 1 gate: `check:all`, then C1–C4 recorded on both local demo-shop branches 3 runs in a row, against `fixtures/ground-truth.json` |
+| `pnpm intenzo record --path … --pr … [--base …]`    | Records a SavedPath with the §21.3 protocol (T1.6) and prints the readings. Takes go to `out/runs/`                                       |
 
 The test layer is picked by file suffix (§6). `test:e2e` and `gate:p<N>` are added as the roadmap reaches them. For browser tests, install Chromium once with `pnpm --filter @intenzo/core exec playwright install chromium`.
 

@@ -213,6 +213,7 @@
 - [ ] **Verify:** watch both videos for one criterion. (T1.7 checked extracted frames by eye: the step captions on `human.mp4` and the time band under the page on `judge.mp4`, on a synthetic lane. A person still has to watch both videos, ideally of a real criterion once T1.6 records one.)
 
 ### ✅ Phase 1 gate: `pnpm gate:p1`
+- **Passed 2026-10-30**: C1–C4 × PR + base × 3 runs, 24 of 24 lanes match `fixtures/ground-truth.json` (#79).
 - Unit + browser tests green.
 - Hand-written paths for C1–C4 recorded on **both** local branches (PR + base), **3 runs in a row**:
   - every reading matches the ground-truth table in `fixtures/ground-truth.json`

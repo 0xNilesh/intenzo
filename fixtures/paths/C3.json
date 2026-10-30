@@ -1,0 +1,25 @@
+{
+  "criterionId": "C3",
+  "setup": [{ "op": "goto", "path": "/cart" }],
+  "trigger": [
+    {
+      "op": "fill",
+      "target": { "by": "role", "role": "textbox", "name": "Discount code" },
+      "value": "OLD5"
+    },
+    { "op": "click", "target": { "by": "role", "role": "button", "name": "Apply" } }
+  ],
+  "watch": [
+    {
+      "label": "discount form",
+      "scope": "region",
+      "target": { "by": "role", "role": "form", "name": "Discount code" }
+    },
+    {
+      "label": "order summary",
+      "scope": "region",
+      "target": { "by": "role", "role": "region", "name": "Order summary" }
+    }
+  ],
+  "portable": true
+}

@@ -1,0 +1,13 @@
+{
+  "id": "C4",
+  "text": "The savings chart shows the discount slice",
+  "trigger": "On the cart, enter SAVE10 in the discount code field and press Apply",
+  "setup": ["the cart page is open", "the cart is the $50.00 seed cart (tote + mug)"],
+  "expected": "The savings chart in the order summary shows a slice for the discount",
+  "watch": ["savings chart", "order summary"],
+  "kind": "ui_visual",
+  "persistence": false,
+  "inferred": false,
+  "sourceQuote": "And the savings chart in the summary should show the discount slice.",
+  "sourceMediaAt": 30000
+}

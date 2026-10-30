@@ -1,0 +1,25 @@
+{
+  "criterionId": "C4",
+  "setup": [{ "op": "goto", "path": "/cart" }],
+  "trigger": [
+    {
+      "op": "fill",
+      "target": { "by": "role", "role": "textbox", "name": "Discount code" },
+      "value": "SAVE10"
+    },
+    { "op": "click", "target": { "by": "role", "role": "button", "name": "Apply" } }
+  ],
+  "watch": [
+    {
+      "label": "savings chart",
+      "scope": "element",
+      "target": { "by": "testId", "id": "savings-chart" }
+    },
+    {
+      "label": "order summary",
+      "scope": "region",
+      "target": { "by": "role", "role": "region", "name": "Order summary" }
+    }
+  ],
+  "portable": true
+}

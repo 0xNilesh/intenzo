@@ -1,0 +1,280 @@
+{
+  "$comment": [
+    "The P1 gate's answer key (ROADMAP P1 gate, #17): what each hand-written path in fixtures/paths must read on each local demo-shop branch. `pnpm gate:p1` records every criterion on both sides 3 runs in a row and compares each lane with this file (scripts/gates/lib/p1.ts).",
+    "pr is pr/discount-almost-right, whose labels scripts/demo/lib/ground-truth.ts proves: C1 pass, C2 FAIL (the total stays $50.00 until a reload), C3 pass, C4 pass. base is main, which has no discount codes: every lane reaches /cart, takes its PRE readings and ends trigger_absent, because there is no 'Discount code' textbox to fill.",
+    "Readings are matched by label, phase and, for POST, the offset after Tt: a label's nth POST reading is the one at offsetsMs[n]. kind must match; value is exact; includes lists lines the value must contain; bbox says whether there is one. A lane must have exactly these readings, nothing missing and nothing extra.",
+    "Checked on 2026-10-30 against both branches served locally with `next start` (:3001 and :3000), with core's Reader on 3 runs in a row; all 3 runs read the same."
+  ],
+  "offsetsMs": [0, 1000, 3000],
+  "sides": {
+    "pr": { "branch": "pr/discount-almost-right", "url": "http://localhost:3001" },
+    "base": { "branch": "main", "url": "http://localhost:3000" }
+  },
+  "criteria": {
+    "C1": {
+      "pr": {
+        "status": "completed",
+        "readings": [
+          { "label": "discount line", "phase": "pre", "kind": "absent" },
+          {
+            "label": "discount line",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "text",
+            "value": "Discount (SAVE10) −$5.00",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Continue\":\n/url: /checkout",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "includes": [
+              "+ text: Subtotal $50.00 Discount (SAVE10) −$5.00 Total $50.00",
+              "+ listitem: Discount (SAVE10) −$5.00"
+            ],
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" },
+          {
+            "label": "live regions",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "value": "no change"
+          }
+        ]
+      },
+      "base": {
+        "status": "trigger_absent",
+        "readings": [
+          { "label": "discount line", "phase": "pre", "kind": "absent" },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Checkout\":\n/url: /checkout",
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" }
+        ]
+      }
+    },
+    "C2": {
+      "note": "The planted bug: the total stays $50.00 at +0, +1 s and +3 s and only shows $45.00 after the reload probe. The order summary diff shows the discount line next to the stale total. Labels follow fixtures/paths/C2.json (T1.6): 'order total' and 'order summary'.",
+      "pr": {
+        "status": "completed",
+        "readings": [
+          {
+            "label": "order total",
+            "phase": "pre",
+            "kind": "text",
+            "value": "$50.00",
+            "bbox": true
+          },
+          {
+            "label": "order total",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "text",
+            "value": "$50.00",
+            "bbox": true
+          },
+          {
+            "label": "order total",
+            "phase": "after_reload",
+            "kind": "text",
+            "value": "$45.00",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Continue\":\n/url: /checkout",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "includes": [
+              "+ text: Subtotal $50.00 Discount (SAVE10) −$5.00 Total $50.00",
+              "+ listitem: Discount (SAVE10) −$5.00"
+            ],
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "after_reload",
+            "kind": "region_diff",
+            "includes": [
+              "+ text: Subtotal $50.00 Discount (SAVE10) −$5.00 Total $45.00",
+              "+ listitem: Discount (SAVE10) −$5.00"
+            ],
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" },
+          {
+            "label": "live regions",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "value": "no change"
+          },
+          {
+            "label": "live regions",
+            "phase": "after_reload",
+            "kind": "region_diff",
+            "value": "no change"
+          }
+        ]
+      },
+      "base": {
+        "status": "trigger_absent",
+        "readings": [
+          {
+            "label": "order total",
+            "phase": "pre",
+            "kind": "text",
+            "value": "$50.00",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Checkout\":\n/url: /checkout",
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" }
+        ]
+      }
+    },
+    "C3": {
+      "note": "The toast is rendered in demo-shop's body-level aria-live portal, so it's read through the live regions (§21.3), not through a watch target. The textbox keeps 'OLD5' after a refused code, and the order summary doesn't change.",
+      "pr": {
+        "status": "completed",
+        "readings": [
+          {
+            "label": "discount form",
+            "phase": "pre",
+            "kind": "text",
+            "value": "form \"Discount code\":\ntext: Discount code\ntextbox \"Discount code\"\nbutton \"Apply\"",
+            "bbox": true
+          },
+          {
+            "label": "discount form",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "value": "+ textbox \"Discount code\": OLD5\n- textbox \"Discount code\"",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Continue\":\n/url: /checkout",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "value": "no change",
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" },
+          {
+            "label": "live regions",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "value": "+ alert: This code has expired"
+          }
+        ]
+      },
+      "base": {
+        "status": "trigger_absent",
+        "readings": [
+          { "label": "discount form", "phase": "pre", "kind": "absent" },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Checkout\":\n/url: /checkout",
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" }
+        ]
+      }
+    },
+    "C4": {
+      "note": "Readings can't see canvas pixels: the chart reads as an empty text element with a bbox, before and after. Its discount slice (#16a34a at 344°, proven by scripts/demo/ground-truth.ts) is checked from the video by SAM 3.1 in P4 (§23). What the DOM does show is the legend's new 'Discount (SAVE10) −$5.00' item, in the order summary diff.",
+      "pr": {
+        "status": "completed",
+        "readings": [
+          { "label": "savings chart", "phase": "pre", "kind": "text", "value": "", "bbox": true },
+          {
+            "label": "savings chart",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "text",
+            "value": "",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Continue\":\n/url: /checkout",
+            "bbox": true
+          },
+          {
+            "label": "order summary",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "includes": [
+              "+ figure \"Canvas tote bag $30.00 Ceramic mug $20.00 Discount (SAVE10) −$5.00\":",
+              "+ listitem: Discount (SAVE10) −$5.00"
+            ],
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" },
+          {
+            "label": "live regions",
+            "phase": "post",
+            "atMs": [0, 1000, 3000],
+            "kind": "region_diff",
+            "value": "no change"
+          }
+        ]
+      },
+      "base": {
+        "status": "trigger_absent",
+        "readings": [
+          { "label": "savings chart", "phase": "pre", "kind": "text", "value": "", "bbox": true },
+          {
+            "label": "order summary",
+            "phase": "pre",
+            "kind": "text",
+            "value": "region \"Order summary\":\ntext: Subtotal $50.00 Total $50.00\nfigure \"Canvas tote bag $30.00 Ceramic mug $20.00\":\nimg \"Savings chart\"\nlist:\nlistitem: Canvas tote bag $30.00\nlistitem: Ceramic mug $20.00\nlink \"Checkout\":\n/url: /checkout",
+            "bbox": true
+          },
+          { "label": "live regions", "phase": "pre", "kind": "text", "value": "" }
+        ]
+      }
+    }
+  }
+}

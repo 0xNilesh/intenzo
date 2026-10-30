@@ -1,0 +1,13 @@
+{
+  "id": "C1",
+  "text": "SAVE10 adds a \"SAVE10 −$5.00\" discount line",
+  "trigger": "On the cart, enter SAVE10 in the discount code field and press Apply",
+  "setup": ["the cart page is open", "the cart is the $50.00 seed cart (tote + mug)"],
+  "expected": "A discount line for SAVE10 showing −$5.00 appears in the order summary",
+  "watch": ["discount line", "order summary"],
+  "kind": "ui_behavior",
+  "persistence": false,
+  "inferred": false,
+  "sourceQuote": "The discount should show up as its own line in the summary: SAVE10, minus five dollars.",
+  "sourceMediaAt": 18500
+}
