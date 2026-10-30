@@ -51,7 +51,7 @@ loadDotEnv();
 const fresh: ProbeResult[] = [];
 const ctx: ProbeContext = {
   samples: Number(process.env.PROBE_SAMPLES ?? 1),
-  media: ensureMedia(),
+  media: await ensureMedia(),
   ...(only && { only }),
   record(result) {
     const stamped = { ...result, at: new Date().toISOString() };
