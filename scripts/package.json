@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p gates",
     "test": "vitest run --project unit",
     "test:contract": "vitest run --project contract --passWithNoTests",
     "test:browser": "vitest run --project browser --passWithNoTests",
@@ -18,7 +18,8 @@
     "github-app:fixtures": "node github-app/deliveries.ts",
     "demo:ground-truth": "node demo/ground-truth.ts",
     "demo:pm-video": "node demo/pm-video.ts",
-    "gate:p0": "node gates/p0.ts"
+    "gate:p0": "node gates/p0.ts",
+    "gate:p1": "node gates/p1.ts"
   },
   "dependencies": {
     "@intenzo/core": "workspace:*",

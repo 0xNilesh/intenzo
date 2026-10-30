@@ -1,0 +1,11 @@
+{
+  // gate:p1 drives the recorder from @intenzo/core/browser, whose page.evaluate() callbacks need
+  // the DOM types. They're added only here: in scripts/tsconfig.json they would turn Node's
+  // WebSocket into the DOM one and break probe/models/transcribe.ts.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["p1.ts"]
+}
