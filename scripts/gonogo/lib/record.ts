@@ -107,7 +107,8 @@ export async function recordClip(
       (a, b) => a - b,
     );
     for (const offset of offsets) {
-      await sleep(Math.max(0, tTriggerMs + offset - Date.now()));
+      // setTimeout can fire up to 1 ms early by Date.now()'s clock, so wait until the time is reached.
+      while (Date.now() < tTriggerMs + offset) await sleep(tTriggerMs + offset - Date.now());
       await read("post", liveBefore);
       if (offset === SHOT_OFFSET_MS && options.shotPath) {
         await page.screenshot({ path: options.shotPath });
