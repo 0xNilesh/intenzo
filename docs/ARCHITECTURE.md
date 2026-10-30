@@ -90,7 +90,8 @@ The document has four parts:
 4. Meta models do real work on the critical path:
    - **Spark 1.3:** intent from text and **video tickets**, second judge, change classification
    - **Spark Open:** primary judge
-   - **Wonder:** navigation, computer use
+   - **Wonder:** navigation
+   - **Spark 1.3 computer use:** the vision fallback (Wonder rejects the computer tool on the live API; T0.2)
    - **Muse Code:** coverage, test generation, reference fixer agent
    - **SAM 3.1:** visual/canvas evidence
    - **Voice Transcribe:** narrated tickets
@@ -168,11 +169,11 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 
 | Stage | Model | Input | Output | Calls per PR (3–4 criteria) |
 |---|---|---|---|---|
-| Spoken intent | **Voice Transcribe** | PCM 16 kHz from the ticket's video/voice note, streamed | transcript | 1 when the ticket has media |
+| Spoken intent | **Voice Transcribe** | 16 kHz WAV from the ticket's video/voice note (file endpoint) | transcript (no timings) | 1 when the ticket has media |
 | Visual intent | **Spark 1.3** (video) | the PM's screen recording (≤ 2 min, 2 fps) + transcript + ticket text + images | `CriterionSet` incl. **repro steps** (start route, setup hints) | 1 |
 | Coverage | **Muse Code** (API) · **Spark 1.3** if Muse Code is CLI-only | criteria + PR diff | `CoverageMap` (criterion → files/hunks, candidate routes) | 1 per run |
 | Navigation | **Wonder** | outline with element ids + goal + history | `NavAction` | 5–25 per new path; 0 when cached |
-| Vision fallback | **Wonder computer use** | screenshot + goal | point action | canvas/unlabeled widgets only |
+| Vision fallback | **Spark 1.3 computer use** (Wonder rejects the tool, T0.2) | screenshot + goal | point action | canvas/unlabeled widgets only |
 | Judge A | **Spark Open** (Baseten) | §22.2 bundle | `JudgeOutput` | 1 per criterion |
 | Judge B | **Spark 1.3** | same bundle | `JudgeOutput` | 1 per criterion (always) |
 | Visual evidence | **SAM 3.1** | ≥ 50 frames + text concept or box | masks | 1 per `ui_visual` criterion or vision-fallback target |
@@ -670,13 +671,14 @@ Customer note: this needs base-branch commits to have preview deployments. On Ve
 ```
 ContextBundle
  ├─ media (PM screen recording / voice note)
- │    ├─ ffmpeg → 16 kHz mono PCM → Voice Transcribe (streamed over WebSocket) → transcript + word times
+ │    ├─ ffmpeg → 16 kHz WAV → Voice Transcribe (file endpoint) → transcript (no word or turn timings, T0.2)
  │    └─ ffmpeg → 2 fps, 960 px → Spark 1.3 video input
  ├─ images → resized ≤ 1568 px
  ▼
 Spark 1.3 (intent.v1): ticket text + transcript + video + images
    → CriterionSet { criteria (≤ 6; each with trigger, setup, expected, watch, kind,
                     persistence, timingMs?, sourceQuote / sourceMediaAt), repro { startPath, steps } }
+   (sourceMediaAt comes from Spark watching the video: transcription returns no timings)
 validation:
    - an explicit checklist in the ticket → criteria map 1:1 to its items (else one retry)
    - every criterion has a trigger, unless kind = not_verifiable_in_ui
@@ -796,7 +798,8 @@ isSameElement(a, b) = a.evaluate((x, y) => x === y, await b.elementHandle())
 
   So a region reading always exists, even when the element the criterion is about never appears, or appears in a toast or portal.
 
-### 20.5 Vision fallback (Wonder computer use)
+### 20.5 Vision fallback (Spark 1.3 computer use)
+- T0.2: the live API rejects the `computer` tool for `muse-wonder-1.0` but accepts it for `muse-spark-1.3`, which clicked inside the probe's Apply button in 2 turns (screenshot, then click). The loop is the documented Responses-API one (`computer_call` → `computer_call_output`).
 - Used only when the outline can't express the target: a canvas, an unlabeled icon, or two failed resolutions.
 - Input: a 1280×720 screenshot + goal. Output: a point action. Executed with `page.mouse`, saved as a `point` target, and the path is marked `portable=false`: it's replayed but never exported as a test.
 
@@ -1194,10 +1197,10 @@ Backup: a recorded take of the full run, in case anything is down during judging
 
 | # | Risk | Plan |
 |---|---|---|
-| R1 | Meta API video input format and limits | Day-1 test; `MediaEncoder` frames mode |
+| R1 | Meta API video input format and limits | **Resolved (T0.2):** inline MP4 `video_url` works on Spark 1.3 (5 s clip ≈ 1.3k prompt tokens, 2.9 s p50); Files API upload works too. Size limit still unpublished |
 | R2 | Baseten Spark Open may not accept video | Then Spark Open judges frames and Spark 1.3 judges video; agreement still required; the bench reports it |
 | R3 | Judge latency | 4 fps, short windows, parallel judges, verdicts streamed |
-| R4 | Wonder computer-use API | Optional fallback; cut if unclear |
+| R4 | Wonder computer-use API | **Resolved (T0.2):** Wonder rejects the tool; Spark 1.3 runs the loop correctly and is the fallback |
 | R5 | **Muse Code has no programmatic API** | Decision tree in §4: CLI only → Muse Code lives in muse-fixer (fix + proposed test), and coverage moves to Spark 1.3. If even the CLI can't run headless in Actions, the fixer uses Wonder and says so plainly. The worker never gets a repo checkout |
 | R13 | **Mostly-inconclusive output** (agreement rule + citation rule) | Measure the inconclusive rate on the day-1 clips. Live-region readings and token matching are designed to keep it down. If it's above about 30% on clear cases, loosen the rule to "agreement for fail; for pass, the primary judge plus a clean readings check" and report that change |
 | R14 | Internal `_snapshotForAI` API changes | Exact version pin + contract test; `data-iz-ref` tagging fallback (§20.1) |
@@ -1205,6 +1208,6 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | R7 | Customer test isolation | Isolation levels; `no_isolation` cap; hook reference implementation |
 | R8 | Merge-base preview missing for customers | Drift walk; `baseUrl=null` fallback; v1: trigger a Vercel preview through the API |
 | R9 | Private-repo media and GIFs | `body_html` signed URLs; `/g/` proxy (roadmap) |
-| R10 | Voice Transcribe is realtime-only | Stream PCM chunks from a file; fallback: Spark 1.2 audio |
+| R10 | Voice Transcribe is realtime-only | **Resolved (T0.2):** a file endpoint exists and is accurate; neither mode returns timings |
 | R11 | Vercel environment naming in `deployment_status` | Prefix match; verify with logged payloads on day 1 |
 | R12 | Judges agree on the wrong answer (correlated errors) | Readings checks + annotated-target check; bench reports false-pass rate per arm |
