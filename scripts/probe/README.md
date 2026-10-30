@@ -14,8 +14,8 @@ pnpm probe:assert             # exits 1 until every capability has a definite an
 ```
 
 - Results go to `probes/results.json` (gitignored). Re-running a model replaces only its results.
-- `PROBE_SAMPLES` (default 5) sets the number of calls per capability. SAM video and realtime transcription use at most 3.
-- **Cost:** real, billed calls, roughly $1 for a full run at 5 samples. Most of it is reasoning tokens on Spark and Wonder. SAM video bills at least 50 frames per call.
+- One call per capability by default, enough for a definite answer. Set `PROBE_SAMPLES=5` when you need a meaningful latency p50 (SAM video and realtime transcription still cap at 3).
+- **Cost:** real, billed calls. A default run across all models costs a few cents. For scale, Spark 1.3 at 5 samples (25 calls) used about 17k input + 15k output tokens, about $0.09. SAM video bills at least 50 frames per call ($0.01).
 - **Muse Code:** `cli_headless` needs the `muse` CLI on your PATH. The probe never installs it. Install it yourself with `curl -fsSL https://dev.meta.ai/install.sh | sh`.
 
 ## What's probed
