@@ -126,6 +126,7 @@
 - [x] **Done when:** both are committed.
 
 ### ✅ Phase 0 gate: `pnpm gate:p0`
+- **Passed 2026-10-30**, 8 of 8 checks (DECISIONS 2026-10-30 · Phase 0 gate).
 - CI green; `probe:assert` passes; the go/no-go result is recorded; demo-shop ground-truth tests pass on both PR previews.
 - `docs/DECISIONS.md` records:
   - the judge mode per model (video or frames)

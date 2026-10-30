@@ -40,6 +40,7 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm github-app:create` / `:sandbox` / `:fixtures` | Register a GitHub App from the §12 manifest, act as it on a sandbox repo, export its webhooks as fixtures (T0.4)  |
 | `pnpm demo:ground-truth correct\|almost-right`      | Proves what demo-shop's demo branches do, on their previews (T0.6)                                                |
 | `pnpm demo:pm-video`                                | Records the demo ticket's narrated PM screen recording (T0.7)                                                     |
+| `pnpm gate:p0`                                      | The Phase 0 gate: `check:all`, CI, probes, ground truth, decisions, golden comment, demo ticket                   |
 
 The test layer is picked by file suffix (§6). `test:e2e` and `gate:p<N>` are added as the roadmap reaches them. For browser tests, install Chromium once with `pnpm --filter @intenzo/core exec playwright install chromium`.
 
