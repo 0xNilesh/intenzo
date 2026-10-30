@@ -30,7 +30,7 @@ fact right, not just that it replied.
 | Voice Transcribe | file (WAV) | ok, correct | 2.7 s | "apply the code SAVE10 and the order total should drop to $45."; `turns` empty |
 | | realtime (WebSocket) | ok, correct | 0.35 s | endStream → final transcript; events: `audioProgress`, `transcript` |
 | Muse Code | api_model | **unsupported** | n/a | no model id; the Model API lists Spark 1.1–1.3 (+ contributor), Wonder, SAM 3.1, Image, Transcribe |
-| | cli_headless | pending | | needs the `muse` CLI installed |
+| | cli_headless | ok, correct | 24 s | `muse exec --json` (1.4.14, macOS) wrote `probe.txt = OK`, exit 0; JSONL records carry `payload_type` (e.g. `runtime.command.accepted`) |
 | Spark Open | all 5 checks | pending | | needs a provider key (Baseten credits form pending; Fireworks is the alternative) |
 
 Rate limits match the docs: `x-ratelimit-limit-requests: 3000`, `x-ratelimit-limit-tokens: 4000000`.
@@ -50,13 +50,12 @@ Rate limits match the docs: `x-ratelimit-limit-requests: 3000`, `x-ratelimit-lim
 4. **Spoken intent uses the file transcription endpoint. Timestamps (`sourceMediaAt`) come from Spark watching the PM video.**
    - *Why:* Both modes transcribe accurately, but neither returns word or turn timings: `turns` is empty in `PUSH_TO_TALK`, and the realtime stream sends only `audioProgress` and `transcript` events. The file endpoint is simpler and needs no real-time pacing.
    - *Alternatives:* Realtime for live notes (0.35 s to finalize); `DIARIZATION` mode, untested.
-5. **Muse Code is a CLI product, not a Model API model.**
-   - *Why:* The model list has no Muse Code entry, matching the docs.
-   - *Next:* where it runs (the worker vs muse-fixer, ARCHITECTURE §4 decision tree) waits for the headless CLI check.
+5. **Muse Code runs in muse-fixer as a headless CLI; the coverage check uses Spark 1.3.**
+   - *Why:* The Model API lists no Muse Code model (it's a product), but `muse exec --json` completed a file-writing task headless in 24 s with `META_API_KEY` alone. That takes the "CLI only" branch of the ARCHITECTURE §4 decision tree: Muse Code works where a repo checkout exists (muse-fixer: the fix and a proposed test), and coverage moves to Spark 1.3. The worker never gets a checkout.
+   - *Next:* T5.3 checks the CLI on a Linux Actions runner (the docs say its sandbox needs bubblewrap) and parses the `payload_type` JSONL stream.
 6. **Probe frugally, and watch reasoning tokens.**
    - *Why:* On the video question, 1,227 of Spark's 1,247 output tokens were reasoning. Spark at 5 calls per check (25 calls) cost about $0.09. Probes now default to one call per check (`PROBE_SAMPLES` raises it).
    - *Next:* T0.3 should test a lower reasoning effort for the judge if accuracy holds.
 
 ### Still open for T0.2
-- `muse-code/cli_headless`: install the CLI (`curl -fsSL https://dev.meta.ai/install.sh | sh`), then `pnpm probe:all muse-code --only=cli_headless`.
 - `spark-open/*`: add a provider key, then `pnpm probe:all spark-open`.
