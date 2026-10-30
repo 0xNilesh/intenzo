@@ -60,7 +60,7 @@
 - [x] **Done when:** a fresh clone builds and tests with no manual steps.
 
 ### T0.2 Model access and capability probes (`scripts/probe/`)
-- [x] **Build:** one small script per model. Each records the request shape, response shape, latency (p50 over 5 calls), limits and errors in `probes/results.json`:
+- [x] **Build:** one small script per model. Each records the request shape, response shape, latency (1 call by default to save credits; `PROBE_SAMPLES=5` for a p50), limits and errors in `probes/results.json`:
   - **Spark 1.3:** text, image, **MP4 video** input; JSON-mode support
   - **Spark Open (Baseten `meta-models/muse-spark-open-1026`):** video vs frames; cold start time
   - **Wonder:** text call latency; computer-use request/response shape

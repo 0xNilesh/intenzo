@@ -1,7 +1,8 @@
 // Runs the model capability probes (ROADMAP T0.2) and merges the results into probes/results.json.
 //   pnpm probe:all                    every model
 //   pnpm probe:all spark-1.3 wonder   only these models
-// Makes real, billed API calls (a few cents per run). Keys come from .env (see .env.example).
+// Makes real, billed API calls: one per capability by default (a few cents for every model);
+// PROBE_SAMPLES=N takes N calls each for a latency p50. Keys come from .env (see .env.example).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
@@ -42,7 +43,7 @@ if (unknown.length > 0) {
 loadDotEnv();
 const fresh: ProbeResult[] = [];
 const ctx: ProbeContext = {
-  samples: Number(process.env.PROBE_SAMPLES ?? 5),
+  samples: Number(process.env.PROBE_SAMPLES ?? 1),
   media: ensureMedia(),
   record(result) {
     const stamped = { ...result, at: new Date().toISOString() };
