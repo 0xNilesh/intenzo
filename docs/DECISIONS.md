@@ -5,6 +5,51 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-30 · demo-shop (T0.5, #6)
+
+**What was built:**
+- **Repo:** `sumithprabhu/demo-shop`, private for now.
+- **Stack:** Next.js 16.4.3 and React 19.3, deployed by Vercel (Hobby).
+- **PRs:** demo-shop #1 is the shop, its test hooks and its tests. #2–#4 are README notes; merging them also gave `main` fresh deploys to check its environment.
+
+**How it was verified:**
+- **Locally:** 33 unit tests, and 9 e2e tests that passed 90/90 over 10 repeats.
+- **CI:** the same suites on every PR.
+- **Live:** against `main`'s protected Vercel preview.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| e2e on `main`'s preview (`demo-shop-git-main-sumithprabhus-projects.vercel.app`) | **9/9**, through Vercel's automation-bypass header. The session hook made a new shopper per call. |
+| Deployment protection | Without the bypass, pages answer 302 (Vercel's login). With `x-vercel-protection-bypass`, they answer 200. |
+| Production guard, live | A *correctly signed* session hook on a Production deployment → **403** `test hooks are disabled in production`. |
+| Production branch | Setting it to `release` before the `release` branch existed didn't take: pushes to `main` kept deploying as Production (hooks 403, no baseline preview). Set again after the branch existed, a push to `main` deploys as **`Preview`**, with a GitHub Deployment and a `deployment_status` `success`. |
+| Hook secret | Vercel stored the first Preview value as sensitive, so it couldn't be read back, and it didn't match the local value (401 `bad signature`). A new value on both sides, plus a new deployment, fixed it. Env changes only reach new deployments. |
+| GitHub errors, about 14:24–14:27 UTC | Merge calls returned 500/502. A push to `main` in that window never reached Vercel: no status, no deployment. One PR was squash-merged after rebase-merging kept failing. |
+
+### Decisions
+
+1. **`main` has no discount codes; the demo PRs add them.** This was the owner's choice.
+   - *Why:* this is what §32, ticket #42, §19 (`trigger_absent` for new UI on the base lane) and §31 (Muse Code implements tickets for IntentBench) all assume. T0.5's text asked for a SAVE10/OLD5 e2e on `main`, which contradicted them. ROADMAP T0.5 and T0.6 are corrected: the discount feature and its e2e move to `pr/discount-correct`.
+   - *Alternatives:* `main` with discounts. The PRs would then change an existing feature, and the base lane would show the correct behavior: a regression story the ticket doesn't tell.
+2. **Shopper state lives in cookies.**
+   - *Why:* a new identity means a new seed cart (the tote and the mug, $50.00). There's no database, isolation comes per browser context, and it's serverless-safe on Vercel.
+3. **The §21.1 hook contract is pinned down, and §21.1 is updated.**
+   - *What:* `X-Intenzo-Timestamp` (unix seconds, ±5 min) and `X-Intenzo-Signature: sha256=<hex HMAC-SHA256(secret, timestamp + body)>`. Answers: 403 on production (checked before the signature), 401, 503, or 200 with `{"shopper"}` and `Set-Cookie`.
+   - demo-shop's `lib/hooks.ts` is the reference implementation.
+4. **Previews stay protected; tests and Intenzo use Vercel's "Protection Bypass for Automation".** This was the owner's choice.
+   - *Why:* it exercises §21.2. Intenzo's recorder gets the bypass cookie once; demo-shop's e2e sends the header.
+5. **Create the production branch before pointing Vercel at it, and redeploy after changing an env var.**
+   - *Why:* both caught us here. demo-shop's README now says so.
+6. **demo-shop stays at `sumithprabhu/demo-shop`, private, for now.**
+   - *Why:* a repo can't be created in another user's personal account.
+   - *Next:* §8 assumes a public demo repo, so the owner decides between a transfer to `0xNilesh` and making it public. Before it goes public, rotate `INTENZO_HOOK_SECRET` and the bypass secret: both were shared in chat during setup, and the hook secret is a short test value.
+7. **Local e2e runs on port 3100.**
+   - *Why:* another Next server already holds :3000 on the dev machine. §31's :3000/:3001 lanes for P1 may need the same change.
+
+---
+
 ## 2026-10-30 · Platform checks: GitHub App, Vercel, check runs (T0.4, #5)
 
 **Setup:**
