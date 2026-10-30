@@ -191,16 +191,18 @@
 - [x] **Verify:** `pnpm --filter @intenzo/core test:browser readings`.
 
 ### T1.6 Observation protocol (`core/browser/record.ts`)
-- [ ] **Build:**
+- [x] **Build:**
   - the §21.3 sequence: setup → PRE → trigger (`Tt`) → POST at +0/+1000/+3000 (+ `timingMs`) → offline-annotated screenshot → reload probe if `persistence`
   - `settle()` = DOM quiet for 300 ms + no pending same-origin document/XHR/fetch, capped at 2 s
-- [ ] **Tests:**
+  - *`recordCriterion()` in `core/browser/record.ts`, `Settler` in `settle.ts`, the annotation in `annotate.ts`; the CLI is `pnpm intenzo record` (`apps/worker`). The C2 path and criterion are in `fixtures/`.*
+- [x] **Tests:**
   - `settle` on a page that polls every 500 ms returns in ≤ 2 s
   - `Tt` is taken before any settle
   - a reload probe only runs for `persistence: true`
-- [ ] **Verify:** run the hand-written C2 path on the local almost-right branch:
+  - *also: POST readings never early, `trigger_absent`, `setup_failed`, the take's files (`settle.browser.test.ts`, `record.browser.test.ts`)*
+- [x] **Verify:** run the hand-written C2 path on the local almost-right branch:
   `pnpm intenzo record --path fixtures/paths/C2.json --pr http://localhost:3001 --base http://localhost:3000`
-  The readings must show **$50.00 at +0 s, +1 s and +3 s, and $45.00 after reload**.
+  The readings must show **$50.00 at +0 s, +1 s and +3 s, and $45.00 after reload**. *3 runs in a row: exactly that, alignment ok (marker) on both sides; the base (`main`, no discount codes) ends `trigger_absent`.*
 
 ### T1.7 Video outputs (`core/browser/ffmpeg.ts`)
 - [ ] **Build:**
