@@ -1,0 +1,46 @@
+import { dig } from "../../probe/lib/json.ts";
+
+const TOKEN = /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g;
+
+/**
+ * A copy of a webhook payload that's safe to commit: values under an `email` key become
+ * user@example.com, and anything shaped like a GitHub token is removed. Logins and ids are kept;
+ * they're public and the tests need real shapes.
+ */
+export function redact(value: unknown, key = ""): unknown {
+  if (typeof value === "string") {
+    if (/email/i.test(key) && value.includes("@")) return "user@example.com";
+    return value.replace(TOKEN, "<redacted-token>");
+  }
+  if (Array.isArray(value)) return value.map((v) => redact(v, key));
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, redact(v, k)]));
+  }
+  return value;
+}
+
+const slug = (text: unknown): string =>
+  String(text ?? "none")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+/**
+ * A stable fixture name per kind of delivery, e.g. `deployment_status.success.preview`,
+ * `check_run.requested_action.approve` or `issue_comment.created.bot`.
+ */
+export function fixtureName(event: string, action: string | null, payload: unknown): string {
+  const base = `${event}.${action ?? "none"}`;
+  switch (event) {
+    case "deployment_status":
+      return `${event}.${slug(dig(payload, "deployment_status", "state"))}.${slug(dig(payload, "deployment", "environment"))}`;
+    case "check_run": {
+      const id = dig(payload, "requested_action", "identifier");
+      return id ? `${base}.${slug(id)}` : base;
+    }
+    case "issue_comment":
+      return `${base}.${dig(payload, "comment", "user", "type") === "Bot" ? "bot" : "user"}`;
+    default:
+      return base;
+  }
+}

@@ -23,7 +23,9 @@
     "probe:all": "pnpm --filter @intenzo/scripts probe:all",
     "probe:assert": "pnpm --filter @intenzo/scripts probe:assert",
     "gonogo": "pnpm --filter @intenzo/scripts gonogo",
-    "github-app:create": "pnpm --filter @intenzo/scripts github-app:create"
+    "github-app:create": "pnpm --filter @intenzo/scripts github-app:create",
+    "github-app:sandbox": "pnpm --filter @intenzo/scripts github-app:sandbox",
+    "github-app:fixtures": "pnpm --filter @intenzo/scripts github-app:fixtures"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
