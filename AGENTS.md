@@ -393,6 +393,7 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **TypeScript 7 isn't supported by typescript-eslint yet.** The repo pins 6.0.x.
 - **Imports use `.ts` extensions** and erasable syntax only (no `enum`, `namespace` or parameter properties), so Node runs sources directly.
 - **Playwright is pinned exactly**, because the navigator will use its internal `_snapshotForAI()`. Upgrade only in a dedicated PR that runs the contract tests.
+- **Homebrew's ffmpeg (8.x) is built without freetype**, so it has no `drawtext` filter (`ffmpeg -filters | grep drawtext` prints nothing). Don't rely on drawtext for text on frames: `scripts/gonogo/lib/encode.ts` draws text with Chromium and uses ffmpeg only to cut and encode. The T0.2 probe media still uses drawtext.
 
 **Shell and CI**
 
