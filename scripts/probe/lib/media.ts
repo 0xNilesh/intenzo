@@ -130,7 +130,7 @@ function text(value: string, x: number, y: number, size: number, extra = ""): st
   return `drawtext=${fontfile}text='${value}':x=${x}:y=${y}:fontsize=${size}:fontcolor=black${extra}`;
 }
 
-function ffmpeg(...args: string[]): void {
+export function ffmpeg(...args: string[]): void {
   execFileSync("ffmpeg", ["-y", "-hide_banner", "-loglevel", "error", ...args], {
     stdio: "inherit",
   });
