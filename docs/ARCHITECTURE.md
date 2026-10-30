@@ -892,7 +892,8 @@ await context.route("**/*", (route, req) => {
 10. if criterion.persistence: reload → settle → after_reload readings
 11. close → video; tracing.stop → trace.zip
 ```
-- **Framework live regions count too.** Next.js keeps an empty body-level `role="alert" aria-live="assertive"` route announcer (`#__next-route-announcer__`) on every page, and it reads out the page title on client-side navigations. The live-region readings include it, so T1.5 should expect it, and possibly drop its title announcements (found in T0.6).
+- **Framework live regions count too.** Next.js keeps an empty body-level `role="alert" aria-live="assertive"` route announcer (`#__next-route-announcer__`) on every page, and it reads out the page title on client-side navigations. Its title announcements aren't app feedback, so the live-region readings leave it out (found in T0.6, done in T1.5).
+- **Portals** are body-level children outside `<main>` that are fixed or absolutely positioned (where toast libraries mount). A live region inside a portal is read once, through the portal (T1.5).
 
 ### 21.4 One canonical clock
 - **Canonical time** = **epoch milliseconds** (`performance.timeOrigin + performance.now()`), used in both Node and the page. They share a host, so the two agree to under 1 ms, and page navigations don't reset it. Every step, reading and box sample is stamped with it. Reports show it relative to the lane start.
