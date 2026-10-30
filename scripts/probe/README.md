@@ -12,6 +12,7 @@ cp .env.example .env          # once; fill in META_API_KEY, and BASETEN_API_KEY 
 pnpm probe:all                # every model (or: pnpm probe:all spark-1.3 sam-3.1)
 pnpm probe:all spark-1.3 --only=computer_use   # re-run one check without re-billing the rest
 pnpm probe:assert             # exits 1 until every capability has a definite answer
+pnpm probe:assert spark-open  # or check only some models
 ```
 
 - Results go to `probes/results.json` (gitignored). Re-running a model replaces only its results.

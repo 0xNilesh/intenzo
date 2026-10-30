@@ -62,14 +62,20 @@
 ### T0.2 Model access and capability probes (`scripts/probe/`)
 - [x] **Build:** one small script per model. Each records the request shape, response shape, latency (1 call by default to save credits; `PROBE_SAMPLES=5` for a p50), limits and errors in `probes/results.json`:
   - **Spark 1.3:** text, image, **MP4 video** input; JSON-mode support
-  - **Spark Open (Baseten `meta-models/muse-spark-open-1026`):** video vs frames; cold start time
+  - **Spark Open (Baseten `meta-models/muse-spark-open-1026`):** video vs frames; cold start time. *Probe built here; its run moved to T0.2b while credits are pending.*
   - **Wonder:** text call latency; computer-use request/response shape
   - **Muse Code:** is there an API model? If not, can its CLI run headless in a container or Actions runner?
   - **SAM 3.1:** text, box and point prompts on a 50-frame clip; mask format
   - **Voice Transcribe:** can a recorded file be streamed over the WebSocket? Word timestamps?
 - [x] **Tests:** `scripts/probe/assert.ts` validates that `results.json` has an entry for every model with `ok | unsupported | error` and a latency.
-- [ ] **Verify:** `pnpm probe:all && pnpm probe:assert`. Read every entry.
-- [ ] **Done when:** every model has a definite capability answer.
+- [x] **Verify:** `pnpm probe:all && pnpm probe:assert spark-1.3 wonder muse-code sam-3.1 voice-transcribe`. Read every entry.
+- [x] **Done when:** every Meta API model has a definite capability answer (Spark Open: T0.2b).
+
+### T0.2b Spark Open capability probes (waiting for credits)
+- [ ] **Build:** put a key for a Spark Open host in `.env`: `BASETEN_API_KEY`, or `SPARK_OPEN_BASE_URL` + `SPARK_OPEN_API_KEY` (e.g. Fireworks). No code changes are expected: the T0.2 probe takes any OpenAI-compatible host.
+- [ ] **Tests:** none new (T0.2's unit and contract tests cover the probe).
+- [ ] **Verify:** `pnpm probe:all spark-open && pnpm probe:assert`. Read every entry, especially `video` vs `frames`.
+- [ ] **Done when:** all five Spark Open checks have a definite answer, Spark Open's judge input mode (native video or frames, R2) is in `docs/DECISIONS.md`, and the full `pnpm probe:assert` passes.
 
 ### T0.3 Judge go/no-go under the agreement rule (`scripts/gonogo/`)
 - [ ] **Build:**
