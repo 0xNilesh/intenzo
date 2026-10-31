@@ -19,6 +19,8 @@ const CloudEnv = z.object({
         .string()
         .regex(/^-----BEGIN [A-Z ]*PRIVATE KEY-----\n[\s\S]+\n-----END [A-Z ]*PRIVATE KEY-----$/),
     ),
+  /** Signs the worker's job tokens (§8, §29). 32 characters at least. */
+  INTENZO_JOB_SECRET: z.string().min(32),
 });
 export type CloudEnv = z.infer<typeof CloudEnv>;
 
