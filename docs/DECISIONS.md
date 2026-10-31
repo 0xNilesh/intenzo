@@ -5,6 +5,33 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · P2 gate (#25)
+
+`pnpm gate:p2` (`scripts/gates/p2.ts`) checks the hosted walking skeleton without creating anything, and passed on 2026-10-31 against T2.7b's live run on demo-shop#13.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| `pnpm check:all`, and CI on `main` (which also runs the Postgres tests) | Green, at `538b0ec` |
+| The Cloud's refusals | An unsigned webhook and a sweep without its secret both got 401 |
+| P1's ground truth on the hosted run | All 8 lanes Modal recorded (C1–C4 × PR + base) read what `fixtures/ground-truth.json` says, and each cites its `human.mp4` with offsets |
+| The report page | 200, 8 videos for 8 lanes; a signed video URL answered 206 `video/mp4` |
+| The end-to-end check (T2.7b) | One Intenzo comment on the PR; the superseded run's check run is `neutral` |
+
+### Decisions
+
+1. **`gate:p2` scores the hosted recordings against P1's ground truth instead of running `gate:p1`.**
+   - *Why:* `gate:p1` records on demo-shop served locally from two checkouts. The hosted lanes are the stronger check for P2: the same ground truth, recorded on Modal through the session hook and the bypass.
+   - *Alternatives:* serve demo-shop's two branches locally for `gate:p1`, outside this repo.
+2. **The owner chose, on 2026-10-31, to trade some process for time** (the schedule is behind: P2 was due Oct 30, the deadline is Nov 4):
+   - A task PR is merged once CI is green, without asking each time (sets aside AGENTS.md rule 6).
+   - `pnpm check:all` runs before each push instead of `pnpm check` before every commit (rules 3–4).
+   - One live run per phase: T2.7b's served as this gate's end-to-end check, run once instead of three times.
+   - Docs still change in each PR, and work still stops at each phase gate for the owner's review.
+
+---
+
 ## 2026-10-31 · Real recordings on Modal (T2.7b, #24)
 
 The Cloud now spawns §8's VerifyJob, with the repo's test secrets sealed at rest and none for a fork's PR, and the worker records the demo ticket's criteria on Modal along the P1 paths, uploads each lane's video and cites it. The checks:
