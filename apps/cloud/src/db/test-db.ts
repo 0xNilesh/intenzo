@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 
+import type { Db } from "./db.ts";
 import * as schema from "./schema.ts";
 
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
@@ -18,10 +19,8 @@ export async function testDb() {
   return { db, close: () => client.close() };
 }
 
-export type TestDb = Awaited<ReturnType<typeof testDb>>["db"];
-
 /** Empties every table and adds demo-shop's installation and repo, as T2.1 installed them. */
-export async function resetWithDemoShop(db: TestDb) {
+export async function resetWithDemoShop(db: Db) {
   await db.execute(
     sql`truncate ${schema.outbox}, ${schema.criteriaResults}, ${schema.savedPaths}, ${schema.modelCalls}, ${schema.runs}, ${schema.intentVersions}, ${schema.runGroups}, ${schema.deployments}, ${schema.repos}, ${schema.installations}, ${schema.webhookEvents} restart identity cascade`,
   );
