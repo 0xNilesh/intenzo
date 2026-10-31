@@ -16,5 +16,11 @@ export const SleepJob = z.object({
 });
 export type SleepJob = z.infer<typeof SleepJob>;
 
-export const JobPayload = z.discriminatedUnion("type", [VerifyJob, SleepJob]);
+/** Reports the demo ticket's criteria with fixed verdicts (stub.ts) until the judges arrive. */
+export const StubJob = SleepJob.omit({ seconds: true, aliveEverySeconds: true }).extend({
+  type: z.literal("stub"),
+});
+export type StubJob = z.infer<typeof StubJob>;
+
+export const JobPayload = z.discriminatedUnion("type", [VerifyJob, SleepJob, StubJob]);
 export type JobPayload = z.infer<typeof JobPayload>;

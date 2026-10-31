@@ -98,6 +98,46 @@ describe("runJob (§9)", () => {
     });
   });
 
+  it("reports the demo ticket's criteria with the stub's fixed verdicts, then finishes failing", async () => {
+    const cloud = await fakeCloud();
+    const stub = {
+      type: "stub",
+      jobId: JOB,
+      runId: RUN,
+      deadlineAt: "2026-10-31T09:15:00.000Z",
+      callback: { baseUrl: cloud.baseUrl, token: "job-token" },
+    };
+    expect(await runJob(stub, quick)).toBe(EXIT.finished);
+    expect(events(cloud.received)).toEqual([
+      "started#0",
+      "intent_ready#1",
+      "criterion_verdict#2",
+      "criterion_verdict#3",
+      "criterion_verdict#4",
+      "criterion_verdict#5",
+      "finished#6",
+    ]);
+    const bodies = cloud.received.filter((r) => r.method === "POST").map((r) => r.body!);
+    const intent = bodies[1]!.intent as { criteria: { id: string }[]; ticketHash: string };
+    expect(intent.criteria.map((c) => c.id)).toEqual(["C1", "C2", "C3", "C4"]);
+    expect(intent.ticketHash).toMatch(/^[0-9a-f]{64}$/);
+    const verdicts = bodies
+      .slice(2, 6)
+      .map(
+        (b) => b.verdict as { criterionId: string; verdict: string; judges: { model: string }[] },
+      );
+    expect(verdicts.map((v) => `${v.criterionId}:${v.verdict}`)).toEqual([
+      "C1:pass",
+      "C2:fail",
+      "C3:pass",
+      "C4:pass",
+    ]);
+    expect(new Set(verdicts.flatMap((v) => v.judges.map((j) => j.model)))).toEqual(
+      new Set(["stub"]),
+    );
+    expect(bodies[6]).toMatchObject({ kind: "finished", outcome: "fail" });
+  });
+
   it("says plainly that it can't verify yet", async () => {
     const cloud = await fakeCloud();
     const verify = {

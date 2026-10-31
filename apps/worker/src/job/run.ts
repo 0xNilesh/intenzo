@@ -2,6 +2,7 @@
 // failed with a code. The one exception is a 410, after which the worker stops without a word.
 import { type JobClient, jobClient, StaleJobError } from "./client.ts";
 import { JobPayload, type SleepJob } from "./payload.ts";
+import { stubIntent, stubOutcome, stubVerdict } from "./stub.ts";
 
 /** Exit codes: the Modal shim reports `failed` itself unless the job finished or was stale. */
 export const EXIT = { finished: 0, failed: 1, stale: 3 } as const;
@@ -28,6 +29,21 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
           timings: { total_ms: Date.now() - startedAt },
         });
         return EXIT.finished;
+      case "stub": {
+        const intent = stubIntent();
+        await client.send({ kind: "intent_ready", intent, coverage: { items: [], routes: [] } });
+        const verdicts = intent.criteria.map((c) => stubVerdict(c.id));
+        for (const verdict of verdicts) {
+          await client.send({ kind: "criterion_verdict", verdict, lanes: [] });
+        }
+        await client.send({
+          kind: "finished",
+          outcome: stubOutcome(verdicts),
+          costUsd: 0,
+          timings: { total_ms: Date.now() - startedAt },
+        });
+        return EXIT.finished;
+      }
       case "verify":
         await client.send({
           kind: "failed",
