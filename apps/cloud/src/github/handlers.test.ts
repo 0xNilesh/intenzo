@@ -221,4 +221,15 @@ describe("pull_request and deployment_status (§16.2, §17)", () => {
       "PR #2: not verified, the config has problems: .intenzo.yml:2: policy.auto_merge: unknown key",
     ]);
   });
+
+  // §29: a fork's PR never gets the repo's secrets, so its group remembers where it came from.
+  it.each([
+    ["a branch of the repo", false, () => {}],
+    ["a fork", true, (p: Payload) => void (p.pull_request.head.repo.id = 4242)],
+    ["a fork that was deleted", true, (p: Payload) => void (p.pull_request.head.repo = null)],
+  ])("remembers that a PR from %s is from_fork %s", async (_from, fromFork, edit) => {
+    sandbox();
+    await deliver("pull_request.opened", edit);
+    expect((await t.db.select().from(runGroups)).map((g) => g.fromFork)).toEqual([fromFork]);
+  });
 });

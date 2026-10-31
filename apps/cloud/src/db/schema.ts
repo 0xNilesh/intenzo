@@ -109,6 +109,11 @@ export const runGroups = pgTable(
     agentAttempts: integer("agent_attempts").notNull().default(0),
     billedAt: at("billed_at"),
     judgedRuns: integer("judged_runs").notNull().default(0),
+    /**
+     * §29: a fork's PR never gets the repo's secrets. Set from each pull_request event; until one
+     * says otherwise, a PR counts as a fork.
+     */
+    fromFork: boolean("from_fork").notNull().default(true),
   },
   (t) => [
     unique().on(t.repoId, t.prNumber),

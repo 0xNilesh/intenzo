@@ -51,8 +51,9 @@ const PullRequestEvent = z.looseObject({
   number: z.number(),
   pull_request: z.looseObject({
     draft: z.boolean().optional(),
-    head: z.looseObject({ sha: z.string() }),
-    base: z.looseObject({ ref: z.string() }),
+    // A fork's head repo is another repo, or null once the fork is deleted.
+    head: z.looseObject({ sha: z.string(), repo: z.looseObject({ id: z.number() }).nullable() }),
+    base: z.looseObject({ ref: z.string(), repo: z.looseObject({ id: z.number() }) }),
   }),
 });
 type PullRequestEvent = z.infer<typeof PullRequestEvent>;
@@ -103,7 +104,9 @@ function onPullRequest(ctx: HandlerContext): EventHandler {
     }
     repo = await saveConfig(ctx.db, repo.id, result.config);
 
-    const group = await ensureRunGroup(ctx.db, repo.id, pr.number);
+    const { head, base } = event.pull_request;
+    const fromFork = head.repo?.id !== base.repo.id;
+    const group = await ensureRunGroup(ctx.db, repo.id, pr.number, fromFork);
     // §16.2: a new run looks its preview up at once, through GitHub when none is stored.
     if (!fact.draft) await findPreview({ ...ctx, github }, repo, fact.headSha, previewRules(repo));
     const decision = await advance(ctx.db, group.id, fact, clock(ctx));
