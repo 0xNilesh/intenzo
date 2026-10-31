@@ -76,7 +76,11 @@ const JobBase = z.object({
 /** The one job type (§8): intent at step 0 when not reused, then verification. */
 export const VerifyJob = JobBase.extend({
   type: z.literal("verify"),
-  bundleUrl: z.url(),
+  /**
+   * A signed URL of the ContextBundle in the private store. Null until the Cloud builds bundles
+   * (P4): the stub worker of T2.7b reads no ticket and no diff.
+   */
+  bundleUrl: z.url().nullable(),
   /** The reused intent for this ticketHash, or null to compute it at step 0. */
   intent: CriterionSet.nullable(),
   prUrl: z.url(),
