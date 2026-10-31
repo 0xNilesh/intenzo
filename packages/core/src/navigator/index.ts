@@ -25,3 +25,10 @@ export {
   type ExploreStep,
 } from "./explore.ts";
 export { roleNameIn } from "./explore.ts";
+export {
+  PathCache,
+  recordWithPath,
+  replayBroke,
+  type ReplayDeps,
+  type ReplayOutcome,
+} from "./replay.ts";
