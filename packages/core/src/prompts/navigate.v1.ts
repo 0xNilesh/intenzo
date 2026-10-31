@@ -99,9 +99,11 @@ export const NavigateReply = z
     thought: w.thought,
     phase: w.phase,
     status: w.status,
-    ...(w.action && { action: toOp(w.action) }),
-    ...(w.watch && w.watch.length > 0 && { watch: w.watch }),
-    ...(w.reason && { reason: w.reason }),
+    // A strict schema makes the model fill every field, so a field that doesn't apply to the
+    // status is ignored rather than refused (Wonder sets reason and watch on ordinary steps).
+    ...(w.action && w.status !== "give_up" && { action: toOp(w.action) }),
+    ...(w.watch && w.watch.length > 0 && w.status === "trigger_done" && { watch: w.watch }),
+    ...(w.reason && w.status === "give_up" && { reason: w.reason }),
   }))
   .pipe(NavAction);
 

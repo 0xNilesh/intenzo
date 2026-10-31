@@ -79,6 +79,34 @@ describe("NavigateReply", () => {
     });
   });
 
+  it("ignores fields that don't apply to the status, as a strict schema makes the model fill them", () => {
+    expect(
+      NavigateReply.parse({
+        thought: "Open the cart",
+        phase: "setup",
+        action: { ...nulls, op: "goto", path: "/cart" },
+        status: "continue",
+        watch: [{ label: "order total", ref: "e3" }],
+        reason: "blocked",
+      }),
+    ).toEqual({
+      thought: "Open the cart",
+      phase: "setup",
+      action: { op: "goto", path: "/cart" },
+      status: "continue",
+    });
+    expect(
+      NavigateReply.parse({
+        thought: "",
+        phase: "trigger",
+        action: { ...nulls, op: "wait", ms: 100 },
+        status: "give_up",
+        watch: null,
+        reason: "blocked",
+      }),
+    ).toEqual({ thought: "", phase: "trigger", status: "give_up", reason: "blocked" });
+  });
+
   it("enforces NavAction's rules", () => {
     const bad = NavigateReply.safeParse({
       thought: "",
