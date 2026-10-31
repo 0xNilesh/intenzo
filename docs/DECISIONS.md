@@ -5,6 +5,25 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Coverage (T4.3, #34)
+
+`core/coverage`: Spark 1.3 maps each criterion to the PR's changed files (`coverage.v1`), and `routeOf` gives the routes those files belong to. `pnpm intenzo coverage` runs it. Checked with 25 new unit tests and one live call on the almost-right PR.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Live, the almost-right PR (13 files) | C2 → `components/CartView.tsx`, `lib/cart.ts` (`priceCart`, which works out the total), then `lib/discounts.ts`, `app/actions.ts`, `app/cart/page.tsx`. C1 and C3 → the cart view and the discount code; C4 → `components/SavingsChart.tsx` first. All four `covered`; the only route is `/cart` |
+| Its cost | 7,095 input and 1,767 output tokens: $0.016 |
+
+### Decisions
+
+1. **Code holds the reply to the diff** (a file it doesn't change is dropped; `covered` needs a file), so a model can't point a criterion at code the PR never touched.
+2. **A failed coverage call makes every criterion `unclear`, never `uncovered`**: `uncovered` lets a `trigger_absent` lane fail (§22.1), which a failed call mustn't cause.
+3. **A file colocated in an app-router route folder belongs to that route**, and app/'s shared root files (`actions.ts`, `globals.css`) belong to none.
+
+---
+
 ## 2026-10-31 · Intent from the PM video (T4.2, #33)
 
 The demo ticket (demo-shop #5, whose text only points at its recording) read with Voice Transcribe and Spark 1.3 watching the video: `prepareTicketVideo` and `extractIntent` in `core/intent`, `pnpm intenzo intent --video`. Checked with 6 new unit tests and five runs of the live test (`intent.live.test.ts`, by hand).

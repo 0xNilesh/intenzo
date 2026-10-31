@@ -459,9 +459,10 @@
   - *Live:* the transcript reads the narration word for word (the code as "save 10"). The four criteria are the demo's: the total ($50.00 → $45.00, right away), the line ("SAVE10 −$5.00"), the expired code ("This code has expired") and the chart, each quoting the PM. Their times are in the PM's order but 3–4.6 s late, and the total comes first, so it's C1 (DECISIONS 2026-10-31 · Intent from the PM video).
 
 ### T4.3 Coverage
-- [ ] **Build:** `coverage.v1` with the model chosen in P0 (Muse Code or Spark 1.3); deterministic Next.js route rules.
-- [ ] **Tests:** route rules (`app/(shop)/cart/page.tsx → /cart`, pages router, dynamic segments); a fixture diff missing C3 → `uncovered`.
-- [ ] **Verify:** coverage for the almost-right PR maps C2 to the total-calculation file.
+- [x] **Build:** `coverage.v1` with the model chosen in P0 (Muse Code or Spark 1.3); deterministic Next.js route rules.
+- [x] **Tests:** route rules (`app/(shop)/cart/page.tsx → /cart`, pages router, dynamic segments); a fixture diff missing C3 → `uncovered`.
+- [x] **Verify:** coverage for the almost-right PR maps C2 to the total-calculation file.
+  - *Live, Spark 1.3, on the almost-right PR's 13 changed files:* C2 → `components/CartView.tsx`, `lib/cart.ts` (`priceCart`, the total) and three more; C4 → `components/SavingsChart.tsx` first; every criterion `covered`; routes `/cart`. One call, $0.016.
 
 ### T4.4 Judge bundle
 - [ ] **Build:** bundle assembly (§22.2); offline annotation of the Tt+1000 screenshot with sharp; step log in canonical time; base comparison; the `MediaEncoder` mode per model.
