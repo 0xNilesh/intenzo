@@ -92,6 +92,7 @@ describe("the Intenzo check run (§26.2)", () => {
         head_sha: "b4e35b0",
         external_id: RUN_1,
         status: "queued",
+        details_url: `https://intenzo-cloud.vercel.app/r/${RUN_1}`,
         output: {
           title: "Waiting for the preview",
           summary: "Waiting for the preview of `b4e35b0`.",

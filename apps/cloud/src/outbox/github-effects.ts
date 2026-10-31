@@ -64,6 +64,7 @@ export function checkRunExecutor(deps: GitHubEffectDeps): EffectExecutor {
         const payload = checkRunPayload(model!);
         const fields = {
           status: payload.status,
+          details_url: payload.detailsUrl,
           ...(payload.conclusion && { conclusion: payload.conclusion }),
           ...(run.startedAt && { started_at: run.startedAt.toISOString() }),
           ...(payload.status === "completed" && {
