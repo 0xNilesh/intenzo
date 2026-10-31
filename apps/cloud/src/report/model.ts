@@ -32,20 +32,31 @@ export function shownRun(groupRuns: readonly RunRow[]): RunRow | undefined {
 }
 
 /** The PR lane's readings in a line: "+0 s $50.00 · +1 s $50.00 · after reload $45.00". */
+/**
+ * §26.1's readings line: what the criterion's watched element read after the trigger, timed from
+ * it ("+0 s $50.00 · +1 s $50.00 · +3 s $50.00 · after reload $45.00"). The first element the lane
+ * watched is the one; a lane that watched no element shows what appeared in its live regions
+ * (a toast), and a lane where nothing changed shows nothing. Region snapshots are left to the
+ * report: they're too long for a line.
+ */
 export function readingsLine(lane: LaneResult): string | null {
   const t0 = lane.tTriggerMs;
   // Stored JSON: tolerate a lane without readings rather than fail the whole report.
-  const parts = (lane.readings ?? [])
-    .filter((r) => r.phase !== "pre" && r.kind !== "absent")
-    .map((r) => {
-      const when =
-        r.phase === "after_reload"
-          ? "after reload"
-          : t0 === null
-            ? ""
-            : `+${Math.round((r.tMs - t0) / 1000)} s`;
-      return `${when} ${r.value ?? ""}`.trim();
-    });
+  const readings = (lane.readings ?? []).filter((r) => r.phase !== "pre");
+  const element = readings.find((r) => r.kind === "text")?.label;
+  const shown = element
+    ? readings.filter((r) => r.label === element && r.kind !== "region_diff")
+    : readings.filter((r) => r.label === "live regions" && r.value && r.value !== "no change");
+  const parts = shown.map((r) => {
+    const when =
+      r.phase === "after_reload"
+        ? "after reload"
+        : t0 === null
+          ? ""
+          : `+${Math.round((r.tMs - t0) / 1000)} s`;
+    const value = r.kind === "absent" ? "(absent)" : (r.value ?? "").split("\n")[0];
+    return `${when} ${value}`.trim();
+  });
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
