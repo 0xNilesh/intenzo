@@ -1,6 +1,6 @@
 // What the Cloud does with pull_request and deployment_status events (§16.2, §17): record what
-// happened, then advance the run groups it concerns. The decisions' effects (check runs, the
-// comment, jobs) are only logged until the outbox executes them (T2.4).
+// happened, advance the run groups it concerns, then drain the outbox their decisions wrote to, so
+// the check run and the comment change within seconds of the event (§16.4).
 import { CONFIG_FILENAMES, configFromFiles, formatProblems } from "@intenzo/core";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -37,6 +37,8 @@ export interface HandlerContext {
   newRunId: () => string;
   /** One line per thing that happened. Never a payload, a token or a secret. */
   log: (line: string) => void;
+  /** Runs the outbox's due effects (drainOutbox with the GitHub executors). */
+  drain: () => Promise<unknown>;
 }
 
 export function eventHandlers(ctx: HandlerContext): Record<string, EventHandler> {
@@ -191,7 +193,10 @@ function onDeploymentStatus(ctx: HandlerContext): EventHandler {
 
 const clock = (ctx: HandlerContext) => ({ now: ctx.now(), newRunId: ctx.newRunId });
 
-/** Logs what changed, and gives each run that starts verifying its baseline (§17.3). */
+/**
+ * Logs what changed, gives each run that starts verifying its baseline (§17.3), then drains the
+ * outbox, so the check run and the comment show the baseline too.
+ */
 async function afterAdvance(
   ctx: HandlerContext,
   github: GitHub,
@@ -202,9 +207,7 @@ async function afterAdvance(
   const changed = [...decision.created, ...decision.updated];
   for (const run of changed) ctx.log(`PR #${pr.number}: ${describeRun(run)}`);
   if (decision.effects.length > 0) {
-    ctx.log(
-      `PR #${pr.number}: effects for the outbox (T2.4): ${decision.effects.map(describeEffect).join(", ")}`,
-    );
+    ctx.log(`PR #${pr.number}: effects: ${decision.effects.map(describeEffect).join(", ")}`);
   }
 
   for (const effect of decision.effects) {
@@ -241,6 +244,7 @@ async function afterAdvance(
       ctx.log(`${prefix}: baseline lookup failed, going on without one: ${why}`);
     }
   }
+  if (decision.effects.length > 0) await ctx.drain();
 }
 
 /** "run 8f9b1c2e (f3cbadc #1, opened): verifying https://…" */

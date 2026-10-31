@@ -27,6 +27,7 @@ const github = fakeGitHub();
 let t: Awaited<ReturnType<typeof testDb>>;
 let lines: string[];
 let ids: number;
+let drains: number;
 
 beforeAll(async () => {
   t = await testDb();
@@ -36,6 +37,7 @@ beforeEach(async () => {
   await resetWithDemoShop(t.db);
   lines = [];
   ids = 0;
+  drains = 0;
 });
 
 const handlers = () =>
@@ -45,6 +47,7 @@ const handlers = () =>
     now: () => new Date("2026-10-31T09:00:00.000Z"),
     newRunId: () => `00000000-0000-4000-8000-${String(++ids).padStart(12, "0")}`,
     log: (line) => lines.push(line),
+    drain: async () => (drains += 1),
   });
 
 async function deliver(name: string, edit: (payload: Payload) => void = () => {}) {
@@ -124,6 +127,8 @@ describe("pull_request and deployment_status (§16.2, §17)", () => {
       `PR #2: run 00000000: baseline main@8440e97 (the merge base) at ${MAIN_URL}`,
     );
     expect(github.calls.some((call) => call.includes("/deployments/21/"))).toBe(false);
+    // Each event that changed a run drained the outbox it wrote to.
+    expect(drains).toBe(3);
   });
 
   it("never starts a run from a production deployment of its head", async () => {
@@ -140,6 +145,7 @@ describe("pull_request and deployment_status (§16.2, §17)", () => {
       "deployment of a412468 (Production, success): stored; not a preview environment",
     );
     expect(github.calls.some((call) => call.endsWith("/pulls"))).toBe(false);
+    expect(drains).toBe(1);
   });
 
   it("stores a preview of a commit in no open PR, and changes nothing", async () => {
