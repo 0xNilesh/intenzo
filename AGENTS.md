@@ -430,6 +430,10 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **The Vercel CLI doesn't read `.gitignore`.** Deploying from the repo root would upload `.env`, `.env.github-app` and the App's `.pem` without `.vercelignore`. Keep it.
 - **A Vercel project created by the CLI keeps the "Other" preset** when its Root Directory is set later; `apps/cloud/vercel.json` pins Next.js.
 - **Migrate Neon before deploying a PR that adds a migration:** `pnpm db:migrate`, then `vercel deploy`. T2.5a was deployed before its `job_events` table existed; nothing wrote to it in between.
+- **Vercel CLI 64's `blob create-store` pulls env into the root `.env.local` and appends `.env*` to `.gitignore`**, which would hide `.env.example`. Revert `.gitignore` and `chmod 600 .env.local` after it. Its `env ls` prints the start of non-sensitive values, so print names only (`awk '{print $1}'`). It won't let an agent delete a store (T2.6).
+- **A new store's env var appears a moment after `create-store` returns.** Wait for the name to show in `env ls` before pulling it (T2.6).
+- **`@vercel/blob` uses its own `undici`, which msw can't intercept.** Point its tests at a local server with `VERCEL_BLOB_API_URL` (T2.6).
+- **zsh doesn't split an unquoted variable into words** (`set -- $OUT` gives one argument). Use `${=OUT}` or explicit `${OUT%%,*}`-style splitting (T2.6).
 - **`commits/{sha}/pulls` lists every open PR that _contains_ the commit**, not only those whose head it is. Compare `head.sha` (T2.3).
 - **A Vercel redeploy adds a second `success` status, with a new URL, to the same GitHub deployment.** Read a deployment's newest status, not its first (T2.3).
 - **Next 16 (Turbopack) traces the whole project into a function** when any bundled module calls `fs` with a dynamic path, even code the function never runs. Mark such calls `/*turbopackIgnore: true*/`, as core's `readConfig()` does, and check the trace count in `.next/server/app/**/route.js.nft.json` (T2.3).

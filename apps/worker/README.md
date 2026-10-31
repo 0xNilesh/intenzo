@@ -49,6 +49,9 @@ node apps/worker/src/main.ts job job.json
   was superseded, cancelled or is over). The worker stops at once and reports nothing more.
 - **Exit code:** 0 finished; 1 failed (reported); 3 stopped on a 410. The shim reports `failed`
   itself only on another code.
+- **Files** go straight to Blob with `uploadArtifacts()`: the Cloud presigns one URL per file under
+  `runs/{runId}/`, by `takePath()` from core, and the worker PUTs it. Videos go to the private
+  store; GIFs and stills to the public one (ARCHITECTURE §28).
 - **Jobs:**
   - A `sleep` job (`seconds`, `aliveEverySeconds`) exercises the protocol and the shim.
   - A `verify` job answers `failed` (`not_implemented`) until T2.7.

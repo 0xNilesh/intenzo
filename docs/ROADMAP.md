@@ -343,9 +343,20 @@
   - DECISIONS 2026-10-31.
 
 ### T2.6 Artifact upload
-- [ ] **Build:** two Blob stores with explicit env prefixes; `/api/worker/upload-tokens` issues a per-file token only for paths under `runs/{runId}/`.
-- [ ] **Tests:** a path outside the run → 403; a second take gets a separate path.
-- [ ] **Verify:** the worker uploads a video and the public URL plays.
+- [x] **Build:** two Blob stores with explicit env prefixes; `/api/worker/upload-tokens` issues a per-file token only for paths under `runs/{runId}/`.
+  - *The "token" is a presigned PUT URL per file that refuses to overwrite.*
+  - *`intenzo-private` (videos, traces, bundles) and `intenzo-public` (GIFs, stills) are private and public stores, reached with `PRIVATE_BLOB_READ_WRITE_TOKEN` and OIDC with `PUBLIC_BLOB_STORE_ID`.*
+  - *Also: core's `takePath()`, and the worker's `uploadArtifacts()`.*
+- [x] **Tests:** a path outside the run → 403; a second take gets a separate path.
+  - *Also:*
+    - a climb with `..`, absolute paths, empty segments and odd characters → 403
+    - a video sent to the public store → 403
+    - a stale job → 410
+    - the signer's request, and the presigned URL's no-overwrite
+    - the worker's PUTs, a 410, and Blob refusing a PUT
+- [x] **Verify:** the worker uploads a video and the public URL plays.
+  - *Live, with a running job's token:* the worker's `uploadArtifacts()` put a test video in the private store (1 object, 22.28 KB). A GIF's public URL served it back identical (200 `image/gif`, 48,823 bytes). A second upload onto the same take was refused ("This blob already exists"), and a path outside the run got 403.
+  - *Videos are private by design (§28)*, so they play through the report page's signed URLs (T2.7), not a public URL.
 
 ### T2.7 Report renderer and check run (stub verdicts)
 - [ ] **Build:** `core/report` (comment markdown, check-run payload) from DB state; the stub worker emits fixed verdicts plus the real P1 recordings.

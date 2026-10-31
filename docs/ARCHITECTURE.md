@@ -540,7 +540,7 @@ The App is **Intenzo Ai** (`intenzo-ai`, bot `intenzo-ai[bot]`), installed on de
 |---|---|---|
 | `POST /api/github/webhook` | HMAC `X-Hub-Signature-256` | store event (idempotent on delivery ID; only §12 events, and only Intenzo's own check runs), then dispatch → `advance` after the response with Next's `after()` (T2.1) |
 | `POST /api/worker/events` | job JWT | ingest event; **410 if stale** |
-| `POST /api/worker/upload-tokens` | job JWT | per-file Blob client tokens for the job's deterministic paths |
+| `POST /api/worker/upload-tokens` | job JWT | a presigned PUT URL per file (up to 20), only under `runs/{runId}/` of the job's run, with each store's content types and size cap, no overwrite (T2.6) |
 | `GET /api/worker/alive` | job JWT | liveness for superseded/cancelled jobs |
 | `POST /api/internal/sweep` | internal secret (`INTENZO_SWEEP_SECRET`) | deadlines (a `tick` for every run group with an unfinished run) and outbox retries, from Modal's cron every minute (T2.5b) |
 | `GET /r/[runId]` | public for public repos (v0) | report page with chaptered player |
@@ -1151,7 +1151,12 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
 ## 28. Artifact storage and privacy
 - **Paths:** `runs/{runId}/{criterion}/{side}/take-{n}/{file}`. Every recording is a new take, so re-records never overwrite the take a verdict cites. Verdicts reference takes explicitly.
 - **Upload:** the worker requests tokens **when it needs them** (per file, or a small batch) from `/api/worker/upload-tokens`. Cloud issues a client token for that exact pathname if it's under `runs/{runId}/` for the job's run. Uploads go straight to Blob, so large videos never pass through Vercel functions.
-- **Two stores** means two read-write tokens. They're connected with distinct env var prefixes (`PUBLIC_BLOB_…`, `PRIVATE_BLOB_…`) and chosen explicitly in code.
+- **Two stores** means two credentials. They're connected with distinct env var prefixes (`PUBLIC_BLOB_…`, `PRIVATE_BLOB_…`) and chosen explicitly in code.
+- **Built in T2.6:**
+  - **Private or public is a property of the store**, fixed when it's created: Vercel Blob now has private stores, readable only with authentication.
+  - **The upload is a presigned PUT URL, not a client token.** The Cloud asks Blob for a signed token scoped to the one path and to PUT (`issueSignedToken`), and presigns a URL that refuses to overwrite and keeps the exact path (`presignUrl`). The worker PUTs to it and never holds any Blob credential.
+  - **Each store's credential:** `intenzo-public` is reached through Vercel's OIDC with `PUBLIC_BLOB_STORE_ID`, and `intenzo-private` with `PRIVATE_BLOB_READ_WRITE_TOKEN`.
+  - **Reading back:** a private blob is read through the Cloud, or through a signed GET URL (at most 7 days); the report page (T2.7) does that.
 - **Stores:**
   - `intenzo-public`: GIFs and stills for public repos (inline through GitHub's image proxy)
   - `intenzo-private`: videos, traces and bundles, served via the report page. For **private repos (roadmap)**, inline GIFs are served from a Cloud route `/g/{random}.gif` that checks expiry and revocation and streams from the private store. The full report needs GitHub OAuth plus a repo-access check.
@@ -1290,7 +1295,7 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | R6 | Exploration on deep flows | `repro.startPath` from the PM video, route candidates, `trigger_absent` handling, a path cache within the run group |
 | R7 | Customer test isolation | Isolation levels; `no_isolation` cap; hook reference implementation |
 | R8 | Merge-base preview missing for customers | Drift walk and the `baseUrl=null` fallback are built (T2.3). v1: trigger a Vercel preview through the API |
-| R9 | Private-repo media and GIFs | `body_html` signed URLs; `/g/` proxy (roadmap) |
+| R9 | Private-repo media and GIFs | `body_html` signed URLs; `/g/` proxy (roadmap). Vercel Blob's private stores and signed GET URLs (T2.6) make the proxy simpler |
 | R10 | Voice Transcribe is realtime-only | **Resolved (T0.2):** a file endpoint exists and is accurate; neither mode returns timings |
 | R11 | Vercel environment naming in `deployment_status` | **Resolved (T0.4):** exactly `Preview` / `Production`; `environment_url` = `target_url`; `ref` = SHA; `production_environment` always `false`. The catch: Vercel's per-project "deployment_status Events" toggle was off on a new project, so onboarding must turn it on (§17.1) |
 | R12 | Judges agree on the wrong answer (correlated errors) | Readings checks + annotated-target check; bench reports false-pass rate per arm. T0.3: the judges also agree on how to read a *vague* criterion (both passed both ambiguous clips), so the intent step must make criteria concrete (T4.1) |
