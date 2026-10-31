@@ -491,6 +491,9 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
                 video_s, frames, cost_usd, cache_hit, error
 ```
 
+- `webhook_events.payload_json` is the request body cast to `jsonb` in SQL, never `JSON.parse` output, so 64-bit ids keep every digit (T0.4, T2.1). `processed_at` is set when dispatch finishes; a failed dispatch leaves it null and fills `error`.
+- Migrations live in `apps/cloud/drizzle/` (`pnpm db:generate`, `pnpm db:migrate`). Unit tests apply the same migrations to an in-process Postgres (PGlite).
+
 ## 12. GitHub App manifest
 
 | Permission | Level | Why |
@@ -511,7 +514,7 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
 
 | Route | Auth | Purpose |
 |---|---|---|
-| `POST /api/github/webhook` | HMAC `X-Hub-Signature-256` | store event (idempotent on delivery ID), dispatch, `waitUntil(advance)` |
+| `POST /api/github/webhook` | HMAC `X-Hub-Signature-256` | store event (idempotent on delivery ID; only §12 events, and only Intenzo's own check runs), then dispatch → `advance` after the response with Next's `after()` (T2.1) |
 | `POST /api/worker/events` | job JWT | ingest event; **410 if stale** |
 | `POST /api/worker/upload-tokens` | job JWT | per-file Blob client tokens for the job's deterministic paths |
 | `GET /api/worker/alive` | job JWT | liveness for superseded/cancelled jobs |
@@ -1121,14 +1124,14 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
 - Every run has a `run_events`-style timeline, built from the outbox + `model_calls` + job events and shown on the report page (debug mode).
 - `model_calls`: latency, tokens, video seconds, cost, prompt version. These feed the bench charts and cost per PR.
 - Worker JSON logs (`runId`, `jobId`, `criterionId`, `lane`); Playwright traces for every lane.
-- On day 1, raw webhook payloads are logged to `webhook_events` (also used to check R11).
+- Every webhook delivery Intenzo acts on is stored in `webhook_events` with its raw payload, and whether its dispatch succeeded (T2.1).
 
 ## 31. Testing and IntentBench
 
 ### Testing
 | Level | What |
 |---|---|
-| Unit (Vitest) | schemas, config, `transition()`, outbox keys, route mapping, `durableTarget`, `settle`, judge combination + normalization, aria diff, comment renderer |
+| Unit (Vitest) | schemas, config, `transition()`, outbox keys, route mapping, `durableTarget`, `settle`, judge combination + normalization, aria diff, comment renderer; webhook intake and the database layer, against an in-process Postgres (PGlite) with the real migrations |
 | Model contract | recorded fixtures per prompt version; a nightly live run |
 | Browser | recorder + marker alignment + readings + isolation against local demo-shop |
 | Pipeline | `intenzo run --local --pr http://localhost:3001 --base http://localhost:3000 --ticket cases/discount` |

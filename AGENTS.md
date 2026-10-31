@@ -422,6 +422,7 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **Comments posted with an App installation token do start `issue_comment` workflows.** The bot login is `<app slug>[bot]`.
 - **Webhook delivery ids are 64-bit:** `JSON.parse` rounds them. Use `parseKeepingBigIds` (`scripts/github-app/lib/fixtures.ts`).
 - **An App's webhook URL doesn't have to answer.** GitHub keeps every delivery's payload, so `GET /app/hook/deliveries/{id}` reads it back.
+- **`deployment_status` payloads carry `"check_run": null`.** Webhook schemas must accept `null` wherever GitHub may send it (T2.1).
 
 **Next.js (demo-shop, T0.5–T0.6)**
 

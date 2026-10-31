@@ -19,7 +19,7 @@
 
 | Layer | Tool | Command | Runs against |
 |---|---|---|---|
-| Unit | Vitest | `pnpm test` | pure functions, fixtures, mocked HTTP (msw) |
+| Unit | Vitest | `pnpm test` | pure functions, fixtures, mocked HTTP (msw), an in-process Postgres (PGlite) |
 | Contract | Vitest | `pnpm test:contract` | model prompt/schema fixtures; the pinned Playwright internal API |
 | Browser | Vitest + Playwright | `pnpm test:browser` | local demo-shop: base on `:3000` (main), PR on `:3001` (branch worktree) |
 | Live model | Vitest (`*.live.test.ts`, called `@live` below) | `pnpm test:live` | real Meta API / Baseten (costs credits; run on purpose) |
@@ -232,7 +232,8 @@
 - [ ] **Build:**
   - create the App from the §12 manifest (permissions + events)
   - `POST /api/github/webhook` with HMAC verification, `webhook_events` insert (unique `delivery_id`), dispatch, `waitUntil(advance)`
-- [ ] **Tests:** valid signature accepted; invalid → 401; a duplicate delivery is ignored (one row, one dispatch). Uses the T0.4 payload fixtures.
+  - *Done: the route (Next.js, dispatch deferred with `after()`), the signature check, `webhook_events` + its migration, the dispatcher. Pending: registering the real App (`GITHUB_APP_ENV=.env.intenzo-app pnpm github-app:create`), which needs the Cloud's URL and a person to press GitHub's button.*
+- [x] **Tests:** valid signature accepted; invalid → 401; a duplicate delivery is ignored (one row, one dispatch). Uses the T0.4 payload fixtures. *(`apps/cloud`: every §12 event type from the fixtures, other apps' check runs and `check_suite` dropped, 400 on a malformed delivery; the database tests run on PGlite.)*
 - [ ] **Verify:** install the App on demo-shop, open a test PR, and see the row in `webhook_events`.
 
 ### T2.2 Database and the run state machine
