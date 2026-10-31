@@ -43,7 +43,11 @@ const happen = (fact: Fact, minute = 0) =>
 const drain = () =>
   drainOutbox({
     db: t.db,
-    executors: githubExecutors({ db: t.db, github: () => githubClient(async () => "ghs_test") }),
+    executors: githubExecutors({
+      db: t.db,
+      github: () => githubClient(async () => "ghs_test"),
+      reportBaseUrl: "https://intenzo-cloud.vercel.app",
+    }),
     now: () => new Date(T0),
     log: () => {},
   });
@@ -90,8 +94,10 @@ describe("the Intenzo check run (§26.2)", () => {
         status: "queued",
         output: {
           title: "Waiting for the preview",
-          summary: "⏳ Waiting for the preview of `b4e35b0`.",
+          summary: "Waiting for the preview of `b4e35b0`.",
         },
+        // No buttons before the run completes (§26.2).
+        actions: [],
       },
     });
     expect((await runRow(RUN_1)).checkRunId).toBe(9001);
@@ -101,7 +107,7 @@ describe("the Intenzo check run (§26.2)", () => {
     expect(sent.find((s) => s.call === "PATCH check-runs/9001")?.body).toMatchObject({
       status: "in_progress",
       started_at: new Date(T0 + 2 * 60_000).toISOString(),
-      output: { title: "Verifying the preview" },
+      output: { title: "Verifying" },
     });
   });
 
@@ -137,7 +143,7 @@ describe("the run group's comment (§26.1)", () => {
     await drain();
     const posted = sent.find((s) => s.call === "POST comment")!;
     expect(posted.body.body).toBe(
-      `<!-- intenzo:run-group:${groupId} -->\n### Intenzo\n\n⏳ Waiting for the preview of \`b4e35b0\`.\n`,
+      `<!-- intenzo:run-group:${groupId} -->\n### Intenzo · ⏳ waiting for the preview · attempt 1\n\nWaiting for the preview of \`b4e35b0\`.\n`,
     );
     const commentId = (await groupRow()).commentId!;
 
@@ -148,7 +154,7 @@ describe("the run group's comment (§26.1)", () => {
       `PATCH comment/${commentId}`,
     ]);
     expect(sent.at(-1)?.body.body).toContain(
-      `🔎 Verifying \`b4e35b0\` on [its preview](${PREVIEW})`,
+      "### Intenzo · 🔎 verifying · attempt 1\n\nVerifying `b4e35b0` on its preview.",
     );
   });
 
@@ -158,7 +164,7 @@ describe("the run group's comment (§26.1)", () => {
     await happen({ kind: "preview_ready", sha: "b4e35b0", url: PREVIEW }, 2);
     await drain();
     expect(calls().filter((c) => c.includes("comment"))).toEqual(["POST comment"]);
-    expect(sent.find((s) => s.call === "POST comment")?.body.body).toContain("🔎 Verifying");
+    expect(sent.find((s) => s.call === "POST comment")?.body.body).toContain("🔎 verifying");
     const comments = await t.db.select().from(outbox).where(eq(outbox.effect, "comment"));
     expect(comments.map((c) => c.status)).toEqual(["done", "done"]);
   });
