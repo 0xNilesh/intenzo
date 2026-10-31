@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import type { Db } from "../db/db.ts";
 import { jobEvents, runs } from "../db/schema.ts";
 import { advance } from "../runs/advance.ts";
-import { requestComment, RESULT_EVENTS, storeResult } from "./results.ts";
+import { requestComment, RESULT_EVENTS, savePath, storeResult } from "./results.ts";
 import type { Fact } from "../runs/transition.ts";
 import { bearerToken, type JobClaims, verifyJobToken } from "./token.ts";
 
@@ -101,6 +101,11 @@ export async function handleWorkerEvent(request: Request, deps: WorkerApiDeps): 
       newRunId: deps.newRunId,
     });
     if (decision.effects.length > 0) await deps.drain();
+  } else if (event.kind === "path_saved") {
+    // No re-render: a path isn't part of the report.
+    const kept = await savePath(deps.db, run, event.path);
+    if (!kept)
+      deps.log(`run ${short(run.id)}: path for ${event.path.criterionId} dropped: no intent yet`);
   } else if (RESULT_EVENTS.has(event.kind)) {
     await storeResult(deps.db, run, event);
     await requestComment(deps.db, run.runGroupId);

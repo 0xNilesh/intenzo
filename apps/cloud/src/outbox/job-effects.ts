@@ -1,12 +1,12 @@
 // The outbox's job effects (§16.3, §16.4): spawn a run's VerifyJob on Modal when the run starts
 // verifying (§8), and cancel it when the run ends any other way (superseded, past its deadline).
-import { VerifyJob } from "@intenzo/core";
-import { and, eq } from "drizzle-orm";
+import { SavedPath, VerifyJob } from "@intenzo/core";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Db } from "../db/db.ts";
 import { repoConfig } from "../db/repos.ts";
-import { repos, runGroups, runs } from "../db/schema.ts";
+import { intentVersions, repos, runGroups, runs, savedPaths } from "../db/schema.ts";
 import type { ModalSettings } from "../env.ts";
 import { signJobToken, tokenExpiry } from "../jobs/token.ts";
 import { type RepoSecrets, repoSecrets } from "../secrets/repo-secrets.ts";
@@ -73,7 +73,7 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
         baseUrl: run.baseUrl,
         baseSha: run.baseSha,
         secrets,
-        cachedPaths: [], // saved paths come with the navigator (P3)
+        cachedPaths: await cachedPaths(deps.db, ctx.group.id),
       });
       const { callId } = await callModal(deps.modal.spawnUrl, deps.modal.secret, job, Spawned);
       await deps.db
@@ -83,6 +83,29 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
       return callId;
     },
   };
+}
+
+/**
+ * The group's saved paths for its latest intent version (§19 3a). The job works out its intent
+ * at step 0, so the latest one stands in for it; a path that no longer fits the app breaks on
+ * replay and is explored again (T3.5).
+ */
+export async function cachedPaths(db: Db, groupId: number): Promise<SavedPath[]> {
+  const [latest] = await db
+    .select({ id: intentVersions.id })
+    .from(intentVersions)
+    .where(eq(intentVersions.runGroupId, groupId))
+    .orderBy(desc(intentVersions.id))
+    .limit(1);
+  if (!latest) return [];
+  const rows = await db
+    .select({ path: savedPaths.pathJson })
+    .from(savedPaths)
+    .where(and(eq(savedPaths.runGroupId, groupId), eq(savedPaths.intentVersionId, latest.id)));
+  return rows.flatMap((row) => {
+    const parsed = SavedPath.safeParse(row.path);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 /** The repo's secrets for its job; a repo with sealed secrets and no key to open them is an error. */
