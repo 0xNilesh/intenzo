@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./browser": "./src/browser/index.ts"
+    "./browser": "./src/browser/index.ts",
+    "./navigator": "./src/navigator/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
