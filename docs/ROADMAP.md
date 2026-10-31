@@ -509,7 +509,8 @@
 *Added 2026-10-31 (DECISIONS · Hosted intent): P4's goal has a PM's video become criteria on hosted runs, but no task built §8's context bundle, so hosted jobs still read the fixtures.*
 - [x] **Build:** the Cloud's context bundle at spawn (the PR, its ticket by §17.2, the ticket's recording downloaded and stored privately, the diff), signed URLs for the worker, an intent version reused by ticket hash; the worker reads the ticket and recording into criteria and maps coverage from the diff, the judges' caps getting each criterion's coverage.
 - [x] **Tests:** the bundle's content, a recording that can't be downloaded, no ticket; the spawn sends the bundle and reuses an intent version, and goes on without a bundle; the worker's criteria from the ticket and recording, a reused intent, text alone, the fixtures without a model.
-- [ ] **Verify:** a demo-shop PR that closes #5 gets criteria read from the PM's recording, in a hosted run.
+- [x] **Verify:** a demo-shop PR that closes #5 gets criteria read from the PM's recording, in a hosted run.
+  - *Live, demo-shop#16 (the almost-right code, "Closes #5"):* the four criteria came from the recording at +61 s, in the PM's order (C1 the total, C2 the line, C3 the expired code, C4 the chart); the navigator explored all four; C1 ❌ (confirmed on a second take), C2–C4 ✅: "❌ 3/4 passed" in 127 s, 💲 $0.20. demo-shop was made public first (DECISIONS 2026-10-31 · Hosted intent).
 
 ### ✅ Phase 4 gate: `pnpm gate:p4`
 - `gate:p3` passes, plus all P4 tests.

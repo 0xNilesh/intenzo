@@ -5,6 +5,29 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Hosted intent: the PR's ticket and its recording (T4.8, #107)
+
+P4's goal has a PM's video become criteria on hosted runs, but no task built §8's context bundle, so hosted jobs read the fixtures. T4.8 was added for it. Checked with 22 new unit tests and a hosted run on demo-shop#16.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Downloading #5's recording with the App's installation token, demo-shop private | **404**, with the token or without: an App can't fetch a private repo's attachments. ARCHITECTURE §8 assumed a public demo repo |
+| The owner's choice | **Make demo-shop public** (2026-10-31). Its 35 commits on 4 branches were scanned first: no key-shaped strings, neither demo secret, only an `.env.example` of empty placeholders. Then the recording downloaded with no credentials (200, 504,961 bytes, the same file as `probes/demo/pm-ticket.mp4`) |
+| Hosted run, demo-shop#16 ("Closes #5", the almost-right code) | Criteria from the recording at +61 s, in the PM's order: C1 the total, C2 the line, C3 the expired code, C4 the chart. All four explored; C1 ❌ (confirmed on a second take), C2–C4 ✅: **❌ 3/4 passed** in 127 s, 💲 $0.20 |
+| C1's readings | "+0 s $50.00 · +1 s $50.00 · +3 s $50.00": this exploration watched the total itself. No "after reload": the PM never asks for the total to survive a reload, so the criterion from the video has no reload probe (the hand-written C2 fixture did) |
+| The comment's header | Named no ticket: the run group didn't keep it. It does now |
+
+### Decisions
+
+1. **The Cloud builds the bundle at spawn; the worker reads it** (§8, §19 step 0), and gets signed URLs only: it never holds a GitHub or Blob credential (§29).
+2. **demo-shop is public**, as §8 assumed. *Still the owner's:* rotate the demo's hook secret and bypass, which were pasted in a chat earlier.
+3. **A bundle that can't be built doesn't stop the run**: the job falls back to the fixtures, and the Cloud logs why.
+4. **The P4 gate's golden test matches criteria by what they're about, not by number** (owner's choice), since the PM's order makes the total C1; and C1's readings line is compared without the after-reload reading the video's criterion doesn't ask for.
+
+---
+
 ## 2026-10-31 · Streaming comment, live (T4.7, #38)
 
 The comment's stages, checked live on demo-shop#15 with both judges on Modal, and the fixes that run needed. 3 new unit tests and a new snapshot (the criteria listed before any verdict).
