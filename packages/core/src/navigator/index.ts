@@ -7,3 +7,10 @@ export {
   type GuardContext,
   type GuardResult,
 } from "./guard.ts";
+export {
+  durableTarget,
+  isSameElement,
+  regionWatchFor,
+  estimateRoleName,
+  type RoleName,
+} from "./durable.ts";
