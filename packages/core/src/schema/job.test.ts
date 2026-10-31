@@ -74,6 +74,11 @@ describe("VerifyJob", () => {
     expect(VerifyJob.parse({ ...job, secrets: null }).secrets).toBeNull();
   });
 
+  it("goes without a context bundle until the Cloud builds one (P4)", () => {
+    expect(VerifyJob.parse({ ...job, bundleUrl: null }).bundleUrl).toBeNull();
+    expect(issues(VerifyJob, { ...job, bundleUrl: "not a url" })[0]).toMatch(/^bundleUrl: /);
+  });
+
   it("validates the ids, URLs and deadline", () => {
     expect(issues(VerifyJob, { ...job, jobId: "job-1" })[0]).toMatch(/^jobId: /);
     expect(issues(VerifyJob, { ...job, prUrl: "not a url" })[0]).toMatch(/^prUrl: /);
