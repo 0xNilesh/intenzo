@@ -83,11 +83,14 @@ with web_image.imports():
 # MODAL_ENDPOINT_SECRET (the Cloud → Modal bearer), INTENZO_SWEEP_SECRET (Modal → Cloud) and
 # INTENZO_CLOUD_URL. Created with `modal secret create` (modal/README.md).
 secrets = [modal.Secret.from_name("intenzo-worker")]
+# META_API_KEY only, for the worker's navigator (§20) and later its judges: the worker never gets
+# the endpoints' bearer or the sweep's secret. Without it, jobs replay the hand-written paths.
+model_secrets = [modal.Secret.from_name("intenzo-models")]
 
 app = modal.App("intenzo-worker")
 
 
-@app.function(image=worker_image, cpu=4.0, memory=8192, timeout=TIMEOUT_S)
+@app.function(image=worker_image, secrets=model_secrets, cpu=4.0, memory=8192, timeout=TIMEOUT_S)
 def run_job(payload: dict) -> str:
     import shim
 

@@ -31,6 +31,7 @@ Once, with a Modal account:
 pipx install modal
 modal token new                                   # opens the browser to log in
 modal secret create intenzo-worker --from-json <file>.json   # see below
+modal secret create intenzo-models --from-json <file>.json   # META_API_KEY only, from .env
 ```
 
 `--from-dotenv .env.intenzo-modal` would be simpler, but it needs `python-dotenv` in the CLI's
@@ -42,6 +43,11 @@ JSON file (owner-only, deleted right after) and used `--from-json`.
 - `MODAL_ENDPOINT_SECRET`: the Cloud's bearer token for `spawn` and `cancel`
 - `INTENZO_SWEEP_SECRET`: what `sweep` sends to the Cloud
 - `INTENZO_CLOUD_URL`
+
+`intenzo-models` holds only `META_API_KEY` (from the repo root's `.env`), and only `run_job` gets
+it: the worker's navigator explores with Wonder (§20), and never sees the endpoints' bearer or the
+sweep's secret. The deploy fails until the secret exists. A job whose worker has no key replays the
+hand-written paths (`fixtures/paths`) instead of exploring.
 
 Then, from the repo root:
 
