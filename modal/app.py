@@ -40,12 +40,20 @@ MANIFESTS = [
     "bench/intentbench/package.json",
     "scripts/package.json",
 ]
-SOURCES = ["packages/core/src", "packages/core/fixtures", "apps/worker/src", "fixtures/criteria"]
+# The demo ticket's criteria and their hand-written paths: the stub verify job records them (T2.7b).
+SOURCES = [
+    "packages/core/src",
+    "packages/core/fixtures",
+    "apps/worker/src",
+    "fixtures/criteria",
+    "fixtures/paths",
+]
 IGNORE = ["**/node_modules", "**/.env*", "**/*.pem", "**/*.test.ts"]
 
 worker_image = (
     modal.Image.debian_slim(python_version="3.12")
-    .apt_install("curl", "ca-certificates")
+    # ffmpeg aligns, cuts and encodes the lane videos (§21.4).
+    .apt_install("curl", "ca-certificates", "ffmpeg")
     # Node 24 (.nvmrc) from NodeSource, and pnpm through corepack (package.json's packageManager).
     .run_commands(
         "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -",
@@ -55,13 +63,16 @@ worker_image = (
 )
 for name in MANIFESTS:
     worker_image = worker_image.add_local_file(REPO / name, f"/repo/{name}", copy=True)
+# Dependencies and Chromium come before the sources, so a code change doesn't download the browser
+# again: these layers change only with the lockfile.
+worker_image = worker_image.workdir("/repo").run_commands(
+    "pnpm install --frozen-lockfile --prod --filter '@intenzo/worker...'",
+    # Chromium and the libraries it needs, for the exact Playwright version the lockfile pins.
+    "pnpm --filter @intenzo/worker exec playwright install --with-deps chromium",
+)
 for name in SOURCES:
     worker_image = worker_image.add_local_dir(REPO / name, f"/repo/{name}", copy=True, ignore=IGNORE)
-worker_image = (
-    worker_image.workdir("/repo")
-    .run_commands("pnpm install --frozen-lockfile --prod --filter '@intenzo/worker...'")
-    .add_local_python_source("shim")
-)
+worker_image = worker_image.add_local_python_source("shim")
 
 # The endpoints and the sweeper only need FastAPI.
 web_image = modal.Image.debian_slim(python_version="3.12").uv_pip_install("fastapi[standard]")
