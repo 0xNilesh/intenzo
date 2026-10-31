@@ -3,7 +3,7 @@
 Intenzo Cloud (ARCHITECTURE §2, §3): the Next.js app on Vercel that receives GitHub's webhooks,
 keeps run state in Postgres and drives runs. It's the only code with GitHub credentials.
 
-## What it does so far (T2.3)
+## What it does so far (T2.4)
 
 | Route                      | What it does                                                                                                                                   |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -29,8 +29,19 @@ What happens after an event is stored (`src/github/handlers.ts`, ARCHITECTURE §
 | `deployment_status`                                                    | Stores the deployment. A preview's success or failure then advances the open PRs whose head is that commit. Production is never used                                                                   |
 | a run starts verifying                                                 | Its baseline (§17.3): the preview of the PR's merge base with its base branch, or of the nearest commit before it, stored on the run and logged: `baseline main@b6b60c7 (the merge base) at https://…` |
 
-Other events are only stored and marked processed. The decisions' effects (check runs, the
-comment, jobs) are logged until the outbox runs them (T2.4).
+Other events are only stored and marked processed.
+
+Each decision's effects are written to the `outbox` in the same transaction as the run change, and
+the handler then drains it (`src/outbox/`, ARCHITECTURE §16.4):
+
+| Effect                    | What runs it                                                                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `check_run`               | The run's `Intenzo` check run (its `external_id` is the run's id), created once and edited as the run moves on               |
+| `comment`                 | The run group's one comment, posted once and edited in place; an older comment effect is skipped when a newer one is pending |
+| `spawn_job`, `cancel_job` | Nothing yet: they stay pending until the worker exists (T2.5)                                                                |
+
+A claimed row is leased for 60 s, so a row whose drainer died is run again. A failure is retried
+after 10, 20, 40 and 80 s, then marked `failed`. Any number of drainers can run at once.
 
 ## Environment
 
@@ -51,12 +62,18 @@ in this folder.
 pnpm --filter @intenzo/cloud dev     # next dev
 pnpm --filter @intenzo/cloud build   # next build
 pnpm --filter @intenzo/cloud test    # unit tests, the database ones included
+pnpm --filter @intenzo/cloud test:pg # the tests that need a Postgres server (see below)
 pnpm db:generate                     # write a migration for a change to src/db/schema.ts
 pnpm db:migrate                      # apply the migrations to DATABASE_URL_UNPOOLED (else DATABASE_URL)
 ```
 
 The database tests run a real Postgres in-process with [PGlite](https://pglite.dev) and apply the same
-migrations as production (`drizzle/`), so they need no Docker and no network. GitHub is mocked with
+migrations as production (`drizzle/`), so they need no Docker and no network.
+
+PGlite has a single connection, so the tests that race two transactions (`*.pg.test.ts`) need a
+Postgres server: `pnpm --filter @intenzo/cloud test:pg`. They create a fresh database for each test
+file on the server at `INTENZO_TEST_PG_URL` (default `postgres://localhost:5432/postgres`), and drop
+it afterwards. CI runs them against a `postgres:18.6` service container. GitHub is mocked with
 [msw](https://mswjs.io) (`src/github/fake-github.ts`), which answers `fetch` in-process and fails any
 request a test didn't expect.
 

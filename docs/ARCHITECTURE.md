@@ -497,6 +497,7 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
 - CHECK constraints keep `runs.state`, `run_groups.state` and `outbox.status` to their values, and make the outcome non-null exactly when `runs.state = 'done'` (§16.1).
 - `runs.base_drift` counts the commits between the merge base and `base_sha` (§17.3): 0 is the merge base itself (T2.3).
 - `repos.config_json` is the validated `.intenzo.yml` from the default branch, refreshed on each PR event. `deployments` keeps one row per commit and environment, with its latest state; a failure never replaces a success (T2.3).
+- `outbox.lease_until` is the end of an in-flight row's lease, or, on a pending row that failed, the time it may be tried again (T2.4).
 
 ## 12. GitHub App manifest
 
@@ -653,6 +654,13 @@ Effects and their idempotency:
 | spawn job | `spawn:{runId}:{jobType}` | The `runs.current_job_id` check before spawning |
 
 **The comment always renders the latest non-superseded run.** It's rebuilt from the DB on every update, never patched incrementally.
+
+Built in T2.4 (`apps/cloud/src/outbox/`):
+- **Where it runs:** `advance()` writes the rows in its transaction (`rows.ts`). Each webhook drains after its event (`drain.ts`). The sweeper will drain too, once the Modal cron exists (T2.5).
+- **Leases and retries:** a claimed row is leased for 60 s. A failure is tried again after 10, 20, 40 and 80 s, then marked `failed`. Effects without an executor (spawn and cancel until T2.5) stay pending.
+- **The check run is rendered from the run's row, like the comment**, under an advisory lock per run. So its key is `check:{runId}:{status}` (a run passes each status once), and no version is needed: whichever drainer runs last shows the latest state.
+- **The comment starts with a marker** (`<!-- intenzo:run-group:{id} -->`). One posted by a drainer that died is found by it, on a bot's comment only. A deleted comment is posted again.
+- **Two drainers at once** make one check-run POST and one comment POST, on a real Postgres (`drain.pg.test.ts`). Checked live on demo-shop#8.
 
 ### 16.5 Lane (worker)
 ```

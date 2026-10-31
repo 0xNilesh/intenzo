@@ -265,13 +265,14 @@ The template in `.github/pull_request_template.md` has these sections:
 
 ## 6. Tests
 
-| Layer       | File suffix          | Runs                                | Rules                                                                                                                                                                                                                                                                 |
-| ----------- | -------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit        | `*.test.ts`          | every commit (`pnpm check`) + CI    | No network, no browser, no real time. Table-driven for rule-heavy code                                                                                                                                                                                                |
-| Contract    | `*.contract.test.ts` | every commit + CI                   | Pins behavior of things we don't own. External protocols are tested against **local fake servers** that follow the documented protocol (see `scripts/probe/models/*.contract.test.ts`: a fake SSE server for SAM, a fake WebSocket server for realtime transcription) |
-| Browser     | `*.browser.test.ts`  | `pnpm check:all` + CI               | Real Chromium against fixture pages or a local demo-shop. CI installs Chromium automatically once any browser test exists                                                                                                                                             |
-| Live        | `*.live.test.ts`     | **by hand only** (`pnpm test:live`) | Real paid APIs. Never in CI (§8)                                                                                                                                                                                                                                      |
-| E2E / gates | `scripts/`           | end of each phase                   | Real GitHub → Cloud → Modal flows                                                                                                                                                                                                                                     |
+| Layer       | File suffix          | Runs                                                               | Rules                                                                                                                                                                                                                                                                 |
+| ----------- | -------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit        | `*.test.ts`          | every commit (`pnpm check`) + CI                                   | No network, no browser, no real time. Table-driven for rule-heavy code                                                                                                                                                                                                |
+| Contract    | `*.contract.test.ts` | every commit + CI                                                  | Pins behavior of things we don't own. External protocols are tested against **local fake servers** that follow the documented protocol (see `scripts/probe/models/*.contract.test.ts`: a fake SSE server for SAM, a fake WebSocket server for realtime transcription) |
+| Browser     | `*.browser.test.ts`  | `pnpm check:all` + CI                                              | Real Chromium against fixture pages or a local demo-shop. CI installs Chromium automatically once any browser test exists                                                                                                                                             |
+| Postgres    | `*.pg.test.ts`       | CI (a service container), and `pnpm test:pg` with a local Postgres | A real Postgres server (`INTENZO_TEST_PG_URL`), only for what PGlite's single connection can't show, such as two transactions racing. Each file gets a fresh database                                                                                                 |
+| Live        | `*.live.test.ts`     | **by hand only** (`pnpm test:live`)                                | Real paid APIs. Never in CI (§8)                                                                                                                                                                                                                                      |
+| E2E / gates | `scripts/`           | end of each phase                                                  | Real GitHub → Cloud → Modal flows                                                                                                                                                                                                                                     |
 
 - **Write the failing case first** for every rule from ARCHITECTURE.md, e.g. `5.00` must not match `$45.00`.
 - **No real models in unit tests.** Use recorded fixtures or fakes. Control time by injecting the clock.
@@ -401,6 +402,7 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **zsh has no `PIPESTATUS`**, and macOS ships bash 3.2 (no `globstar`). Check exit codes without pipes, and keep CI shell steps portable. `git ls-files '*.x.ts'` is a good way to detect tracked files.
 - **zsh treats `$var:r`, `:h`, `:t` and `:e` as modifiers**, so `"$C:refs/heads/x"` loses text. Write `"${C}:refs/heads/x"`.
 - **Force-push is blocked** in this environment. Rewrite nothing that's pushed; add forward commits.
+- **Gate a commit on the check: `pnpm check && git commit …`.** Chained with `;`, a failed check still commits (it happened in T2.4, before the push).
 
 **Meta APIs (DECISIONS 2026-10-30)**
 
@@ -430,6 +432,9 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **A Vercel redeploy adds a second `success` status, with a new URL, to the same GitHub deployment.** Read a deployment's newest status, not its first (T2.3).
 - **Next 16 (Turbopack) traces the whole project into a function** when any bundled module calls `fs` with a dynamic path, even code the function never runs. Mark such calls `/*turbopackIgnore: true*/`, as core's `readConfig()` does, and check the trace count in `.next/server/app/**/route.js.nft.json` (T2.3).
 - **msw 3 renamed `onUnhandledRequest` to `onUnhandledFrame`**, and `http`/`HttpResponse` come from `msw/http` (T2.3).
+- **msw's `"error"` strategy only makes the request throw**, and code that catches errors hides it. `src/github/fake-github.ts` records unanswered requests and fails the test in `afterEach` (T2.4).
+- **pg's `pool.end()` resolves before its connections have closed.** Dropping their database `WITH (FORCE)` then kills them mid-close and their clients raise FATAL 57P01; retry a plain `DROP DATABASE` while it reports 55006 instead (T2.4).
+- **An App receives the events its own actions cause:** its check run's `check_run.created`, its comment's `issue_comment.created` and `edited` (T2.4).
 
 **Next.js (demo-shop, T0.5–T0.6)**
 
