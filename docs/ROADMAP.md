@@ -229,12 +229,12 @@
 **Goal:** the full hosted plumbing works end to end with a hard-coded path and a **stub judge**.
 
 ### T2.1 GitHub App and webhook intake (`apps/cloud`)
-- [ ] **Build:**
+- [x] **Build:**
   - create the App from the §12 manifest (permissions + events)
   - `POST /api/github/webhook` with HMAC verification, `webhook_events` insert (unique `delivery_id`), dispatch, `waitUntil(advance)`
-  - *Done: the route (Next.js, dispatch deferred with `after()`), the signature check, `webhook_events` + its migration, the dispatcher. Pending: registering the real App (`GITHUB_APP_ENV=.env.intenzo-app pnpm github-app:create`), which needs the Cloud's URL and a person to press GitHub's button.*
+  - *The App is **Intenzo Ai** (`intenzo-ai`). Its permissions and events were set by hand to exactly the manifest's, because GitHub's form lost them (DECISIONS 2026-10-31). Dispatch is deferred with Next's `after()`. The Cloud is live at https://intenzo-cloud.vercel.app.*
 - [x] **Tests:** valid signature accepted; invalid → 401; a duplicate delivery is ignored (one row, one dispatch). Uses the T0.4 payload fixtures. *(`apps/cloud`: every §12 event type from the fixtures, other apps' check runs and `check_suite` dropped, 400 on a malformed delivery; the database tests run on PGlite.)*
-- [ ] **Verify:** install the App on demo-shop, open a test PR, and see the row in `webhook_events`.
+- [x] **Verify:** install the App on demo-shop, open a test PR, and see the row in `webhook_events`. *(demo-shop#6: `pull_request.opened` and the Preview `deployment_status` for its head SHA stored and processed; GitHub's log shows 202 for every stored delivery and 200 for the ignored ones.)*
 
 ### T2.2 Database and the run state machine
 - [ ] **Build:** the Drizzle schema (§11) with the `pg` driver and migrations; `transition(run, inputs)` as a pure function.

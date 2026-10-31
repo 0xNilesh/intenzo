@@ -150,7 +150,7 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 
 | Piece | Runtime | Settings |
 |---|---|---|
-| Cloud | Vercel, Next.js App Router, Node 24 (Fluid Compute) | Function timeout 300 s (orchestration steps are short) |
+| Cloud | Vercel, Next.js App Router, Node 24 (Fluid Compute). Project `intenzo-cloud` (Root Directory `apps/cloud`), https://intenzo-cloud.vercel.app, deployed with the CLI (T2.1) | Function timeout 300 s (orchestration steps are short) |
 | Database | Neon Postgres via Vercel Marketplace | Drizzle with the **`node-postgres` / `neon-serverless` (WebSocket) driver**, which supports interactive transactions. Not `neon-http` |
 | Blob | Vercel Blob, **two stores**: `intenzo-public` (GIFs/stills for public repos) and `intenzo-private` (videos, traces, bundles) | §28 |
 | Worker | Modal: `run_job` function, `spawn`/`cancel` web endpoints, cron | `cpu=4, memory=8192, timeout=900`, `min_containers=1` during demo windows |
@@ -495,6 +495,8 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
 - Migrations live in `apps/cloud/drizzle/` (`pnpm db:generate`, `pnpm db:migrate`). Unit tests apply the same migrations to an in-process Postgres (PGlite).
 
 ## 12. GitHub App manifest
+
+The App is **Intenzo Ai** (`intenzo-ai`, bot `intenzo-ai[bot]`), installed on demo-shop only (T2.1).
 
 | Permission | Level | Why |
 |---|---|---|
