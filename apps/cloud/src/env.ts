@@ -7,6 +7,18 @@ const CloudEnv = z.object({
   DATABASE_URL: z.string().min(1),
   GITHUB_APP_ID: z.coerce.number().int().positive(),
   GITHUB_APP_WEBHOOK_SECRET: z.string().min(1),
+  /**
+   * The App's private key (PEM), to mint installation tokens. Its line breaks may also be written
+   * as a backslash and an n, the way some tools store multi-line values.
+   */
+  GITHUB_APP_PRIVATE_KEY: z
+    .string()
+    .transform((pem) => pem.replaceAll("\\n", "\n").trim())
+    .pipe(
+      z
+        .string()
+        .regex(/^-----BEGIN [A-Z ]*PRIVATE KEY-----\n[\s\S]+\n-----END [A-Z ]*PRIVATE KEY-----$/),
+    ),
 });
 export type CloudEnv = z.infer<typeof CloudEnv>;
 
