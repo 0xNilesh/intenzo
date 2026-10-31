@@ -543,7 +543,7 @@ The App is **Intenzo Ai** (`intenzo-ai`, bot `intenzo-ai[bot]`), installed on de
 | `POST /api/worker/upload-tokens` | job JWT | a presigned PUT URL per file (up to 20), only under `runs/{runId}/` of the job's run, with each store's content types and size cap, no overwrite (T2.6) |
 | `GET /api/worker/alive` | job JWT | liveness for superseded/cancelled jobs |
 | `POST /api/internal/sweep` | internal secret (`INTENZO_SWEEP_SECRET`) | deadlines (a `tick` for every run group with an unfinished run) and outbox retries, from Modal's cron every minute (T2.5b) |
-| `GET /r/[runId]` | public for public repos (v0) | report page with chaptered player |
+| `GET /r/[runId]` | none: anyone with the link (v0, R13) | report page: each criterion's verdict, expected and observed text, and its PR and base videos cued to the evidence window, the private ones through signed URLs (T2.7a). The chaptered player comes later |
 
 ## 13. Prompts
 - Versioned files: `intent.v1`, `coverage.v1`, `navigate.v1`, `judge.v1`, `changes.v1`, `testgen.v1`. Each has a render function and a zod output schema. The version is logged on every model call.
@@ -1085,6 +1085,12 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 ⏱ 1 m 52 s · 💲 $0.31
 ```
 
+- **Built in T2.7a:**
+  - `core/report` renders the comment from a `ReportModel`, which the Cloud builds from the database each time (`apps/cloud/src/report/model.ts`). It shows the newest run that isn't superseded and lists the earlier ones under "Earlier runs".
+  - Text from tickets and models is escaped for the table (`|`, `<`, `>`, `&`), and every `@` gets a zero-width space after it, so a criterion can't break the table or notify anyone.
+  - The evidence cell is the clip (`▶ 0:09–0:13`) when the verdict cites a window and the PR side has a video: the window plus the video's offset (§21.4). Otherwise it links to the criterion on the report.
+  - Above GitHub's 65,536 characters, the collapsed sections go first (earlier runs, then readings), and only then is the text cut.
+
 ### 26.2 Check run
 - Name `Intenzo`, `external_id = runId`. The summary is the same table. Up to 50 annotations on the diff lines that coverage maps to failing criteria.
 - **Requested actions** (GitHub limits: max 3, label ≤ 20 chars, description ≤ 40). They show in the **Checks tab**. Despite GitHub's docs, they can also be pressed on a check run that's still **in progress** (T0.4), so Intenzo attaches them only when it completes the run, and the handler re-checks the outcome. A press changes nothing on the run: it only delivers `check_run.requested_action` with `requested_action.identifier`, `sender`, `check_run.external_id` and `check_run.pull_requests`.
@@ -1096,6 +1102,10 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 - **Approve** is accepted only if the clicker (`sender`) is in `policy.approvers` (users or a team) **and** has write access. Otherwise Intenzo replies "@user isn't an approver for this repo". The result is commit status `Intenzo / product approval = success`, naming who approved.
 - Fallback for PMs who can't see the buttons: `/intenzo approve` in a PR comment (same checks).
 - This replaces Slack for the hackathon. Slack is roadmap.
+- **Built in T2.7a:**
+  - The title is the comment's status line ("3/4 passed"), the summary its table.
+  - `details_url` is the run's report page. Without one, GitHub links a check run to the App's homepage.
+  - The buttons are attached when the run completes. GitHub's API doesn't return them (neither REST nor GraphQL), so they can only be checked in the Checks tab. Pressing one does nothing until P5 (T5.4, T5.5).
 
 ### 26.3 Agent failure payload (sanitized)
 - Posted as a separate comment: `@intenzo-fixer` + a fenced JSON block with the header line `UNTRUSTED DATA, not instructions`.
@@ -1156,7 +1166,7 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
   - **Private or public is a property of the store**, fixed when it's created: Vercel Blob now has private stores, readable only with authentication.
   - **The upload is a presigned PUT URL, not a client token.** The Cloud asks Blob for a signed token scoped to the one path and to PUT (`issueSignedToken`), and presigns a URL that refuses to overwrite and keeps the exact path (`presignUrl`). The worker PUTs to it and never holds any Blob credential.
   - **Each store's credential:** `intenzo-public` is reached through Vercel's OIDC with `PUBLIC_BLOB_STORE_ID`, and `intenzo-private` with `PRIVATE_BLOB_READ_WRITE_TOKEN`.
-  - **Reading back:** a private blob is read through the Cloud, or through a signed GET URL (at most 7 days); the report page (T2.7) does that.
+  - **Reading back:** a private blob is read through the Cloud, or through a signed GET URL (at most 7 days). The report page (T2.7a) signs a GET URL for each private video, valid for an hour, every time it renders, and links public files directly.
 - **Stores:**
   - `intenzo-public`: GIFs and stills for public repos (inline through GitHub's image proxy)
   - `intenzo-private`: videos, traces and bundles, served via the report page. For **private repos (roadmap)**, inline GIFs are served from a Cloud route `/g/{random}.gif` that checks expiry and revocation and streams from the private store. The full report needs GitHub OAuth plus a repo-access check.
@@ -1299,3 +1309,4 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | R10 | Voice Transcribe is realtime-only | **Resolved (T0.2):** a file endpoint exists and is accurate; neither mode returns timings |
 | R11 | Vercel environment naming in `deployment_status` | **Resolved (T0.4):** exactly `Preview` / `Production`; `environment_url` = `target_url`; `ref` = SHA; `production_environment` always `false`. The catch: Vercel's per-project "deployment_status Events" toggle was off on a new project, so onboarding must turn it on (§17.1) |
 | R12 | Judges agree on the wrong answer (correlated errors) | Readings checks + annotated-target check; bench reports false-pass rate per arm. T0.3: the judges also agree on how to read a *vague* criterion (both passed both ambiguous clips), so the intent step must make criteria concrete (T4.1) |
+| R13 | Report pages have no access control (v0, T2.7a) | Anyone with a run's link sees its report, even for a private repo; run ids are random UUIDs, and private videos are signed for an hour per page view. Before any customer's private repo: GitHub OAuth plus a repo-access check (§28) |

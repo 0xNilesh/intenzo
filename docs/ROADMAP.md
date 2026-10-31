@@ -362,16 +362,18 @@
 *Split in two (issue #24): the report from the database first, then real recordings on Modal. T2.7a's PR is "Part of #24"; T2.7b's closes it.*
 
 #### T2.7a Report renderer, check run and report page
-- [ ] **Build:**
+- [x] **Build:**
   - `core/report` (comment markdown, check-run payload) from DB state
   - the worker's `intent_ready`, `criterion_verdict` and `criterion_evidence` events stored
   - the check run's requested actions (§26.2)
   - a report page `/r/[runId]` that plays the private videos through signed URLs
   - the stub worker emits fixed verdicts
-- [ ] **Tests:**
+- [x] **Tests:**
   - snapshot tests of the comment for pass, fail, inconclusive and superseded
   - length cap: collapsed sections are dropped first above 65,536 characters
-- [ ] **Verify:** the rendered comment looks right on GitHub.
+- [x] **Verify:** the rendered comment looks right on GitHub.
+  - *Live, demo-shop#12:* in a 13 s run (from the preview being ready), the comment showed the stub's verdicts: "❌ 3/4 passed · attempt 1", C2's expected and observed text, the merge-base baseline and a report link per criterion. The check run completed as `failure` with the same table, and `/r/{runId}` answered 200. A second commit added "Earlier runs (1)" to the same comment.
+  - *Found and fixed:* the check run's Details link went to the App's homepage, which has a stray period. It now opens the run's report.
 
 #### T2.7b Real recordings from the stub worker
 - [ ] **Build:**
