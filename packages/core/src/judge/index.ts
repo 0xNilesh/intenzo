@@ -1,6 +1,16 @@
 // Judging (ARCHITECTURE §22): the bundle both judges get, and the rules that combine them.
 export { judgeBundle, renderJudgeText, type JudgeBundle, type JudgeSide } from "./bundle.ts";
 export {
+  judgeCriterion,
+  judgesFromEnv,
+  SPARK_13_MODEL,
+  SPARK_OPEN_MODEL,
+  verdictOf,
+  type Judge,
+  type JudgeCall,
+  type Judged,
+} from "./judges.ts";
+export {
   afterRerecord,
   capVerdict,
   checkJudge,

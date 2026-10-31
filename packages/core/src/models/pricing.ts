@@ -8,6 +8,8 @@ export const USD_PER_M_TOKENS: Readonly<
 > = {
   "muse-spark-1.3": { input: 1.25, cached: 0.15, output: 4.25 },
   "muse-wonder-1.0": { input: 4, cached: 0.2, output: 20 },
+  // Spark Open on Baseten's Model APIs, at its list price (DECISIONS 2026-10-30, T0.3).
+  "meta-models/muse-spark-open": { input: 1.25, cached: 0.15, output: 4.25 },
 };
 
 /** A call's list-price cost, or null for a model without a known price. */
