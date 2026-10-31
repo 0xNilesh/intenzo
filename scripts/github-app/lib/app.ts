@@ -5,9 +5,24 @@ import { REPO_ROOT } from "../../probe/lib/env.ts";
 import { errorText, request, type HttpResult, type RequestOptions } from "../../probe/lib/http.ts";
 import { asString, dig } from "../../probe/lib/json.ts";
 
-/** Written by create-app.ts; both match .gitignore's `.env.*`. */
-export const APP_ENV_FILE = `${REPO_ROOT}.env.github-app`;
-export const APP_KEY_FILE = `${REPO_ROOT}.env.github-app.pem`;
+/**
+ * Which App the scripts act as: its credentials file at the repo root. `.env.github-app` is T0.4's
+ * throwaway App; GITHUB_APP_ENV picks another, such as `.env.intenzo-app` for the real one (T2.1).
+ * Only `.env.<name>` files are allowed, because .gitignore's `.env.*` is what keeps them out of git
+ * (`.env.example` is the exception it commits).
+ */
+export function appEnvFileName(value = process.env.GITHUB_APP_ENV): string {
+  const name = value || ".env.github-app";
+  if (!/^\.env\.[\w-]+$/.test(name) || name === ".env.example") {
+    throw new Error(`GITHUB_APP_ENV must name a gitignored .env.<name> file, not ${name}`);
+  }
+  return name;
+}
+
+/** Written by create-app.ts, mode 600. The private key is the same name plus `.pem`. */
+export const APP_ENV_NAME = appEnvFileName();
+export const APP_ENV_FILE = `${REPO_ROOT}${APP_ENV_NAME}`;
+export const APP_KEY_FILE = `${APP_ENV_FILE}.pem`;
 
 export const GITHUB_API = "https://api.github.com";
 export const GITHUB_HEADERS = {
@@ -24,11 +39,11 @@ export interface AppCredentials {
 
 export function loadApp(): AppCredentials {
   if (!existsSync(APP_ENV_FILE)) {
-    throw new Error("No .env.github-app: register the App first with `pnpm github-app:create`");
+    throw new Error(`No ${APP_ENV_NAME}: register the App first with \`pnpm github-app:create\``);
   }
   process.loadEnvFile(APP_ENV_FILE);
   const { GITHUB_APP_ID: id, GITHUB_APP_SLUG: slug } = process.env;
-  if (!id || !slug) throw new Error(".env.github-app needs GITHUB_APP_ID and GITHUB_APP_SLUG");
+  if (!id || !slug) throw new Error(`${APP_ENV_NAME} needs GITHUB_APP_ID and GITHUB_APP_SLUG`);
   return { id, slug, privateKey: readFileSync(APP_KEY_FILE, "utf8") };
 }
 

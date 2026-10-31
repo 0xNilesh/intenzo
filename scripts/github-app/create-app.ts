@@ -1,10 +1,11 @@
-// Registers a GitHub App from the §12 manifest through GitHub's manifest flow (ROADMAP T0.4):
-//   pnpm github-app:create [--name=intenzo-t04-xxxxxx] [--hook=https://example.com/intenzo-webhook]
+// Registers a GitHub App from the §12 manifest through GitHub's manifest flow (ROADMAP T0.4, T2.1):
+//   [GITHUB_APP_ENV=.env.intenzo-app] pnpm github-app:create [--name=intenzo-t04-xxxxxx] [--hook=https://example.com/intenzo-webhook]
 // It prints a localhost link. Open it, press the button, confirm on github.com, and GitHub sends the
 // browser back here with a one-hour code, which is exchanged for the App's id, private key and
-// webhook secret. They go to .env.github-app and .env.github-app.pem (gitignored, mode 600) and
-// are never printed. The default webhook URL answers nothing useful, which is fine: GitHub keeps
-// every delivery's payload anyway, and deliveries.ts reads them back.
+// webhook secret. They go to .env.github-app and .env.github-app.pem, or the file GITHUB_APP_ENV
+// names (gitignored, mode 600), and are never printed. T0.4's default webhook URL answers nothing
+// useful, which is fine: GitHub keeps every delivery's payload, and deliveries.ts reads them back.
+// The real App (T2.1) gets the Cloud's URL: --hook=https://<cloud>/api/github/webhook.
 import { randomBytes } from "node:crypto";
 import { chmodSync, existsSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -12,7 +13,7 @@ import type { AddressInfo } from "node:net";
 
 import { request } from "../probe/lib/http.ts";
 import { asString, dig } from "../probe/lib/json.ts";
-import { APP_ENV_FILE, APP_KEY_FILE, GITHUB_API, GITHUB_HEADERS } from "./lib/app.ts";
+import { APP_ENV_FILE, APP_ENV_NAME, APP_KEY_FILE, GITHUB_API, GITHUB_HEADERS } from "./lib/app.ts";
 import { buildManifest } from "./manifest.ts";
 
 const option = (name: string): string | undefined =>
@@ -20,7 +21,7 @@ const option = (name: string): string | undefined =>
 const name = option("name") ?? `intenzo-t04-${randomBytes(3).toString("hex")}`;
 const hookUrl = option("hook") ?? "https://example.com/intenzo-webhook";
 if (existsSync(APP_ENV_FILE) && !process.argv.includes("--force")) {
-  console.error(".env.github-app already exists. Use --force to register another App over it.");
+  console.error(`${APP_ENV_NAME} already exists. Use --force to register another App over it.`);
   process.exit(2);
 }
 const state = randomBytes(16).toString("hex");
@@ -39,7 +40,7 @@ const server = createServer((req, res) => {
       name,
       hookUrl,
       redirectUrl: `${origin}/callback`,
-      description: "Throwaway App for Intenzo's T0.4 platform checks. Safe to delete.",
+      description: "Intenzo: proof that a PR does what its ticket asked, on video.",
     });
     return page(
       200,
@@ -57,13 +58,13 @@ const server = createServer((req, res) => {
       page(
         200,
         `<h1>Done: ${escapeHtml(slug)} is registered</h1>
-<p><a href="https://github.com/apps/${slug}/installations/new">Install it</a> on the sandbox repository only.</p>`,
+<p><a href="https://github.com/apps/${slug}/installations/new">Install it</a> on the repositories it should verify, and only those.</p>`,
       );
       console.log(
-        `\nRegistered ${slug}. Credentials are in .env.github-app and .env.github-app.pem.`,
+        `\nRegistered ${slug}. Credentials are in ${APP_ENV_NAME} and ${APP_ENV_NAME}.pem.`,
       );
       console.log(
-        `Next: install it on the sandbox repo only: https://github.com/apps/${slug}/installations/new`,
+        `Next: install it on the repos it should verify, and only those: https://github.com/apps/${slug}/installations/new`,
       );
       server.close();
     },

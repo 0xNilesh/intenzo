@@ -2,7 +2,25 @@ import { createVerify, generateKeyPairSync } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { appJwt } from "./app.ts";
+import { appEnvFileName, appJwt } from "./app.ts";
+
+describe("appEnvFileName", () => {
+  it.each([
+    [undefined, ".env.github-app"],
+    ["", ".env.github-app"],
+    [".env.intenzo-app", ".env.intenzo-app"],
+  ])("%j → %s", (value, name) => {
+    expect(appEnvFileName(value)).toBe(name);
+  });
+
+  // Credentials must land in a file .gitignore's `.env.*` covers, at the repo root.
+  it.each(["secrets.txt", ".env", ".env.example", "../.env.app", ".env.app/key", "env.app"])(
+    "refuses %s",
+    (value) => {
+      expect(() => appEnvFileName(value)).toThrow(/gitignored \.env\.<name> file/);
+    },
+  );
+});
 
 describe("appJwt", () => {
   const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });

@@ -3,7 +3,8 @@
 //   pnpm github-app:sandbox comment <owner/repo> <issue-or-pr-number> <body>
 //   pnpm github-app:sandbox check-run <owner/repo> <head-sha> [--in-progress]
 //   pnpm github-app:sandbox closing <owner/repo> <pr-number>   (prints the GraphQL response)
-// Credentials come from .env.github-app (see create-app.ts); tokens are never printed.
+// Credentials come from .env.github-app, or the file GITHUB_APP_ENV names (see create-app.ts);
+// tokens are never printed.
 import { dig } from "../probe/lib/json.ts";
 import { appJwt, ensureOk, github, installationToken, loadApp } from "./lib/app.ts";
 import { REQUESTED_ACTIONS } from "./lib/actions.ts";
