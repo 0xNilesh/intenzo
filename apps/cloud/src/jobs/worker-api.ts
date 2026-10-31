@@ -95,6 +95,13 @@ export async function handleWorkerEvent(request: Request, deps: WorkerApiDeps): 
       : event.kind === "failed"
         ? { kind: "job_failed", runId: run.id, code: event.error.code }
         : null;
+  if (event.kind === "finished") {
+    // §26.1's final stage: what the job spent on model calls, and how long its parts took.
+    await deps.db
+      .update(runs)
+      .set({ costUsd: event.costUsd, timingsJson: event.timings })
+      .where(eq(runs.id, run.id));
+  }
   if (fact) {
     const decision = await advance(deps.db, run.runGroupId, fact, {
       now: deps.now(),
