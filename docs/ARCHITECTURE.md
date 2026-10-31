@@ -802,6 +802,7 @@ VerifyJob (Modal: 4 CPU, 8 GB, timeout 900 s; Node limit 870 s)
  5. emit finished(outcome, cost, timings)
 ```
 
+- **Built in T4.6b:** criteria run concurrently through two limits: 2 recording slots (explore, the PR take, the base take) and 2 criteria judged at a time (4 judge calls). A fail or a tie is recorded once more and judged again (§19 e), and the event cites the take the verdict rests on. Liveness is checked before recording and before judging. Without both judges' keys the verdicts stay the stub's. `finished.costUsd` adds up the navigator's and the judges' calls at list price. `pnpm intenzo run --local` runs the job on this machine, its takes in `--out`.
 - **Built in T2.7b, with stub verdicts** (`apps/worker/src/job/verify.ts`):
   - The intent is the demo ticket's (`fixtures/criteria`), and each criterion's path is a saved one, else its hand-written fixture (`fixtures/paths`).
   - Lanes are recorded one at a time, the PR side then the base side, each through the session hook and with the bypass, as the job's secrets allow.

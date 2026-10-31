@@ -494,9 +494,10 @@
   - *Live, on the almost-right preview (and main as the base):* C1, C3, C4 agreed `pass`; C2 agreed `fail`, both judges citing the order total at Tt+1001 ms ($50.00). Spark Open answered in 3.5–5.7 s, Spark 1.3 in 7.2–10.6 s; the 8 calls cost $0.066, $0.028 of it Baseten.
 
 #### T4.6b The judge queue in the worker
-- [ ] **Build:** recording slots (2) + judge queue (4); the §19 e re-record; liveness checks; the verify job's verdicts from the judges.
-- [ ] **Tests:** the queue's limits; a fail re-recorded once; a stale job stops; no judges without both keys.
-- [ ] **Verify:** `pnpm intenzo run --local --pr :3001 --base :3000 --ticket demo/42`.
+- [x] **Build:** recording slots (2) + judge queue (4); the §19 e re-record; liveness checks; the verify job's verdicts from the judges.
+- [x] **Tests:** the queue's limits; a fail re-recorded once; a stale job stops; no judges without both keys.
+- [x] **Verify:** `pnpm intenzo run --local --pr :3001 --base :3000 --ticket demo/42`.
+  - *Live, on the almost-right and main previews with `fixtures/tickets/42.md`:* C1 ✅, C2 ❌ (confirmed on a second take, both judges citing $50.00 at Tt+1002), C3 ✅, C4 ✅; 50 s, $0.081. The first run had C3 inconclusive (`wrong_target`) until the judge prompt said a box around a container, or a message read from the live regions, isn't a wrong target.
 
 ### T4.7 Streaming comment
 - [ ] **Build:** `intent_ready` → criteria list; each `criterion_verdict` → re-render; `finished` → final table.
