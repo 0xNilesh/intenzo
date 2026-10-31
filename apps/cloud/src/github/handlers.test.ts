@@ -94,6 +94,8 @@ function sandbox({
   github.get(`${REPO}/compare/main...:head`, {
     merge_base_commit: { sha: MERGE_BASE, parents: [{ sha: "7d1e2f3" }] },
   });
+  // The merge base's parent is main's first commit: the drift walk ends there.
+  github.get(`${REPO}/commits/7d1e2f3`, { sha: "7d1e2f3", parents: [] });
 }
 
 const runsByHead = async () =>
@@ -204,8 +206,11 @@ describe("pull_request and deployment_status (§16.2, §17)", () => {
       p.pull_request.head.sha = PUSHED_SHA;
     });
     expect(await runsByHead()).toMatchObject({
-      "39eed67": { trigger: "ready_for_review", state: "verifying", prUrl: PR_URL },
+      "39eed67": { trigger: "ready_for_review", state: "verifying", prUrl: PR_URL, baseUrl: null },
     });
+    expect(lines).toContain(
+      "PR #2: run 00000000: baseline none (no preview of main@8440e97 or the commits before it)",
+    );
   });
 
   it("verifies nothing while .intenzo.yml has problems, and says which", async () => {

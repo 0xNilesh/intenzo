@@ -1,6 +1,7 @@
 // A fake GitHub REST API for unit tests: msw answers fetch() calls to api.github.com in-process, so
 // the tests stay offline. Each request is logged as "GET /path?query", so a test can check which
-// calls were made and that some never were. A request no route answers fails the test.
+// calls were made and that some never were. A request no route answers fails the test, even when
+// the code under test catches the error it gets.
 import { http } from "msw/http";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
@@ -17,10 +18,21 @@ export const notFound = () => json({ message: "Not Found" }, 404);
 export function fakeGitHub() {
   const server = setupServer();
   const calls: string[] = [];
-  beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
+  const unanswered: string[] = [];
+  beforeAll(() =>
+    server.listen({
+      onUnhandledFrame({ frame, defaults }) {
+        const request = (frame.data as { request?: Request }).request;
+        unanswered.push(request ? `${request.method} ${new URL(request.url).pathname}` : "?");
+        defaults.error();
+      },
+    }),
+  );
   afterEach(() => {
     server.resetHandlers();
     calls.length = 0;
+    const missed = unanswered.splice(0);
+    if (missed.length > 0) throw new Error(`No fake GitHub route answered: ${missed.join(", ")}`);
   });
   afterAll(() => server.close());
 
