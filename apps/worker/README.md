@@ -60,13 +60,16 @@ pnpm intenzo record --path out/paths/C2.json --pr http://localhost:3001 --base h
 - **Exit code:** 0 when a path was found, 1 for `setup_failed` or `trigger_absent`, 2 for usage
   errors.
 
-## `intenzo intent` (T4.1)
+## `intenzo intent` (T4.1, T4.2)
 
-Reads a text ticket's criteria with Spark 1.3 (ARCHITECTURE §18, `intent.v1`) and prints them,
-with the tokens and the list-price cost. A checklist ticket gets one criterion per item.
+Reads a ticket's criteria with Spark 1.3 (ARCHITECTURE §18, `intent.v1`) and prints them, with
+the tokens and the list-price cost. A checklist ticket gets one criterion per item. With
+`--video`, the PM's recording is transcribed (Voice Transcribe) and watched by Spark, and each
+criterion says when in the recording it comes.
 
 ```bash
 pnpm intenzo intent --ticket fixtures/tickets/42.md [--out out/intent.json]
+pnpm intenzo intent --ticket fixtures/tickets/5.md --video probes/demo/pm-ticket.mp4
 ```
 
 The ticket file's first `# ` line is its title. One call, two if the reply breaks the checklist

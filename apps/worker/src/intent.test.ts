@@ -22,11 +22,9 @@ describe("intenzo intent", () => {
       ticket: "t.md",
       model: "muse-spark-1.3",
     });
-    expect(parseIntentArgs(["--ticket", "t.md", "--model", "m", "--out", "o.json"])).toEqual({
-      ticket: "t.md",
-      model: "m",
-      out: "o.json",
-    });
+    expect(
+      parseIntentArgs(["--ticket", "t.md", "--video", "v.mp4", "--model", "m", "--out", "o.json"]),
+    ).toEqual({ ticket: "t.md", video: "v.mp4", model: "m", out: "o.json" });
     expect(() => parseIntentArgs([])).toThrow(UsageError);
     expect(() => parseIntentArgs(["--ticket", "t.md", "--wat"])).toThrow(UsageError);
   });
