@@ -15,6 +15,8 @@ export interface CheckRunAction {
 export interface CheckRunPayload {
   status: "queued" | "in_progress" | "completed";
   conclusion?: CheckConclusion;
+  /** GitHub's "Details" link: without one it opens the App's homepage. */
+  detailsUrl: string;
   output: { title: string; summary: string };
   actions: CheckRunAction[];
 }
@@ -55,9 +57,11 @@ export function checkRunPayload(model: ReportModel): CheckRunPayload {
     summary:
       summary.length > MAX_SUMMARY_CHARS ? `${summary.slice(0, MAX_SUMMARY_CHARS - 1)}…` : summary,
   };
+  const detailsUrl = model.reportUrl;
   if (run.state !== "done") {
     return {
       status: run.state === "waiting_inputs" ? "queued" : "in_progress",
+      detailsUrl,
       output,
       actions: [],
     };
@@ -65,6 +69,7 @@ export function checkRunPayload(model: ReportModel): CheckRunPayload {
   return {
     status: "completed",
     conclusion: conclusionFor(run.outcome ?? "superseded", model.policy.inconclusive),
+    detailsUrl,
     output,
     actions: actionsFor(model),
   };

@@ -213,6 +213,8 @@ describe("checkRunPayload (§26.2)", () => {
       status: "completed",
       conclusion: "failure",
       output: { title: "3/4 passed" },
+      // GitHub's "Details" link opens the run's report, not the App's homepage.
+      detailsUrl: failing.reportUrl,
     });
     expect(payload.output.summary).toContain("| ❌ | **C2**");
     expect(payload.actions.map((a) => a.identifier)).toEqual(["fix", "rerun"]);
