@@ -1022,6 +1022,8 @@ await context.route("**/*", (route, req) => {
 6. Base `judgeVideo` + readings, or "trigger absent on baseline at step k"
 7. Counts of console errors and failed requests in the trigger window
 
+- **Built in T4.4** (`core/judge/bundle.ts`, `prompts/judge.v1.ts`): the go/no-go's judge prompt and bundle (T0.3), moved into core. The step log is numbered, in ms from the lane's start, with the last trigger step marked `TRIGGER (Tt = …)`; readings keep their index `i` for citing, region diffs one cited line per row. The baseline shows its readings and video when it completed, else where its trigger was missing; base readings carry no index, so they can't be cited. The ticket's text (with the PM's quote) and the page's readings sit in `<untrusted>` blocks. The annotated still is the recorder's own (`shot-annotated.png`, drawn by Chromium in T1.6, so no sharp), and both judges get native video, so there's no frames mode yet.
+
 Rules given in the prompt:
 - Judge only this criterion.
 - If the labelled boxes are not what the criterion is about → `targetCorrect=false`.

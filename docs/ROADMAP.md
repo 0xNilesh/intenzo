@@ -465,9 +465,12 @@
   - *Live, Spark 1.3, on the almost-right PR's 13 changed files:* C2 → `components/CartView.tsx`, `lib/cart.ts` (`priceCart`, the total) and three more; C4 → `components/SavingsChart.tsx` first; every criterion `covered`; routes `/cart`. One call, $0.016.
 
 ### T4.4 Judge bundle
-- [ ] **Build:** bundle assembly (§22.2); offline annotation of the Tt+1000 screenshot with sharp; step log in canonical time; base comparison; the `MediaEncoder` mode per model.
-- [ ] **Tests:** snapshot of the bundle text for a fixture lane; the annotated PNG has labelled boxes at the recorded bbox coordinates.
-- [ ] **Verify:** open the annotated still for C2.
+- [x] **Build:** bundle assembly (§22.2); offline annotation of the Tt+1000 screenshot with sharp; step log in canonical time; base comparison; the `MediaEncoder` mode per model.
+  - *The annotation was already built in T1.6 with Chromium (no sharp), and both judges take native video, so the frames mode isn't built (DECISIONS 2026-10-31 · Judge bundle).*
+- [x] **Tests:** snapshot of the bundle text for a fixture lane; the annotated PNG has labelled boxes at the recorded bbox coordinates.
+  - *The PNG's boxes are T1.6's tests (`browser/annotate.test.ts`, `record.browser.test.ts`).*
+- [x] **Verify:** open the annotated still for C2.
+  - *Live, on the almost-right preview:* the still at Tt+1000 shows the "Discount (SAVE10) −$5.00" line and the boxed order total still at **$50.00**, with the order summary region labelled. The bundle built from that lane and main's carries 15 PR readings and "the trigger control isn't there at step 2" for the base.
 
 ### T4.5 `valueMatches` and the combination rules
 - [ ] **Build:** token matching, both-judge combination (§22.3), re-record rules (§19 e), pre-judge rules (§22.1), aggregation.
