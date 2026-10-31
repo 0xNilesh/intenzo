@@ -1,5 +1,5 @@
 // What happens to a stored webhook event once GitHub has its answer. Event types get handlers as
-// the roadmap reaches them (pull_request in T2.2, deployment_status in T2.3, …). An event with no
+// the roadmap reaches them (pull_request and deployment_status in T2.3, …). An event with no
 // handler yet is only stored.
 import type { AcceptedEvent } from "./intake.ts";
 
