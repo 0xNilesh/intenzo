@@ -1,3 +1,4 @@
+import type { RunOutcome } from "@intenzo/core";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -38,6 +39,12 @@ const pushed = (headSha: string, draft = false): Fact => ({ kind: "pr_pushed", h
 const preview = (sha: string, url = urlOf(sha)): Fact => ({ kind: "preview_ready", sha, url });
 const previewFailed = (sha: string): Fact => ({ kind: "preview_failed", sha });
 const tick: Fact = { kind: "tick" };
+const jobFinished = (runId: string, outcome: RunOutcome = "pass"): Fact => ({
+  kind: "job_finished",
+  runId,
+  outcome,
+});
+const jobFailed = (runId: string, code = "crash"): Fact => ({ kind: "job_failed", runId, code });
 
 type Steps = readonly (readonly [minute: number, fact: Fact])[];
 
@@ -251,6 +258,64 @@ describe("decide", () => {
         ["check run-1 queued", "comment 7"],
         ["check run-1 completed neutral", "comment 7"],
         ["check run-2 queued", "comment 7"],
+      ],
+    },
+    {
+      name: "the job finishes: its run ends with the job's outcome, and nothing is cancelled",
+      steps: [
+        [0, opened("A")],
+        [1, preview("A")],
+        [5, jobFinished("run-1", "fail")],
+      ],
+      runs: ["A#1 opened done/fail"],
+      effects: [
+        ["check run-1 queued", "comment 7"],
+        ["check run-1 in_progress", "spawn run-1", "comment 7"],
+        ["check run-1 completed failure", "comment 7"],
+      ],
+    },
+    {
+      name: "the job fails: its run ends in error",
+      steps: [
+        [0, opened("A")],
+        [1, preview("A")],
+        [3, jobFailed("run-1", "crash")],
+      ],
+      runs: ["A#1 opened done/error (worker_failed)"],
+      effects: [
+        ["check run-1 queued", "comment 7"],
+        ["check run-1 in_progress", "spawn run-1", "comment 7"],
+        ["check run-1 completed neutral", "comment 7"],
+      ],
+    },
+    {
+      name: "the shim reports the job cancelled: its run ends cancelled",
+      steps: [
+        [0, opened("A")],
+        [1, preview("A")],
+        [3, jobFailed("run-1", "cancelled")],
+      ],
+      runs: ["A#1 opened done/cancelled (worker_failed)"],
+      effects: [
+        ["check run-1 queued", "comment 7"],
+        ["check run-1 in_progress", "spawn run-1", "comment 7"],
+        ["check run-1 completed cancelled", "comment 7"],
+      ],
+    },
+    {
+      name: "a job event for a run that's no longer verifying changes nothing",
+      steps: [
+        [0, opened("A")],
+        [1, preview("A")],
+        [2, pushed("B")],
+        [3, jobFinished("run-1")],
+      ],
+      runs: ["A#1 opened done/superseded", "B#1 synchronize waiting_inputs"],
+      effects: [
+        ["check run-1 queued", "comment 7"],
+        ["check run-1 in_progress", "spawn run-1", "comment 7"],
+        ["cancel run-1", "check run-1 completed neutral", "check run-2 queued", "comment 7"],
+        [],
       ],
     },
   ])("$name", ({ steps, runs, effects }) => {
