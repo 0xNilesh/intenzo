@@ -46,6 +46,18 @@ describe("githubClient", () => {
     );
   });
 
+  it("sends JSON with POST and PATCH", async () => {
+    const sent: unknown[] = [];
+    github.post("/repos/sumithprabhu/demo-shop/issues/7/comments", async (request: Request) => {
+      sent.push(request.headers.get("content-type"), await request.json());
+      return json({ id: 42, body: "hi" }, 201);
+    });
+    const Comment = z.object({ id: z.number() });
+    const path = "/repos/sumithprabhu/demo-shop/issues/7/comments";
+    expect(await client.send("POST", path, { body: "hi" }, Comment)).toEqual({ id: 42 });
+    expect(sent).toEqual(["application/json", { body: "hi" }]);
+  });
+
   it("reads a file's text at a ref", async () => {
     let accept: string | null = null;
     github.get("/repos/sumithprabhu/demo-shop/contents/.intenzo.yml", (request: Request) => {

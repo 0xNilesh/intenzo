@@ -24,7 +24,7 @@ export function fakeGitHub() {
   });
   afterAll(() => server.close());
 
-  const route = (method: "get" | "post", path: string, reply: Reply) =>
+  const route = (method: "get" | "post" | "patch", path: string, reply: Reply) =>
     server.use(
       // msw matches the path only; the query is logged for the test to check.
       http[method](`${GITHUB_API}${path}`, async ({ request }) => {
@@ -41,6 +41,7 @@ export function fakeGitHub() {
     calls,
     get: (path: string, answer: unknown) => route("get", path, reply(answer)),
     post: (path: string, answer: unknown) => route("post", path, reply(answer)),
+    patch: (path: string, answer: unknown) => route("patch", path, reply(answer)),
     /** An installation that mints `token`, valid for an hour. */
     installation: (id: number, token = "ghs_test") =>
       route("post", `/app/installations/${id}/access_tokens`, () => ({

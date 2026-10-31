@@ -36,32 +36,58 @@ export async function errorText(response: Response): Promise<string> {
 export interface GitHub {
   /** GETs a JSON resource and checks the fields Intenzo reads. Null when GitHub answers 404. */
   get<T>(path: string, schema: z.ZodType<T>): Promise<T | null>;
+  /** POSTs or PATCHes JSON and checks the answer. Null when GitHub answers 404. */
+  send<T>(
+    method: "POST" | "PATCH",
+    path: string,
+    body: unknown,
+    schema: z.ZodType<T>,
+  ): Promise<T | null>;
   /** A file's text at a ref, through the contents API. Null when there's no such file. */
   file(repo: string, path: string, ref: string): Promise<string | null>;
 }
 
 /** A client that authenticates every call with `token()`: an installation token (app-auth.ts). */
 export function githubClient(token: () => Promise<string>): GitHub {
-  async function get(path: string, accept: string): Promise<Response | null> {
+  async function call(
+    method: string,
+    path: string,
+    accept: string,
+    body?: unknown,
+  ): Promise<Response | null> {
+    const headers: Record<string, string> = {
+      ...GITHUB_HEADERS,
+      Accept: accept,
+      Authorization: `Bearer ${await token()}`,
+    };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
     const response = await fetch(`${GITHUB_API}${path}`, {
-      headers: { ...GITHUB_HEADERS, Accept: accept, Authorization: `Bearer ${await token()}` },
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (response.status === 404) return null;
-    if (!response.ok)
-      throw new GitHubError(response.status, `GET ${path}: ${await errorText(response)}`);
+    if (!response.ok) {
+      throw new GitHubError(response.status, `${method} ${path}: ${await errorText(response)}`);
+    }
     return response;
   }
   return {
     async get(path, schema) {
-      const response = await get(path, GITHUB_HEADERS.Accept);
+      const response = await call("GET", path, GITHUB_HEADERS.Accept);
+      return response && schema.parse(await response.json());
+    },
+    async send(method, path, body, schema) {
+      const response = await call(method, path, GITHUB_HEADERS.Accept, body);
       return response && schema.parse(await response.json());
     },
     async file(repo, path, ref) {
       // docs.github.com/en/rest/repos/contents#get-repository-content: the raw media type
       // answers with the file's bytes instead of base64 in JSON.
       const query = new URLSearchParams({ ref });
-      const response = await get(
+      const response = await call(
+        "GET",
         `/repos/${repo}/contents/${path}?${query}`,
         "application/vnd.github.raw+json",
       );
