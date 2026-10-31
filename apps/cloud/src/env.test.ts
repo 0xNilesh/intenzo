@@ -2,7 +2,7 @@ import { generateKeyPairSync } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { cloudEnv } from "./env.ts";
+import { cloudEnv, modalSettings } from "./env.ts";
 
 // A key made for the test, so no key-shaped text is committed.
 const PEM = generateKeyPairSync("rsa", { modulusLength: 1024 })
@@ -58,5 +58,27 @@ describe("cloudEnv", () => {
     }
     expect(message).toBe(`Intenzo Cloud env vars missing or invalid: ${names}`);
     for (const value of Object.values(VALID)) expect(message).not.toContain(value.trim());
+  });
+});
+
+describe("modalSettings", () => {
+  const MODAL = {
+    MODAL_SPAWN_URL: "https://sumithprabhu--intenzo-worker-spawn.modal.run",
+    MODAL_CANCEL_URL: "https://sumithprabhu--intenzo-worker-cancel.modal.run",
+    MODAL_ENDPOINT_SECRET: "a-modal-endpoint-secret-for-tests-01234",
+    INTENZO_CLOUD_URL: "https://intenzo-cloud.vercel.app",
+  };
+
+  it("is null until all four Modal settings are set, so no job is spawned before then", () => {
+    expect(modalSettings(cloudEnv(VALID))).toBeNull();
+    for (const name of Object.keys(MODAL)) {
+      expect(modalSettings(cloudEnv({ ...VALID, ...MODAL, [name]: undefined }))).toBeNull();
+    }
+    expect(modalSettings(cloudEnv({ ...VALID, ...MODAL }))).toEqual({
+      spawnUrl: MODAL.MODAL_SPAWN_URL,
+      cancelUrl: MODAL.MODAL_CANCEL_URL,
+      secret: MODAL.MODAL_ENDPOINT_SECRET,
+      cloudUrl: MODAL.INTENZO_CLOUD_URL,
+    });
   });
 });
