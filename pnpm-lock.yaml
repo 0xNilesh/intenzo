@@ -40,6 +40,10 @@ importers:
       '@intenzo/core':
         specifier: workspace:*
         version: link:../../packages/core
+    devDependencies:
+      vitest:
+        specifier: 5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(yaml@2.9.1))
 
   apps/worker:
     dependencies:

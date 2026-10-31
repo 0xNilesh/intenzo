@@ -6,9 +6,15 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:contract": "vitest run --project contract --passWithNoTests",
+    "test:browser": "vitest run --project browser --passWithNoTests"
   },
   "dependencies": {
     "@intenzo/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "5.0.5"
   }
 }
