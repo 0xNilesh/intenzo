@@ -1,11 +1,13 @@
-// Entry point for the local `intenzo` CLI (and, from P2, VerifyJob execution on Modal).
+// Entry point for the local `intenzo` CLI, and for jobs on Modal (`intenzo job`, T2.5).
 //   pnpm intenzo <command> [options]
+import { JOB_USAGE, runJobCommand } from "./job/command.ts";
 import { RECORD_USAGE, runRecord, UsageError } from "./record.ts";
 
 const USAGE = `Usage: pnpm intenzo <command>
 
 Commands:
   record   Record a SavedPath on the PR (and base) app with the observation protocol
+${JOB_USAGE}
 
 ${RECORD_USAGE}`;
 
@@ -14,6 +16,8 @@ async function main(argv: string[]): Promise<number> {
   switch (command) {
     case "record":
       return runRecord(rest);
+    case "job":
+      return runJobCommand(rest);
     case undefined:
     case "help":
     case "--help":
