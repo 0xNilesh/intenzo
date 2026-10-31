@@ -10,7 +10,8 @@ export type RunTrigger =
   "opened" | "reopened" | "ready_for_review" | "synchronize" | "late_preview";
 
 /** Why a run ended without verdicts. */
-export type OutcomeReason = "preview_not_ready" | "preview_failed" | "deadline_passed";
+export type OutcomeReason =
+  "preview_not_ready" | "preview_failed" | "deadline_passed" | "worker_failed";
 
 /** §16.1: how long a run waits for its preview. */
 export const PREVIEW_WAIT_MS = 20 * 60_000;
@@ -66,7 +67,11 @@ export type Fact =
   /** A failed deployment_status. */
   | { kind: "preview_failed"; sha: string }
   /** The sweeper's minute tick: deadlines (§16.1). */
-  | { kind: "tick" };
+  | { kind: "tick" }
+  /** The run's current job reported `finished` (§9). Its events were already checked as current. */
+  | { kind: "job_finished"; runId: string; outcome: RunOutcome }
+  /** The run's current job reported `failed`, with its error code (§9; the shim's `cancelled`, …). */
+  | { kind: "job_failed"; runId: string; code: string };
 
 export type CheckConclusion = "success" | "failure" | "neutral" | "cancelled";
 
@@ -101,7 +106,13 @@ export interface Clock {
 export type Step =
   | { kind: "start"; url: string }
   | { kind: "supersede" }
-  | { kind: "finish"; outcome: RunOutcome; reason: OutcomeReason | null };
+  | {
+      kind: "finish";
+      outcome: RunOutcome;
+      reason: OutcomeReason | null;
+      /** The job ended by itself, so there's nothing to cancel. */
+      jobEnded?: boolean;
+    };
 
 /** Applies one step to one run. A run that is done never changes again. */
 export function transition(
@@ -128,9 +139,9 @@ export function transition(
         ],
       };
     case "supersede":
-      return finish(run, "superseded", null, now, inconclusive);
+      return finish(run, "superseded", null, now, inconclusive, false);
     case "finish":
-      return finish(run, step.outcome, step.reason, now, inconclusive);
+      return finish(run, step.outcome, step.reason, now, inconclusive, step.jobEnded ?? false);
   }
 }
 
@@ -140,10 +151,11 @@ function finish(
   reason: OutcomeReason | null,
   now: Date,
   inconclusive: Group["inconclusiveConclusion"],
+  jobEnded: boolean,
 ): { run: Run; effects: Effect[] } {
   const effects: Effect[] = [];
   // §16.3: a job that may still be running is told to stop.
-  if (run.state === "verifying") effects.push({ kind: "cancel_job", runId: run.id });
+  if (run.state === "verifying" && !jobEnded) effects.push({ kind: "cancel_job", runId: run.id });
   effects.push({
     kind: "check_run",
     runId: run.id,
@@ -276,6 +288,23 @@ export function decide(group: Group, fact: Fact, clock: Clock): Decision {
         }
       }
       break;
+    case "job_finished":
+    case "job_failed": {
+      const run = group.runs.find((r) => r.id === fact.runId);
+      if (run?.state !== "verifying" && run?.state !== "reporting") break;
+      apply(
+        run,
+        fact.kind === "job_finished"
+          ? { kind: "finish", outcome: fact.outcome, reason: null, jobEnded: true }
+          : {
+              kind: "finish",
+              outcome: fact.code === "cancelled" ? "cancelled" : "error",
+              reason: "worker_failed",
+              jobEnded: true,
+            },
+      );
+      break;
+    }
   }
 
   if (created.length > 0 || updated.length > 0)

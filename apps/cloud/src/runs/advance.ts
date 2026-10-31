@@ -69,6 +69,8 @@ function factSha(fact: Fact): string | null {
     case "preview_failed":
       return fact.sha;
     case "tick":
+    case "job_finished":
+    case "job_failed":
       return null;
   }
 }
