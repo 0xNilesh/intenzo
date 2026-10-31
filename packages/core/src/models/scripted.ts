@@ -4,7 +4,8 @@ import { NO_USAGE, type ModelPort, type ModelRequest, type ModelResult } from ".
 // request (e.g. to pick a ref out of the outline the prompt carries). Replies are checked against
 // the request's schema, exactly as a real reply would be.
 
-export type ScriptedReply = unknown | ((request: ModelRequest<unknown>, n: number) => unknown);
+export type ScriptedFn = (request: ModelRequest<unknown>, n: number) => unknown;
+export type ScriptedReply = ScriptedFn | object | string | number | boolean | null;
 
 export interface ScriptedPort extends ModelPort {
   readonly requests: ModelRequest<unknown>[];

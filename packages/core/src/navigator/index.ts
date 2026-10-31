@@ -9,8 +9,19 @@ export {
 } from "./guard.ts";
 export {
   durableTarget,
+  estimateRoleName,
   isSameElement,
   regionWatchFor,
-  estimateRoleName,
   type RoleName,
 } from "./durable.ts";
+export {
+  explore,
+  EXPLORE_BUDGET,
+  HISTORY_WINDOW,
+  NAVIGATOR_MODEL,
+  startPathFor,
+  type ExploreOptions,
+  type ExploreResult,
+  type ExploreStep,
+} from "./explore.ts";
+export { roleNameIn } from "./explore.ts";
