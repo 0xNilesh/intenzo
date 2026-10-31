@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { formatProblems, parseConfig, readConfig } from "./load.ts";
+import { configFromFiles, formatProblems, parseConfig, readConfig } from "./load.ts";
 
 const demoShop = readFileSync(
   new URL("../../fixtures/config/demo-shop.intenzo.yml", import.meta.url),
@@ -110,6 +110,20 @@ describe("readConfig", () => {
     expect(result.ok ? [] : result.problems).toEqual([
       { path: "", message: "found both .intenzo.yml and .intenzo.yaml; keep one" },
     ]);
+  });
+});
+
+describe("configFromFiles", () => {
+  // The Cloud reads the files through GitHub's contents API, not from a checkout.
+  it("parses the one file it's given, naming it", () => {
+    const { file, result } = configFromFiles([{ name: ".intenzo.yaml", text: demoShop }]);
+    expect(file).toBe(".intenzo.yaml");
+    expect(result.ok && result.config.start.default).toBe("/cart");
+  });
+
+  it("names the file's problems the same way", () => {
+    const { result } = configFromFiles([{ name: ".intenzo.yml", text: "version: 2\n" }]);
+    expect(result.ok ? [] : result.problems.map((p) => p.path)).toEqual(["version"]);
   });
 });
 
