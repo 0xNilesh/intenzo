@@ -26,10 +26,10 @@ import { recordCriterion, type RecordOptions, type Recording } from "@intenzo/co
 // The session hook's path comes from the config; its secret from the environment (.env), under
 // the name --hook-secret-env gives (the config only ever names secrets, never holds them).
 
-const REPO = resolve(import.meta.dirname, "../../..");
-const DEFAULT_CONFIG = "packages/core/fixtures/config/demo-shop.intenzo.yml";
-const DEFAULT_HOOK_SECRET_ENV = "DEMO_SHOP_HOOK_SECRET";
-const DEFAULT_BYPASS_ENV = "DEMO_SHOP_BYPASS_SECRET";
+export const REPO = resolve(import.meta.dirname, "../../..");
+export const DEFAULT_CONFIG = "packages/core/fixtures/config/demo-shop.intenzo.yml";
+export const DEFAULT_HOOK_SECRET_ENV = "DEMO_SHOP_HOOK_SECRET";
+export const DEFAULT_BYPASS_ENV = "DEMO_SHOP_BYPASS_SECRET";
 
 export const RECORD_USAGE = `Usage: pnpm intenzo record --path <SavedPath.json> --pr <url> [--base <url>]
          [--criterion <Criterion.json>] [--out <dir>] [--config <.intenzo.yml>]
@@ -155,7 +155,7 @@ function row(r: Reading, width: number, origin: number): string {
   ].join("  ");
 }
 
-function loadConfig(path: string): IntenzoConfig {
+export function loadConfig(path: string): IntenzoConfig {
   if (!existsSync(path)) throw new UsageError(`no config at ${path}`);
   const isDir = statSync(path).isDirectory();
   const { file, result } = isDir
@@ -174,7 +174,7 @@ interface Schema<T> {
 }
 
 /** Reads and validates a JSON file, with a readable error for the CLI. */
-function readJson<T>(schema: Schema<T>, path: string): T {
+export function readJson<T>(schema: Schema<T>, path: string): T {
   let data: unknown;
   try {
     data = JSON.parse(readFileSync(path, "utf8"));
@@ -189,7 +189,7 @@ function readJson<T>(schema: Schema<T>, path: string): T {
   throw new UsageError(`${path} isn't valid:\n${problems.join("\n")}`);
 }
 
-const isLocal = (origin: string) =>
+export const isLocal = (origin: string) =>
   ["localhost", "127.0.0.1", "[::1]"].includes(new URL(origin).hostname);
 
 /** Runs `intenzo record`. Returns the exit code. */
