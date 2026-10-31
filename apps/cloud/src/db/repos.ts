@@ -74,13 +74,14 @@ export function previewRules(repo: Repo): PreviewRules {
 }
 
 /** The pull request's run group, created on its first event and open again when it's reopened. */
-export async function ensureRunGroup(db: Db, repoId: number, prNumber: number) {
+/** The PR's run group, opened again if it was closed. fromFork comes from its pull_request event. */
+export async function ensureRunGroup(db: Db, repoId: number, prNumber: number, fromFork?: boolean) {
   const [group] = await db
     .insert(runGroups)
-    .values({ repoId, prNumber })
+    .values({ repoId, prNumber, ...(fromFork !== undefined && { fromFork }) })
     .onConflictDoUpdate({
       target: [runGroups.repoId, runGroups.prNumber],
-      set: { state: "open" },
+      set: { state: "open", ...(fromFork !== undefined && { fromFork }) },
     })
     .returning();
   return group!;

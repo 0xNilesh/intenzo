@@ -1,0 +1,1 @@
+ALTER TABLE "run_groups" ADD COLUMN "from_fork" boolean DEFAULT true NOT NULL;
