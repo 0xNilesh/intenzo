@@ -40,7 +40,7 @@ MANIFESTS = [
     "bench/intentbench/package.json",
     "scripts/package.json",
 ]
-SOURCES = ["packages/core/src", "packages/core/fixtures", "apps/worker/src"]
+SOURCES = ["packages/core/src", "packages/core/fixtures", "apps/worker/src", "fixtures/criteria"]
 IGNORE = ["**/node_modules", "**/.env*", "**/*.pem", "**/*.test.ts"]
 
 worker_image = (
