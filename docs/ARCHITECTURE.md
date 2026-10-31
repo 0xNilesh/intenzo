@@ -241,7 +241,7 @@ export interface Liveness     { alive(): Promise<boolean> }                     
 | ModelPort | HTTP clients + local file cache keyed by input hash | Recorded fixtures |
 | ArtifactStore | Vercel Blob with per-file client tokens from `/api/worker/upload-tokens` | tmp dir |
 | EventSink | `POST /api/worker/events` (signed); a 410 response maps to `"stale"` | array |
-| Liveness | `GET /api/worker/alive?job=` | always true |
+| Liveness | `GET /api/worker/alive` (the job token names the job) | always true |
 
 ## 7. Core schemas (`core/schema`)
 
@@ -423,6 +423,13 @@ export const WorkerEvent = z.discriminatedUnion("kind", [
 - **Stale guard:** Cloud answers **410** if `jobId ≠ runs.current_job_id` or the run is terminal. The worker treats 410 as "abort now".
 - Bodies stay under 1 MB; media is always an `ArtifactRef`.
 
+Built in T2.5a (`apps/cloud/src/jobs/`, `apps/worker/src/job/`):
+- **Storage and answers:** events are stored in `job_events`. A larger body gets 413, another job's event 403, and a bad or expired token 401.
+- **Ending the run:** `finished` and `failed` end it (the facts `job_finished` and `job_failed`, §16.1). A `failed` with the code `cancelled` ends it as cancelled.
+- **The worker side:** events are numbered from 0, and seqs from 1,000,000 up are reserved for the Modal shim. An event the Cloud couldn't take is sent again with the same seq.
+- **Exit codes:** 0 finished; 1 failed (already reported); 3 stopped on a 410. The shim reports `failed` itself only on another code.
+- **Job tokens** are HS256 JWTs signed with `INTENZO_JOB_SECRET`, holding the job and run ids and `exp = deadline + 5 min`. `/alive` doesn't reissue them, since the deadline doesn't move.
+
 ## 10. Configuration (`.intenzo.yml`)
 
 ```yaml
@@ -487,6 +494,7 @@ criteria_results id, run_id, criterion_id, verdict, reason_code, evidence_json, 
 saved_paths     id, run_group_id, criterion_id, intent_version_id, path_json, UNIQUE(run_group_id, criterion_id, intent_version_id)
 outbox          id, run_id, group_id, effect, idem_key UNIQUE, payload_json,
                 status(pending|in_flight|done|failed), lease_until, attempts, external_id, last_error, created_at
+job_events      id, job_id, run_id, seq, kind, payload_json, received_at, UNIQUE(job_id, seq)
 model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in, tokens_out,
                 video_s, frames, cost_usd, cache_hit, error, created_at
 ```
@@ -498,6 +506,7 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
 - `runs.base_drift` counts the commits between the merge base and `base_sha` (§17.3): 0 is the merge base itself (T2.3).
 - `repos.config_json` is the validated `.intenzo.yml` from the default branch, refreshed on each PR event. `deployments` keeps one row per commit and environment, with its latest state; a failure never replaces a success (T2.3).
 - `outbox.lease_until` is the end of an in-flight row's lease, or, on a pending row that failed, the time it may be tried again (T2.4).
+- `job_events` holds every event a run's current job reported (§9), once per `(job_id, seq)`. A stale job's events are answered 410 and not stored (T2.5a).
 
 ## 12. GitHub App manifest
 

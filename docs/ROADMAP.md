@@ -304,16 +304,22 @@
 *Split in two (issue #22), so the Cloud and Node side could land while the Modal account was being set up. T2.5a's PR is "Part of #22"; T2.5b's closes it.*
 
 #### T2.5a Job protocol (Cloud and Node worker)
-- [ ] **Build:**
+- [x] **Build:**
   - job JWT (`exp = deadline + 5 min`)
   - `/api/worker/events` with a `(jobId, seq)` unique constraint and the **410 stale guard**
   - `/api/worker/alive`
   - `finished` and `failed` end the run
   - the worker's job runner and event client, with a sleep job for testing
-- [ ] **Tests:**
+  - *Also:* the `job_events` table, and `INTENZO_JOB_SECRET` on Vercel
+- [x] **Tests:**
   - an event from a superseded job → 410, and the worker aborts
   - a duplicate `seq` is ignored
-- [ ] **Verify:** the worker CLI runs a sleep job against the Cloud's routes: its events are accepted, and once its run is superseded the worker aborts on 410.
+  - *also:*
+    - forged, expired or `alg`-swapped tokens are refused
+    - another job's event, a non-event and an over-1 MB body are refused
+    - a `finished` event ends the run without cancelling its job; `failed(cancelled)` ends it cancelled
+    - a 5xx is retried with the same seq
+- [x] **Verify:** the worker CLI runs a sleep job against the Cloud's routes: its events are accepted, and once its run is superseded the worker aborts on 410. *(`protocol.test.ts` runs the real CLI in its own process against the routes on a local port: `started` stored, then exit 3 within one nap of the push. The deployed routes answer 401 without a token and 410 for a token whose run doesn't exist.)*
 
 #### T2.5b Modal shim
 - [ ] **Build:**

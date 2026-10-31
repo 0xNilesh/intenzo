@@ -34,6 +34,25 @@ pnpm intenzo record --path fixtures/paths/C2.json --pr http://localhost:3001 --b
   feature yet).
 - **Needs** Playwright's Chromium and `ffmpeg` (for the alignment). No model calls; it costs nothing.
 
+## `intenzo job` (T2.5a)
+
+Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,
+and reports to the Cloud with the job's token (§9):
+
+```bash
+node apps/worker/src/main.ts job job.json
+```
+
+- **Events** are numbered from 0. One the Cloud couldn't take (unreachable, 5xx) is sent again with
+  the same seq, which the Cloud stores once.
+- **A 410**, to an event or to `GET /api/worker/alive`, means the job isn't current any more (its run
+  was superseded, cancelled or is over). The worker stops at once and reports nothing more.
+- **Exit code:** 0 finished; 1 failed (reported); 3 stopped on a 410. The shim reports `failed`
+  itself only on another code.
+- **Jobs:**
+  - A `sleep` job (`seconds`, `aliveEverySeconds`) exercises the protocol and the shim.
+  - A `verify` job answers `failed` (`not_implemented`) until T2.7.
+
 ## Tests
 
 ```bash
