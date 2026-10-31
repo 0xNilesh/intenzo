@@ -1,0 +1,14 @@
+# What `vercel deploy` must not upload from this repo (Intenzo Cloud, apps/cloud/README.md).
+# The CLI doesn't read .gitignore. Its own defaults skip .env.local, but not .env or .env.<name>,
+# which hold this repo's keys.
+.env
+.env.*
+!.env.example
+*.pem
+# Local recordings and results: large, and not needed to build the Cloud.
+probes/
+out/
+bench/results/raw/
+coverage/
+playwright-report/
+test-results/
