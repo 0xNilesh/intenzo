@@ -394,7 +394,7 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **pnpm 12 doesn't run through corepack 0.34** (its package layout changed). The repo pins pnpm 10.x.
 - **TypeScript 7 isn't supported by typescript-eslint yet.** The repo pins 6.0.x.
 - **Imports use `.ts` extensions** and erasable syntax only (no `enum`, `namespace` or parameter properties), so Node runs sources directly.
-- **Playwright is pinned exactly**, because the navigator will use its internal `_snapshotForAI()`. Upgrade only in a dedicated PR that runs the contract tests.
+- **Playwright is pinned exactly**, because the navigator reads its AI snapshot (`page.ariaSnapshot({ mode: "ai" })` + `page.getByRef`). Playwright 1.64 made it public and removed the internal `_snapshotForAI()`; the format can still change, so upgrade only in a dedicated PR that runs `outline.browser.test.ts`.
 - **Homebrew's ffmpeg (8.x) is built without freetype**, so it has no `drawtext` filter (`ffmpeg -filters | grep drawtext` prints nothing). Don't rely on drawtext for text on frames: `scripts/gonogo/lib/encode.ts` draws text with Chromium and uses ffmpeg only to cut and encode. The T0.2 probe media are rendered the same way (no drawtext anywhere).
 
 **Shell and CI**

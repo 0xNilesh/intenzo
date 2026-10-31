@@ -804,15 +804,15 @@ VerifyJob (Modal: 4 CPU, 8 GB, timeout 900 s; Node limit 870 s)
 
 ## 20. Navigator: the exploration loop
 
-### 20.1 The outline (pinned Playwright AI snapshot)
-- Playwright is pinned to an **exact version** in `package.json` (no caret). The outline comes from Playwright's internal `page._snapshotForAI()`, the same snapshot Playwright MCP uses. It is aria-snapshot YAML in which every node carries `[ref=eN]`, the names are computed by **Playwright's own accessible-name logic** (so they match `getByRole`), and iframes are included.
-- Acting on a ref uses `page.locator("aria-ref=e12")`: a real Playwright locator, with actionability waits.
-- **Contract test** (`browser/snapshot.contract.test.ts`): runs against a fixture page and fails CI if the API, ref format or locator engine changes. It's the only place that touches the internal API, wrapped in `browser/outline.ts`.
-- **Fallback if the internal API breaks:** a single `page.evaluate` pass that tags outlined nodes with `data-iz-ref="eN"` (the `settle` observer ignores that attribute) and uses `locator('[data-iz-ref="eN"]')`.
+### 20.1 The outline (Playwright's AI snapshot)
+- Playwright is pinned to an **exact version** in `package.json` (no caret). The outline comes from `page.ariaSnapshot({ mode: "ai" })`, the snapshot Playwright MCP uses, which Playwright 1.64 made **public** (the internal `page._snapshotForAI()` this section first named no longer exists; T3.1, DECISIONS 2026-10-31). It is aria-snapshot YAML in which every node carries `[ref=eN]` (`fNeM` inside iframes), the names are computed by **Playwright's own accessible-name logic** (so they match `getByRole`), and iframes are included.
+- Acting on a ref uses `page.getByRef("e12")` (the same engine as `locator("aria-ref=e12")`): a real Playwright locator, with actionability waits. A ref resolves against the latest snapshot of its frame.
+- **Contract test** (`browser/outline.browser.test.ts`, in the browser layer because it needs Chromium): runs against a fixture page and fails CI if the ref format, iframe refs or ref resolution change. `browser/outline.ts` is the only code that takes snapshots for the navigator.
+- **Fallback if the snapshot API breaks** (`buildOutline(page, { fallback: true })`): a single `page.evaluate` pass that tags outlined nodes with `data-iz-ref="eN"` (the `settle` observer ignores that attribute) and uses `locator('[data-iz-ref="eN"]')`.
 - Pruning (done in our wrapper):
-  - banner/navigation collapsed after turn 1 unless the model asks to expand it
+  - banner/navigation/contentinfo collapsed after turn 1 unless the model asks to expand it (an `expand` of the landmark's ref; an expanded landmark shows its nested landmarks too). Collapsed controls lose their refs, so the model can only use them after expanding
   - lists with > 8 similar items → first 8 + "(+N more)"
-  - cap of about 6k tokens
+  - cap of about 6k tokens (chars / 4): the deepest level is folded into `(+N hidden)` lines first, then the text is cut with `(… truncated)`. demo-shop's `/products` is about 330 tokens
 ```
 <untrusted source="page_outline" url="/products">
 - banner [ref=e3] (collapsed: link "Shop", link "Cart (0)")
