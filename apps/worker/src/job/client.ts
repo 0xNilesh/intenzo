@@ -14,11 +14,25 @@ export class StaleJobError extends Error {
 type Unnumbered<E> = E extends unknown ? Omit<E, "jobId" | "seq"> : never;
 export type OutgoingEvent = Unnumbered<WorkerEvent>;
 
+/** A file the worker wants to upload: which store, and its path under runs/{runId}/ (§28). */
+export interface UploadRequest {
+  store: "public" | "private";
+  path: string;
+  contentType: string;
+}
+export interface Upload extends UploadRequest {
+  /** A presigned PUT URL for exactly this path. */
+  uploadUrl: string;
+  validUntil: string;
+}
+
 export interface JobClient {
   /** Sends the next event. Throws StaleJobError on 410. */
   send(event: OutgoingEvent): Promise<void>;
   /** Throws StaleJobError once the job shouldn't go on (GET /api/worker/alive). */
   alive(): Promise<void>;
+  /** Presigned upload URLs for up to 20 files (POST /api/worker/upload-tokens). */
+  uploadUrls(files: readonly UploadRequest[]): Promise<Upload[]>;
 }
 
 export interface ClientOptions {
@@ -72,6 +86,14 @@ export function jobClient(
     },
     async alive() {
       await call("/api/worker/alive");
+    },
+    async uploadUrls(files) {
+      const response = await call("/api/worker/upload-tokens", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ files }),
+      });
+      return ((await response.json()) as { uploads: Upload[] }).uploads;
     },
   };
 }
