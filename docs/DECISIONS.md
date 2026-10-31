@@ -5,6 +5,48 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Job protocol (T2.5a, #22)
+
+The Cloud now has §9's worker routes: `POST /api/worker/events` and `GET /api/worker/alive`, behind job tokens and the 410 stale guard. The worker has `intenzo job`, which runs a job and reports it. The checks:
+
+- 36 new unit tests: 29 in `apps/cloud` and 7 in `apps/worker`.
+- An end-to-end test that runs the real worker CLI against the routes.
+- Deliberately broken rules, to check the tests catch them.
+- The deployed routes, answering without a valid token and with a token for a run that doesn't exist.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| The worker CLI, in its own process, against the routes on a local port | `started` stored. After a push superseded its run, `/alive` answered 410 and the worker exited 3 within one 100 ms nap, sending nothing more. About 1 s |
+| Do the tests catch a broken rule? | Each of these failed at least one test: dropping either half of the stale guard (the current job id, or the run being over), `/alive` skipping it (the end-to-end test times out), accepting any JWT algorithm, cancelling a job that ended by itself, ignoring a 410, reporting a 410 as a crash, and reusing a seq |
+| Modal's docs on cancellation | They don't say what a running function sees when its input is cancelled (an exception, or a signal). T2.5b's live check settles it; the shim's design (stop the process group, then `finally` reports `failed`) doesn't depend on the answer |
+
+### Decisions
+
+1. **T2.5 is split:** T2.5a (Cloud and Node, no Modal) and T2.5b (the Modal shim, spawn and cancel, the sweeper, the live check).
+   - *Why:* the Modal account isn't set up yet, and everything but the shim can be built and tested without it.
+   - Both halves are on issue #22.
+2. **Job tokens are HS256 JWTs with a Cloud secret** (`INTENZO_JOB_SECRET`, on Vercel as sensitive, locally in `.env.intenzo-cloud`).
+   - Only the header the Cloud writes is accepted. The signature is compared in constant time.
+   - `/alive` doesn't reissue tokens: the deadline doesn't move, so `exp` wouldn't either.
+3. **The stale guard is "the token's job isn't the run's `current_job_id`, or the run is done".**
+   - *Why:* a superseded run is done, so its job gets 410 even if nothing cleared `current_job_id`.
+4. **Events are stored in a new `job_events` table, once per `(job_id, seq)`; a stale job's are not stored.**
+5. **`finished` and `failed` end the run through `decide()`, as new facts.**
+   - A job that ended by itself isn't sent a cancel.
+   - `failed` with the shim's code `cancelled` ends the run as cancelled; anything else ends it in error, with the reason `worker_failed`.
+6. **The worker reports everything except a 410, and its exit code tells the shim whether to report a failure itself.**
+   - Exit codes: 0 finished, 1 failed (reported), 3 stale.
+   - Seqs from 1,000,000 up are the shim's, so its `failed` can't collide with the worker's.
+7. *Next (T2.5b):*
+   - `modal/app.py` and the spawn and cancel endpoints.
+   - The spawn effect setting `current_job_id`.
+   - The sweeper, and the live check.
+   - A `verify` job answers `failed` (`not_implemented`) until T2.7, so T2.5b decides whether production spawns before then.
+
+---
+
 ## 2026-10-31 · Outbox and drainer (T2.4, #21)
 
 Every decision's effects now go to the outbox in `advance()`'s transaction. Drainers run them after each event: the `Intenzo` check run of each run, and one comment per run group (`apps/cloud/src/outbox/`). The checks:

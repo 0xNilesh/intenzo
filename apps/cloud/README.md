@@ -3,12 +3,14 @@
 Intenzo Cloud (ARCHITECTURE §2, §3): the Next.js app on Vercel that receives GitHub's webhooks,
 keeps run state in Postgres and drives runs. It's the only code with GitHub credentials.
 
-## What it does so far (T2.4)
+## What it does so far (T2.5a)
 
-| Route                      | What it does                                                                                                                                   |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/github/webhook` | Checks `X-Hub-Signature-256`, stores each delivery once in `webhook_events`, answers, then dispatches the event after the response (`after()`) |
-| `GET /`                    | A placeholder page                                                                                                                             |
+| Route                      | What it does                                                                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/github/webhook` | Checks `X-Hub-Signature-256`, stores each delivery once in `webhook_events`, answers, then dispatches the event after the response (`after()`)     |
+| `POST /api/worker/events`  | A worker's report on its job (§9), with its job token: 410 if the job isn't current, stored once per `(job, seq)`, `finished`/`failed` end the run |
+| `GET /api/worker/alive`    | 200 while the token's job is its run's current one, 410 once it isn't                                                                              |
+| `GET /`                    | A placeholder page                                                                                                                                 |
 
 `POST /api/github/webhook` answers:
 
@@ -52,6 +54,7 @@ after 10, 20, 40 and 80 s, then marked `failed`. Any number of drainers can run 
 | `GITHUB_APP_ID`             | the App's id                                             | `.env.intenzo-app`, written when the App is registered (`scripts/github-app/README.md`) |
 | `GITHUB_APP_WEBHOOK_SECRET` | the App's webhook secret                                 | the same file                                                                           |
 | `GITHUB_APP_PRIVATE_KEY`    | the App's private key (PEM), to mint installation tokens | `.env.intenzo-app.pem`                                                                  |
+| `INTENZO_JOB_SECRET`        | signs the worker's job tokens (32+ characters)           | generated into `.env.intenzo-cloud` (T2.5a)                                             |
 
 Locally they go in `apps/cloud/.env.local` (gitignored), for example with `vercel env pull .env.local`
 in this folder.
