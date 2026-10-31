@@ -765,6 +765,8 @@ intent_versions (keyed by ticket_hash; reused by later runs in the group)
 
 - **Built in T4.1** (`core/intent`, `prompts/intent.v1.ts`): text tickets. Spark 1.3 answers with a strict JSON schema; code numbers the criteria C1…Cn, holds a checklist to 1:1 (one retry naming the items), asks again for a missing trigger, and sets `timingMs` 1000 for "instantly", "immediately", "right away" or "at once" without a number. An empty ticket makes no call. The ticket goes in an `<untrusted>` block whose closing tag the ticket can't forge. `ticketHash` covers the normalized title, body, comments and media hashes. `pnpm intenzo intent --ticket <file>` runs it.
 
+- **Built in T4.2** (`core/intent/media.ts`, `core/models/transcribe.ts`): `prepareTicketVideo` makes the 16 kHz WAV and the 2 fps, 960 px MP4 with ffmpeg, transcribes the WAV, and hashes the original. Messages can carry `image_url` and `video_url` parts. With a recording attached, the prompt states its length and code requires every criterion's `sourceMediaAt` (one retry). A control other criteria use isn't a criterion of its own. Spark's media times come back in the PM's order but seconds off (DECISIONS 2026-10-31 · Intent from the PM video).
+
 Coverage (every run, since it depends on the diff; runs in parallel with recording when cached paths exist):
 Muse Code, or Spark 1.3 if Muse Code is CLI-only (coverage.v1): criteria + diff → CoverageMap
    + deterministic route candidates (Next.js app/ and pages/ file → route rules)

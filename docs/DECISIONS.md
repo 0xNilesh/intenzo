@@ -5,6 +5,29 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Intent from the PM video (T4.2, #33)
+
+The demo ticket (demo-shop #5, whose text only points at its recording) read with Voice Transcribe and Spark 1.3 watching the video: `prepareTicketVideo` and `extractIntent` in `core/intent`, `pnpm intenzo intent --video`. Checked with 6 new unit tests and five runs of the live test (`intent.live.test.ts`, by hand).
+
+### What we found
+
+| Check | Result |
+|---|---|
+| The transcript | Voice Transcribe's file endpoint read the 36.5 s narration in 7–10 s, word for word, with the code as "save 10" and a repeated word here and there ("codes codes"). No timings, as in T0.2 |
+| The criteria | The first run gave 5: it added "a code field under the items". With a rule that a control other criteria use isn't a criterion of its own, every later run gave the demo's 4, each quoting the PM |
+| Media times | One run left them all null. With the recording's length in the prompt and a retry when one is missing, every run had them, in the PM's order but 0.6–5.6 s off (3–4.6 s late in the last run): Spark places them from the picture at 2 fps |
+| Numbering | The PM says the total first (9.4 s), then the line (18.5 s), so the intent step numbers the total C1. The golden comment (`demo/expected-comment.md`) and `demo/README.md` ("matched by number") have the line as C1 and the total as C2 |
+| Cost | Each run: one transcription (36 s of audio, $0.002) and one Spark call with the video (about 10,000 input and 3,500–6,600 output tokens), $0.03–0.04. T4.2's five live runs: about $0.18 |
+
+### Decisions
+
+1. **With a recording attached, code requires every criterion's `sourceMediaAt`** (one retry), and the prompt states the recording's length.
+2. **A control other criteria use is not a criterion of its own**: its place goes in their setup or the repro steps.
+3. **Media times stay Spark's estimates for now**: close enough to jump near the moment. *If they must be exact:* transcribe each sentence on its own (split on silence), so each has a start time, and match criteria to sentences by their quote.
+4. **Open for the P4 gate:** its golden test can't match criteria by number, since the PM's order makes the total C1. Either match them by what they're about, or re-record the PM video with the line said before the total (the owner's call).
+
+---
+
 ## 2026-10-31 · Intent from text tickets (T4.1, #32)
 
 `core/intent` turns a ticket into criteria with Spark 1.3 (`intent.v1`), and `pnpm intenzo intent` runs it. Checked with 15 new unit tests (scripted replies) and one live call on `fixtures/tickets/42.md`.

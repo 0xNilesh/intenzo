@@ -453,9 +453,10 @@
   - *Live, Spark 1.3:* 4 criteria, one per checklist item, matching C1–C4: C2 "the order total changes from $50.00 to $45.00", within 1000 ms, surviving a reload; C3 copy "This code has expired"; C4 `ui_visual`; `repro.startPath` /cart. One call, 952 input and 4,020 output tokens (3,455 reasoning), $0.018.
 
 ### T4.2 Intent from the PM video
-- [ ] **Build:** ffmpeg → PCM → Voice Transcribe (the approach chosen in P0) → transcript with timings; ffmpeg → 2 fps frames/MP4 → Spark 1.3 video; `sourceQuote` + `sourceMediaAt`; `repro.startPath`.
-- [ ] **Tests:** `@live` on the demo PM video → 4 criteria matching C1–C4, each with a quote and a media timestamp; `repro.startPath = /cart`.
-- [ ] **Verify:** read the transcript and criteria by eye against the video.
+- [x] **Build:** ffmpeg → PCM → Voice Transcribe (the approach chosen in P0) → transcript with timings; ffmpeg → 2 fps frames/MP4 → Spark 1.3 video; `sourceQuote` + `sourceMediaAt`; `repro.startPath`.
+- [x] **Tests:** `@live` on the demo PM video → 4 criteria matching C1–C4, each with a quote and a media timestamp; `repro.startPath = /cart`.
+- [x] **Verify:** read the transcript and criteria by eye against the video.
+  - *Live:* the transcript reads the narration word for word (the code as "save 10"). The four criteria are the demo's: the total ($50.00 → $45.00, right away), the line ("SAVE10 −$5.00"), the expired code ("This code has expired") and the chart, each quoting the PM. Their times are in the PM's order but 3–4.6 s late, and the total comes first, so it's C1 (DECISIONS 2026-10-31 · Intent from the PM video).
 
 ### T4.3 Coverage
 - [ ] **Build:** `coverage.v1` with the model chosen in P0 (Muse Code or Spark 1.3); deterministic Next.js route rules.
