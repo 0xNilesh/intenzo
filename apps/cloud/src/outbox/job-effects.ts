@@ -146,7 +146,9 @@ async function reusedIntent(db: Db, groupId: number, hash: string): Promise<Crit
     .select({ intent: intentVersions.intentJson })
     .from(intentVersions)
     .where(and(eq(intentVersions.runGroupId, groupId), eq(intentVersions.ticketHash, hash)));
-  return row ? (CriterionSet.safeParse(row.intent).data ?? null) : null;
+  const intent = row ? CriterionSet.safeParse(row.intent).data : undefined;
+  // An intent with no criteria is never reused: the ticket is read again (P4 gate).
+  return intent && intent.criteria.length > 0 ? intent : null;
 }
 
 /** The repo's secrets for its job; a repo with sealed secrets and no key to open them is an error. */

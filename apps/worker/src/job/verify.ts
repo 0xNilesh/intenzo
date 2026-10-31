@@ -197,6 +197,8 @@ export interface VerifyDeps {
   models?: ModelPort;
   /** Reads the PM's recording from its signed URL (transcript and video); injectable for tests. */
   readRecording?: (url: string) => Promise<TicketVideo>;
+  /** The pause before a failed intent call is tried again (tests make it short). */
+  retryDelayMs?: number;
   /** Spark Open and Spark 1.3 (judgesFromEnv); null: stub verdicts. */
   judges?: readonly [Judge, Judge] | null;
   log: (line: string) => void;
@@ -270,20 +272,37 @@ export async function verify(
         );
       }
     }
-    const result = await extractIntent(models, ticket, {
-      intentSource: bundle.ticket ? (recording ? "linked_issue_video" : "linked_issue") : "pr_body",
-      ...(recording && {
-        transcript: recording.transcript.text,
-        video: {
-          dataUrl: recording.dataUrl,
-          ...(recording.transcript.audioDurationMs && {
-            durationMs: recording.transcript.audioDurationMs,
-          }),
-        },
-        mediaHashes: [recording.mediaHash],
-      }),
-    });
+    const readTicket = () =>
+      extractIntent(models, ticket, {
+        intentSource: bundle.ticket
+          ? recording
+            ? "linked_issue_video"
+            : "linked_issue"
+          : "pr_body",
+        ...(recording && {
+          transcript: recording.transcript.text,
+          video: {
+            dataUrl: recording.dataUrl,
+            ...(recording.transcript.audioDurationMs && {
+              durationMs: recording.transcript.audioDurationMs,
+            }),
+          },
+          mediaHashes: [recording.mediaHash],
+        }),
+      });
+    // A call that failed (a 404 model_not_found came back once, P4 gate) is tried once more; a
+    // second failure fails the job, so no empty intent is ever reported as the ticket's.
+    let result = await readTicket();
     spend(INTENT_MODEL, result.usage);
+    if (!result.ok && result.intent.criteria.length === 0) {
+      log(redact(`intent: ${result.problems.join("; ")}: trying once more`).slice(0, 300));
+      await new Promise((resolve) => setTimeout(resolve, deps.retryDelayMs ?? 3000));
+      result = await readTicket();
+      spend(INTENT_MODEL, result.usage);
+      if (!result.ok && result.intent.criteria.length === 0) {
+        throw new Error(`the ticket couldn't be read: ${result.problems.join("; ")}`.slice(0, 400));
+      }
+    }
     for (const p of result.problems) log(redact(`intent: ${p}`).slice(0, 300));
     log(
       `intent: ${result.intent.criteria.length} criteria from ${ticket.ref}${recording ? " and its recording" : ""}`,
