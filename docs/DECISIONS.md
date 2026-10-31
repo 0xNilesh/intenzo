@@ -5,6 +5,28 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · The judge queue in the worker (T4.6b, #37)
+
+The verify job judges now: two recording slots and a judge queue, the §19 e re-record, liveness checks, and the spend in `finished`. `pnpm intenzo run --local` runs it without the Cloud. Checked with 9 new worker tests and two local runs on the almost-right and main previews.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Local run 1 (`fixtures/tickets/42.md`, fixture paths) | C1 ✅, C2 ❌ (re-recorded, confirmed), C4 ✅, but **C3 inconclusive (`wrong_target`)**: both judges said pass, one marked the target wrong, since the toast is read from the live regions (no box) and the boxes were on the form. 51 s, $0.082 |
+| Local run 2, after the prompt fix | **C1 ✅, C2 ❌, C3 ✅, C4 ✅**, the golden comment's verdicts. 50 s, $0.081 |
+| Concurrency | Two criteria were recorded at a time; the run took 50 s for 9 takes and 10 judge calls, against about 90 s one at a time (T2.7b) |
+
+### Decisions
+
+1. **`judge.v1`'s rule 2 now says** that a box around the element's container (its form, summary or region) isn't a wrong target, and neither is a message read from the live regions, which never gets a box. It was amended before any hosted run used it.
+2. **Two criteria are judged at a time** (four calls), apart from the two recording slots, so recording goes on while the judges think.
+3. **The event cites the take the verdict rests on**: after a re-record, the second PR take.
+4. **Without both judges' keys, the job keeps the stub's verdicts**, so a worker missing a key can't post invented ones. **On Modal, `BASETEN_API_KEY` must join `META_API_KEY` in the `intenzo-models` secret.**
+5. **Unit tests pass `judges: null`**, so a developer's shell keys can never make one call a model.
+
+---
+
 ## 2026-10-31 · The judges, live (T4.6a, #37)
 
 `core/judge/judges.ts`: the two judges, Spark Open on Baseten and Spark 1.3, asked the same thing at once and held to the §22 rules. Checked with 12 new unit tests (scripted ports, Baseten's request shape) and the live test on C1–C4 recorded on the almost-right preview, with main as the base.
