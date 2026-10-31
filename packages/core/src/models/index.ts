@@ -1,4 +1,11 @@
-export { BACKOFF_MS, META_BASE_URL, metaModelPort, type MetaPortOptions } from "./meta.ts";
+export {
+  BACKOFF_MS,
+  BASETEN_BASE_URL,
+  META_BASE_URL,
+  metaModelPort,
+  sparkOpenPort,
+  type MetaPortOptions,
+} from "./meta.ts";
 export {
   addUsage,
   type ContentPart,

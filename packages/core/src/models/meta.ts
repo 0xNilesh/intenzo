@@ -25,6 +25,29 @@ export interface MetaPortOptions {
   baseUrl?: string;
   fetch?: typeof fetch;
   sleep?: (ms: number) => Promise<unknown>;
+  /** The output-token limit's name: Meta's max_completion_tokens, or max_tokens (Baseten). */
+  maxTokensField?: "max_completion_tokens" | "max_tokens";
+  /** False for a host without structured outputs: the schema is only asked for in the prompt. */
+  structuredOutputs?: boolean;
+}
+
+/** Baseten's Model APIs, which serve Spark Open (DECISIONS 2026-10-30, T0.2b). */
+export const BASETEN_BASE_URL = "https://inference.baseten.co/v1";
+
+/**
+ * Spark Open on Baseten: the same OpenAI-style Chat Completions, but max_tokens and no structured
+ * outputs ("All except Muse Spark Open support structured outputs", docs.baseten.co, Model APIs).
+ * Its reply is asked for by the prompt, extracted and checked (§14; 20/20 valid JSON in T0.3).
+ */
+export function sparkOpenPort(
+  options: Omit<MetaPortOptions, "maxTokensField" | "structuredOutputs">,
+) {
+  return metaModelPort({
+    ...options,
+    baseUrl: options.baseUrl ?? BASETEN_BASE_URL,
+    maxTokensField: "max_tokens",
+    structuredOutputs: false,
+  });
 }
 
 interface ChatReply {
@@ -66,7 +89,7 @@ export function metaModelPort(options: MetaPortOptions): ModelPort {
                 Authorization: `Bearer ${options.apiKey}`,
                 "content-type": "application/json",
               },
-              body: JSON.stringify(body(request, messages)),
+              body: JSON.stringify(body(request, messages, options)),
               signal: AbortSignal.timeout(Math.max(1000, Math.round(deadline - performance.now()))),
             });
             const text = await res.text();
@@ -120,22 +143,27 @@ export function metaModelPort(options: MetaPortOptions): ModelPort {
   };
 }
 
-function body<T>(request: ModelRequest<T>, messages: ModelRequest<T>["messages"]) {
+function body<T>(
+  request: ModelRequest<T>,
+  messages: ModelRequest<T>["messages"],
+  options: Pick<MetaPortOptions, "maxTokensField" | "structuredOutputs">,
+) {
   return {
     model: request.model,
-    max_completion_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
+    [options.maxTokensField ?? "max_completion_tokens"]: request.maxTokens ?? DEFAULT_MAX_TOKENS,
     ...(request.reasoningEffort && { reasoning_effort: request.reasoningEffort }),
     messages,
-    ...(request.jsonSchema && {
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: request.jsonSchema.name,
-          strict: true,
-          schema: request.jsonSchema.schema,
+    ...(request.jsonSchema &&
+      options.structuredOutputs !== false && {
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: request.jsonSchema.name,
+            strict: true,
+            schema: request.jsonSchema.schema,
+          },
         },
-      },
-    }),
+      }),
   };
 }
 
