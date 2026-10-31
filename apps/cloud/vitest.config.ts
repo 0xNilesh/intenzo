@@ -4,8 +4,9 @@ import { configDefaults, defineConfig } from "vitest/config";
 //   foo.test.ts           unit      fast, offline, no browser
 //   foo.contract.test.ts  contract  pins behavior of things we don't own (fixtures, Playwright internals)
 //   foo.browser.test.ts   browser   real Chromium against local pages
+//   foo.pg.test.ts        postgres  a real Postgres server (INTENZO_TEST_PG_URL): concurrent connections
 //   foo.live.test.ts      live      real model APIs (costs credits, never gates PRs)
-const LAYERED = "src/**/*.{contract,browser,live}.test.ts";
+const LAYERED = "src/**/*.{contract,browser,pg,live}.test.ts";
 
 export default defineConfig({
   test: {
@@ -28,6 +29,13 @@ export default defineConfig({
           name: "browser",
           include: ["src/**/*.browser.test.ts"],
           testTimeout: 60_000,
+        },
+      },
+      {
+        test: {
+          name: "postgres",
+          include: ["src/**/*.pg.test.ts"],
+          testTimeout: 30_000,
         },
       },
       {

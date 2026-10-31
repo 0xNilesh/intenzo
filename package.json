@@ -17,6 +17,7 @@
     "test": "pnpm -r --if-present test",
     "test:contract": "pnpm -r --if-present test:contract",
     "test:browser": "pnpm -r --if-present test:browser",
+    "test:pg": "pnpm -r --if-present test:pg",
     "test:live": "pnpm -r --if-present test:live",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:contract",
     "check:all": "pnpm check && pnpm test:browser",
