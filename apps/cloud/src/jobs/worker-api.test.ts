@@ -4,7 +4,14 @@ import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { ensureRunGroup } from "../db/repos.ts";
-import { criteriaResults, intentVersions, jobEvents, outbox, runs } from "../db/schema.ts";
+import {
+  criteriaResults,
+  intentVersions,
+  jobEvents,
+  outbox,
+  runs,
+  savedPaths,
+} from "../db/schema.ts";
 import { resetWithDemoShop, testDb } from "../db/test-db.ts";
 import { advance } from "../runs/advance.ts";
 import type { Fact } from "../runs/transition.ts";
@@ -199,6 +206,32 @@ describe("the events that add to the report (§9, §26.1)", () => {
     (await t.db.select().from(outbox).orderBy(asc(outbox.id)))
       .filter((r) => r.effect === "comment")
       .map((r) => r.idemKey);
+
+  it("keeps a path_saved for the group's later runs, without re-rendering the comment", async () => {
+    const path = (name: string) => ({
+      criterionId: "C2",
+      setup: [{ op: "goto", path: "/cart" }],
+      trigger: [{ op: "click", target: { by: "role", role: "button", name } }],
+      watch: [{ label: "summary", scope: "region", target: { by: "testId", id: "summary" } }],
+      portable: true,
+    });
+    // Before the intent, the path has no intent version to belong to.
+    expect(
+      (await send({ kind: "path_saved", jobId: JOB, seq: 1, path: path("Apply") })).status,
+    ).toBe(202);
+    expect(await t.db.select().from(savedPaths)).toEqual([]);
+    expect(lines.some((l) => l.includes("path for C2 dropped"))).toBe(true);
+
+    await send({ kind: "intent_ready", jobId: JOB, seq: 2, intent, coverage });
+    const before = (await comments()).length;
+    await send({ kind: "path_saved", jobId: JOB, seq: 3, path: path("Apply") });
+    await send({ kind: "path_saved", jobId: JOB, seq: 4, path: path("Redeem") });
+    const intentVersionId = (await t.db.select().from(intentVersions))[0]!.id;
+    expect(await t.db.select().from(savedPaths)).toMatchObject([
+      { runGroupId: groupId, criterionId: "C2", intentVersionId, pathJson: path("Redeem") },
+    ]);
+    expect((await comments()).length).toBe(before);
+  });
 
   it("stores the criteria, a verdict and its evidence, re-rendering the comment after each", async () => {
     const before = (await comments()).length;

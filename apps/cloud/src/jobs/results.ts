@@ -1,11 +1,11 @@
 // What a job learns, stored where the report reads it (§9, §11): the criteria (intent_ready), a
 // verdict per criterion (criterion_verdict) and its evidence (criterion_evidence). Each changes
 // the comment, which is re-rendered from the database (§26.1: verdicts stream in).
-import type { WorkerEvent } from "@intenzo/core";
+import type { SavedPath, WorkerEvent } from "@intenzo/core";
 import { and, eq, sql } from "drizzle-orm";
 
 import type { Db } from "../db/db.ts";
-import { criteriaResults, intentVersions, runGroups, runs } from "../db/schema.ts";
+import { criteriaResults, intentVersions, runGroups, runs, savedPaths } from "../db/schema.ts";
 import { enqueueEffects } from "../outbox/rows.ts";
 
 type RunRow = typeof runs.$inferSelect;
@@ -85,6 +85,28 @@ export async function storeResult(db: Db, run: RunRow, event: WorkerEvent): Prom
     default:
       return;
   }
+}
+
+/**
+ * Keeps a path the navigator found (path_saved, §20), for the group's later runs of the same
+ * intent version (§11: one per group, criterion and intent version). A path saved before the
+ * run's intent is stored has nothing to belong to and is dropped.
+ */
+export async function savePath(db: Db, run: RunRow, path: SavedPath): Promise<boolean> {
+  if (run.intentVersionId === null) return false;
+  await db
+    .insert(savedPaths)
+    .values({
+      runGroupId: run.runGroupId,
+      criterionId: path.criterionId,
+      intentVersionId: run.intentVersionId,
+      pathJson: path,
+    })
+    .onConflictDoUpdate({
+      target: [savedPaths.runGroupId, savedPaths.criterionId, savedPaths.intentVersionId],
+      set: { pathJson: sql`excluded.path_json` },
+    });
+  return true;
 }
 
 /**

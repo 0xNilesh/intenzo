@@ -7,7 +7,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { ensureRunGroup } from "../db/repos.ts";
-import { outbox, repos, runGroups, runs } from "../db/schema.ts";
+import { intentVersions, outbox, repos, runGroups, runs, savedPaths } from "../db/schema.ts";
 import { resetWithDemoShop, testDb } from "../db/test-db.ts";
 import type { ModalSettings } from "../env.ts";
 import { isCurrentJob } from "../jobs/worker-api.ts";
@@ -162,11 +162,47 @@ describe("the spawn effect", () => {
       baseUrl: "https://demo-shop-main.vercel.app",
       baseSha: BASE_SHA,
       config: { start: { default: "/cart" } },
-      // Until P3 and P4: no saved paths, no context bundle, and the intent computed by the job.
+      // Until P4: no context bundle, and the intent computed by the job. No paths saved yet.
       cachedPaths: [],
       bundleUrl: null,
       intent: null,
     });
+  });
+
+  it("sends the group's saved paths for its latest intent version (§19 3a)", async () => {
+    const path = (criterionId: string, name: string) => ({
+      criterionId,
+      setup: [{ op: "goto", path: "/cart" }],
+      trigger: [{ op: "click", target: { by: "role", role: "button", name } }],
+      watch: [{ label: "summary", scope: "region", target: { by: "testId", id: "summary" } }],
+      portable: true,
+    });
+    const intent = async (ticketHash: string) =>
+      (
+        await t.db
+          .insert(intentVersions)
+          .values({ runGroupId: groupId, ticketHash, intentJson: {} })
+          .returning()
+      )[0]!.id;
+    const old = await intent("a".repeat(64));
+    const latest = await intent("b".repeat(64));
+    await t.db.insert(savedPaths).values([
+      { runGroupId: groupId, criterionId: "C2", intentVersionId: old, pathJson: path("C2", "Old") },
+      {
+        runGroupId: groupId,
+        criterionId: "C2",
+        intentVersionId: latest,
+        pathJson: path("C2", "Apply"),
+      },
+      {
+        runGroupId: groupId,
+        criterionId: "C3",
+        intentVersionId: latest,
+        pathJson: { not: "a path" },
+      },
+    ]);
+    await drain();
+    expect(calls[0]!.body.cachedPaths).toEqual([path("C2", "Apply")]);
   });
 
   it("opens the repo's secrets into the job of a PR from the repo itself", async () => {
