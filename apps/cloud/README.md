@@ -3,7 +3,7 @@
 Intenzo Cloud (ARCHITECTURE §2, §3): the Next.js app on Vercel that receives GitHub's webhooks,
 keeps run state in Postgres and drives runs. It's the only code with GitHub credentials.
 
-## What it does so far (T2.7a)
+## What it does so far (T2.7b)
 
 | Route                            | What it does                                                                                                                                                                                                                         |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -43,7 +43,7 @@ the handler then drains it (`src/outbox/`, ARCHITECTURE §16.4):
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `check_run`               | The run's `Intenzo` check run (its `external_id` is the run's id), created once and edited as the run moves on: the comment's table, the outcome's conclusion, its buttons once it completes, and a Details link to the run's report |
 | `comment`                 | The run group's one comment, rendered from the database by `core/report`, posted once and edited in place; an older comment effect is skipped when a newer one is pending                                                            |
-| `spawn_job`, `cancel_job` | Start the run's job on Modal (a fresh job id each attempt; a `stub` job until T2.7b) and cancel it; they wait in the outbox until the Modal settings are set (T2.5b)                                                                 |
+| `spawn_job`, `cancel_job` | Start the run's VerifyJob on Modal (a fresh job id each attempt; the repo's secrets unless the PR is from a fork) and cancel it; they wait in the outbox until the Modal settings are set (T2.5b, T2.7b)                             |
 
 A claimed row is leased for 60 s, so a row whose drainer died is run again. A failure is retried
 after 10, 20, 40 and 80 s, then marked `failed`. Any number of drainers can run at once.
@@ -57,6 +57,7 @@ after 10, 20, 40 and 80 s, then marked `failed`. Any number of drainers can run 
 | `GITHUB_APP_ID`                       | the App's id                                                                      | `.env.intenzo-app`, written when the App is registered (`scripts/github-app/README.md`) |
 | `GITHUB_APP_WEBHOOK_SECRET`           | the App's webhook secret                                                          | the same file                                                                           |
 | `GITHUB_APP_PRIVATE_KEY`              | the App's private key (PEM), to mint installation tokens                          | `.env.intenzo-app.pem`                                                                  |
+| `INTENZO_SECRETS_KEY`                 | seals the repos' test secrets (32 bytes, base64)                                  | generated into `.env.intenzo-cloud` (T2.7b)                                             |
 | `INTENZO_JOB_SECRET`                  | signs the worker's job tokens (32+ characters)                                    | generated into `.env.intenzo-cloud` (T2.5a)                                             |
 | `INTENZO_SWEEP_SECRET`                | what Modal's cron sends to the sweep route                                        | `.env.intenzo-modal` (T2.5b)                                                            |
 | `MODAL_ENDPOINT_SECRET`               | the bearer token for Modal's spawn and cancel endpoints                           | the same file                                                                           |
@@ -68,7 +69,8 @@ after 10, 20, 40 and 80 s, then marked `failed`. Any number of drainers can run 
 Only the first six are required. Until the four Modal ones (`MODAL_*` and `INTENZO_CLOUD_URL`) are
 all set, no job is spawned; without `INTENZO_SWEEP_SECRET` the sweep route refuses every request;
 without a Blob store's variable, uploads to that store fail and the report shows nothing from it;
-and report links point at `http://localhost:3000` until `INTENZO_CLOUD_URL` is set. Locally they go in `apps/cloud/.env.local` (gitignored), for example with `vercel env pull .env.local`
+report links point at `http://localhost:3000` until `INTENZO_CLOUD_URL` is set; and without
+`INTENZO_SECRETS_KEY` a repo with sealed secrets gets no jobs. Locally they go in `apps/cloud/.env.local` (gitignored), for example with `vercel env pull .env.local`
 in this folder.
 
 ## Commands
@@ -80,7 +82,15 @@ pnpm --filter @intenzo/cloud test    # unit tests, the database ones included
 pnpm --filter @intenzo/cloud test:pg # the tests that need a Postgres server (see below)
 pnpm db:generate                     # write a migration for a change to src/db/schema.ts
 pnpm db:migrate                      # apply the migrations to DATABASE_URL_UNPOOLED (else DATABASE_URL)
+pnpm repo:secrets --repo sumithprabhu/demo-shop \
+  --hook-secret-env DEMO_SHOP_HOOK_SECRET --bypass-env DEMO_SHOP_BYPASS_SECRET
 ```
+
+`pnpm repo:secrets` seals a repo's session-hook secret and Vercel bypass into its `repos` row
+(ARCHITECTURE §11, §29). It reads the values by name from the repo root's `.env`, never from the
+command line, the key from `.env.intenzo-cloud` and the database from `.env.local`, and prints
+only which secrets it stored. The spawn effect opens them into the VerifyJob of a PR that isn't
+from a fork.
 
 The database tests run a real Postgres in-process with [PGlite](https://pglite.dev) and apply the same
 migrations as production (`drizzle/`), so they need no Docker and no network.

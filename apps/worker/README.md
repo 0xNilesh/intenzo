@@ -34,7 +34,7 @@ pnpm intenzo record --path fixtures/paths/C2.json --pr http://localhost:3001 --b
   feature yet).
 - **Needs** Playwright's Chromium and `ffmpeg` (for the alignment). No model calls; it costs nothing.
 
-## `intenzo job` (T2.5a)
+## `intenzo job` (T2.5a, T2.7b)
 
 Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,
 and reports to the Cloud with the job's token (§9):
@@ -53,11 +53,15 @@ node apps/worker/src/main.ts job job.json
   `runs/{runId}/`, by `takePath()` from core, and the worker PUTs it. Videos go to the private
   store; GIFs and stills to the public one (ARCHITECTURE §28).
 - **Jobs:**
+  - A `verify` job (§8, §19) is what the Cloud spawns. Until the navigator (P3) and the judges
+    (P4), it records the demo ticket's criteria (`fixtures/criteria`, C1–C4) along their
+    hand-written paths (`fixtures/paths`) on the PR preview and the base preview, uploads each
+    lane's `human.mp4` to the private store, and reports the stub's fixed verdicts (C2 fails, the
+    others pass) citing the PR recording. A PR side that doesn't complete makes its criterion
+    inconclusive (§22.1). It needs Chromium and ffmpeg, as the Modal image has.
   - A `sleep` job (`seconds`, `aliveEverySeconds`) exercises the protocol and the shim.
-  - A `stub` job (T2.7a) reports the demo's criteria (`fixtures/criteria`, C1–C4) with fixed
-    verdicts, C2 failing and the others passing, then finishes `fail`. The Cloud spawns it until
-    the worker records for real (T2.7b).
-  - A `verify` job answers `failed` (`not_implemented`) until T2.7b.
+- **Secrets:** the job's hook secret, bypass and test passwords are replaced with `[redacted]` in
+  every lane, log line and crash message before anything leaves the worker.
 
 ## Tests
 

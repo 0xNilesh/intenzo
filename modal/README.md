@@ -53,14 +53,17 @@ The deploy prints the `spawn` and `cancel` URLs. They go on Vercel as `MODAL_SPA
 `MODAL_CANCEL_URL`, next to the same `MODAL_ENDPOINT_SECRET`, `INTENZO_SWEEP_SECRET` and
 `INTENZO_CLOUD_URL` (apps/cloud/README.md). Until all four are set, the Cloud spawns nothing.
 
-**The image** holds Node 24, pnpm, and the worker's and core's sources with their production
-dependencies. It never holds the repo root, which has the `.env` files and the App's private key.
+**The image** holds Node 24, pnpm, ffmpeg, Chromium with its system libraries (for the Playwright
+version the lockfile pins), and the worker's and core's sources with their production dependencies,
+plus the demo's criteria and paths. The browser is installed before the sources are copied in, so a
+code change doesn't download it again. The image never holds the repo root, which has the `.env`
+files and the App's private key.
 
 ## Costs
 
 Modal's Starter plan includes $30 of compute a month (modal.com/pricing, 2026-10-31). Rates: $0.0000131 per
 core-second and $0.00000222 per GiB-second.
 
-- **`run_job`** (4 cores, 8 GiB) costs about $0.25 an hour while it runs. Until T2.7, a job is a
-  60 s placeholder: about $0.004.
+- **`run_job`** (4 cores, 8 GiB) costs about $0.25 an hour while it runs. A verify job that
+  records C1–C4 on both sides (T2.7b) runs for a few minutes: about $0.01–0.02.
 - **The cron** starts a small container once a minute: a few cents a day.

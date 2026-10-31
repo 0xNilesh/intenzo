@@ -443,6 +443,8 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **An App receives the events its own actions cause:** its check run's `check_run.created`, its comment's `issue_comment.created` and `edited` (T2.4).
 - **GitHub's API doesn't return a check run's requested actions** (neither REST nor GraphQL). Look for the buttons in the Checks tab (T2.7a).
 - **A check run without `details_url` links to the App's homepage**, and intenzo-ai's is set to `https://intenzo-cloud.vercel.app.` (a stray period). Intenzo sends the run's report as `details_url` (T2.7a).
+- **The Vercel project is linked at the repo root** (`.vercel/`), so run `vercel env …` from there: with `--cwd apps/cloud` it finds no project. Pipe a secret into `vercel env add NAME production --sensitive` from its file, never as an argument (T2.7b).
+- **Playwright's error messages can quote request headers** in their call log, such as the bypass header. The worker redacts the job's secrets from every lane, log line and crash message (T2.7b).
 
 **Next.js (demo-shop, T0.5–T0.6)**
 
