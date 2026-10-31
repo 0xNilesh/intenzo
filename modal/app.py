@@ -65,8 +65,9 @@ worker_image = (
 
 # The endpoints and the sweeper only need FastAPI.
 web_image = modal.Image.debian_slim(python_version="3.12").uv_pip_install("fastapi[standard]")
+# FastAPI is only in the image: nothing from it may run while this file loads on a laptop.
 with web_image.imports():
-    from fastapi import Header, HTTPException
+    from fastapi import HTTPException, Request
 
 # MODAL_ENDPOINT_SECRET (the Cloud → Modal bearer), INTENZO_SWEEP_SECRET (Modal → Cloud) and
 # INTENZO_CLOUD_URL. Created with `modal secret create` (modal/README.md).
@@ -90,18 +91,18 @@ def authorize(authorization: str | None) -> None:
 
 @app.function(image=web_image, secrets=secrets)
 @modal.fastapi_endpoint(method="POST")
-def spawn(job: dict, authorization: str | None = Header(default=None)) -> dict:
+def spawn(job: dict, request: Request) -> dict:
     """Starts run_job on the job and answers with its call id, which cancel takes."""
-    authorize(authorization)
+    authorize(request.headers.get("authorization"))
     call = run_job.spawn(job)
     return {"callId": call.object_id}
 
 
 @app.function(image=web_image, secrets=secrets)
 @modal.fastapi_endpoint(method="POST")
-def cancel(body: dict, authorization: str | None = Header(default=None)) -> dict:
+def cancel(body: dict, request: Request) -> dict:
     """Cancels a spawned job: the shim stops its process group and reports failed (cancelled)."""
-    authorize(authorization)
+    authorize(request.headers.get("authorization"))
     modal.FunctionCall.from_id(body["callId"]).cancel()
     return {"cancelled": body["callId"]}
 
