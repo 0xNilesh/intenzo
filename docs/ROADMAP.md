@@ -409,9 +409,9 @@
 - [x] **Verify:** `pnpm --filter @intenzo/core test:browser outline`; print the outline for demo-shop `/products`.
 
 ### T3.2 Action guard
-- [ ] **Build:** `NavAction` validation; guards for same-origin `goto`, refs that exist, `deny_text`, the allowed op set.
-- [ ] **Tests:** off-origin goto rejected; "Delete account" rejected; an unknown ref rejected with a useful message back to the model.
-- [ ] **Verify:** `pnpm --filter @intenzo/core test guard`.
+- [x] **Build:** `NavAction` validation; guards for same-origin `goto` (resolved, so `/\\host` is caught), refs that exist and resolve to one element, `deny_text` (whole words or phrases, case-insensitive), `fill`/`select` on the right kind of element.
+- [x] **Tests:** off-origin goto rejected; "Delete account" rejected; an unknown ref rejected with a useful message back to the model.
+- [x] **Verify:** `pnpm --filter @intenzo/core test guard`.
 
 ### T3.3 Durable targets
 - [ ] **Build:** `durableTarget()` with the candidate order and **same-element verification** (§20.4).
