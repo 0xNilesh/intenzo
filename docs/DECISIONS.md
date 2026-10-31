@@ -7,7 +7,11 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ## 2026-10-31 · Webhook intake (T2.1, #18)
 
-`apps/cloud` is now a Next.js 16.4.3 app with `POST /api/github/webhook`. It was checked two ways. Its 49 unit tests include every §12 event type from the T0.4 fixtures, run against a real in-process Postgres. Then `next start`, with a migrated PGlite socket server, received real fixture deliveries over HTTP. The hosted check (App registered, Neon, a real PR on demo-shop) is still pending.
+`apps/cloud` is now a Next.js 16.4.3 app with `POST /api/github/webhook`, live at https://intenzo-cloud.vercel.app. It was checked three ways:
+
+- Its 49 unit tests include every §12 event type from the T0.4 fixtures, run against a real in-process Postgres.
+- `next start`, with a migrated PGlite socket server, received real fixture deliveries over HTTP.
+- Hosted: the real App, **Intenzo Ai** (`intenzo-ai`, id 5551372; "Intenzo" was taken), was installed on demo-shop only. A throwaway PR there (demo-shop#6) was opened, checked and closed. GitHub's delivery log and `webhook_events` (Neon) were then compared.
 
 ### What we found
 
@@ -17,6 +21,10 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 | `deployment_status` payloads | They carry `"check_run": null`. The first envelope schema only allowed the key to be absent, so it answered them with 400 |
 | A 64-bit id stored through `$1::jsonb` | `9007199254740993` reads back with every digit; `JSON.parse` turns it into `…992` |
 | A duplicate insert (`ON CONFLICT DO NOTHING`) | Still uses up an identity value, so row ids have gaps. Nothing relies on them being dense |
+| The hosted path, demo-shop#6 | GitHub's log: 7 deliveries answered 202 (`installation` ×1, `installation_repositories` ×2, `pull_request.opened`, `deployment_status` Preview `success` for the PR's head `f3cbadc`, and Vercel's comment created and edited), 8 answered 200 `ignored` (`check_suite`, Vercel's and Actions' `check_run`s). `webhook_events` holds exactly those 7, all processed, no error. The 2 earlier deliveries got 500: they came before the App's id and secret were on Vercel |
+| Registering the real App | GitHub's form came up without the manifest's settings, and the App was created with no permissions and no events (`GET /app`: `{}` and `[]`). It was then set by hand to exactly the §12 permissions and events, checked against `manifest.ts` through `GET /app` and the installation's accepted permissions. The webhook URL and a generated secret were set through `PATCH /app/hook/config`. Why the manifest didn't carry is unknown; GitHub's password confirmation dropping the POST is the likeliest cause |
+| Vercel CLI deploys from the repo root | The CLI doesn't read `.gitignore`. Its defaults skip `.env.local` but would upload `.env`, `.env.github-app` and the App's `.pem`; `.vercelignore` keeps them here (the upload is 3.5 MB). A project created by the CLI before its Root Directory was set kept the framework preset "Other"; `apps/cloud/vercel.json` pins Next.js. `engines` `24.x` overrides the project's Node 26 default |
+| Neon from the Vercel Marketplace | Sets `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED`, among others, for all three environments. Postgres 18.6. `pnpm db:migrate` applied the migration over the direct connection |
 
 ### Decisions
 
@@ -32,6 +40,9 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
    - *Why:* both Next.js and Vercel recommend `after()` from Next 15.1 on. On Vercel it extends the function the way `waitUntil` does. §12 is updated.
 5. **The real App gets its own credentials file (`GITHUB_APP_ENV=.env.intenzo-app`), next to T0.4's throwaway App.**
    - *Why:* the scripts kept one App's credentials in `.env.github-app`, so a second registration meant `--force` over the first. Only gitignored `.env.<name>` files are accepted, and `.env.example` is refused, because git commits that one.
+6. **Intenzo Cloud is the Vercel project `intenzo-cloud` on the demo account (sumithprabhu), deployed with the CLI from the repo root.**
+   - *Why:* demo-shop already lives on that account. A Git-connected project would need Vercel's GitHub App on 0xNilesh's account, which this account can't install, so deploys are `vercel deploy --prod` from a checkout (apps/cloud/README.md).
+   - *Next:* connect Git when the repo's owner can, so merges to `main` deploy by themselves. Only the App's id and webhook secret are on Vercel; its private key goes there when the Cloud first calls GitHub (T2.3, T2.4).
 
 ---
 

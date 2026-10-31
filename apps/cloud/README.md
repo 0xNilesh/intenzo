@@ -50,6 +50,25 @@ pnpm db:migrate                      # apply the migrations to DATABASE_URL_UNPO
 The database tests run a real Postgres in-process with [PGlite](https://pglite.dev) and apply the same
 migrations as production (`drizzle/`), so they need no Docker and no network.
 
+## Deploying
+
+Intenzo Cloud is the Vercel project `intenzo-cloud` (account sumithprabhu), live at
+https://intenzo-cloud.vercel.app. It isn't connected to Git (DECISIONS 2026-10-31), so deploys
+run from a checkout:
+
+```bash
+vercel link --yes --project intenzo-cloud   # once, from the repo root
+vercel deploy --prod                       # from the repo root, so the pnpm workspace is uploaded
+```
+
+- The project's Root Directory is `apps/cloud`; `vercel.json` here pins the Next.js preset.
+- `/.vercelignore` keeps every `.env` file, private key and local recording out of the upload.
+- Neon's variables come from the Marketplace integration. `GITHUB_APP_ID` and
+  `GITHUB_APP_WEBHOOK_SECRET` were added with `vercel env add <name> production` from
+  `.env.intenzo-app`, the secret as `--sensitive`. A changed variable needs a new deploy.
+- Schema changes: `vercel env pull .env.local --environment=production` in this folder (once),
+  then `pnpm db:migrate`.
+
 ## Costs
 
 Nothing paid: Vercel's Hobby plan and Neon's free plan. No model calls.

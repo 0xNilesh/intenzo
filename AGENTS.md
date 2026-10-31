@@ -399,6 +399,7 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 
 - **`pnpm test -- <name>` doesn't filter**: pnpm forwards the `--` and Vitest then runs every test. Use `pnpm --filter <package> test <name>`.
 - **zsh has no `PIPESTATUS`**, and macOS ships bash 3.2 (no `globstar`). Check exit codes without pipes, and keep CI shell steps portable. `git ls-files '*.x.ts'` is a good way to detect tracked files.
+- **zsh treats `$var:r`, `:h`, `:t` and `:e` as modifiers**, so `"$C:refs/heads/x"` loses text. Write `"${C}:refs/heads/x"`.
 - **Force-push is blocked** in this environment. Rewrite nothing that's pushed; add forward commits.
 
 **Meta APIs (DECISIONS 2026-10-30)**
@@ -423,6 +424,8 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **Webhook delivery ids are 64-bit:** `JSON.parse` rounds them. Use `parseKeepingBigIds` (`scripts/github-app/lib/fixtures.ts`).
 - **An App's webhook URL doesn't have to answer.** GitHub keeps every delivery's payload, so `GET /app/hook/deliveries/{id}` reads it back.
 - **`deployment_status` payloads carry `"check_run": null`.** Webhook schemas must accept `null` wherever GitHub may send it (T2.1).
+- **The Vercel CLI doesn't read `.gitignore`.** Deploying from the repo root would upload `.env`, `.env.github-app` and the App's `.pem` without `.vercelignore`. Keep it.
+- **A Vercel project created by the CLI keeps the "Other" preset** when its Root Directory is set later; `apps/cloud/vercel.json` pins Next.js.
 
 **Next.js (demo-shop, T0.5–T0.6)**
 
