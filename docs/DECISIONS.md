@@ -5,6 +5,29 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · The judges, live (T4.6a, #37)
+
+`core/judge/judges.ts`: the two judges, Spark Open on Baseten and Spark 1.3, asked the same thing at once and held to the §22 rules. Checked with 12 new unit tests (scripted ports, Baseten's request shape) and the live test on C1–C4 recorded on the almost-right preview, with main as the base.
+
+### What we found
+
+| Criterion | Spark Open | Spark 1.3 | Combined |
+|---|---|---|---|
+| C1 discount line | pass, cites "Discount (SAVE10) −$5.00" · 4.3 s · $0.0066 | pass, same value · 10.6 s · $0.0103 | **agreed pass** |
+| C2 total | fail, cites readings 6 and 12, "$50.00" · 5.3 s · $0.0075 | fail, cites reading 6, "$50.00" · 9.1 s · $0.0102 | **agreed fail**: reading 6 is the total at Tt+1001 ms |
+| C3 expired code | pass, cites "+ alert: This code has expired" · 5.7 s · $0.0081 | pass, same · 7.2 s · $0.0082 | **agreed pass** |
+| C4 chart | pass, from the video, no reading · 3.5 s · $0.0058 | pass, same · 8.2 s · $0.0094 | **agreed pass** (`ui_visual`) |
+
+Total: $0.066, of which $0.028 Baseten credit. Each judge's `observed` names the values ("stayed at $50.00 at Tt+1001ms … only changed to $45.00 after the reload").
+
+### Decisions
+
+1. **One chat port for both hosts**: Baseten's dialect is options on the Meta port (`max_tokens`, no `response_format`), not a second client.
+2. **Each judge's call fails alone**: a judge without an answer counts as `infra_error` for itself, and the other's answer is kept for the report.
+3. **T4.6 is split** (AGENTS.md §5.4): the judges here, the worker's recording slots, judge queue and re-record in T4.6b.
+
+---
+
 ## 2026-10-31 · Judge rules (T4.5, #36)
 
 `core/judge/rules.ts`: the deterministic rules around the two judges (§22.1, §22.3, §19 e), moved from the go/no-go (`scripts/gonogo/lib/combine.ts`) and completed. 49 table-driven unit tests; with the bundle's, `pnpm --filter @intenzo/core test judge` runs 54. No model calls.
