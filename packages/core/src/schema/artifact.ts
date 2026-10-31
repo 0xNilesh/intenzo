@@ -16,3 +16,19 @@ export const ArtifactRef = z.object({
   bytes: z.number().int().nonnegative().optional(),
 });
 export type ArtifactRef = z.infer<typeof ArtifactRef>;
+
+/**
+ * §28: where one file of one take lives in a Blob store. Every recording is a new take, so a
+ * re-record never overwrites the take a verdict cites; uploads refuse to overwrite as well.
+ */
+export function takePath(
+  runId: string,
+  criterionId: string,
+  side: "pr" | "base",
+  take: number,
+  file: string,
+): string {
+  if (!Number.isInteger(take) || take < 1) throw new Error(`take must be 1 or more, not ${take}`);
+  if (!/^[\w.-]+$/.test(file)) throw new Error(`not a plain file name: ${file}`);
+  return `runs/${runId}/${criterionId}/${side}/take-${take}/${file}`;
+}
