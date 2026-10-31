@@ -5,6 +5,49 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Outbox and drainer (T2.4, #21)
+
+Every decision's effects now go to the outbox in `advance()`'s transaction. Drainers run them after each event: the `Intenzo` check run of each run, and one comment per run group (`apps/cloud/src/outbox/`). The checks:
+
+- 33 new unit tests on PGlite and msw.
+- 3 Postgres tests that race two drainers on a real server: CI's `postgres:18.6`, the same version as Neon. This Mac has neither Docker nor Postgres.
+- Deliberately broken rules, to check the tests catch them.
+- A throwaway PR on demo-shop (#8).
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Two drainers at once, real Postgres (5 rounds each) | One check-run POST and one comment POST every time; the other drainer PATCHes after the advisory lock |
+| Do the tests catch a broken rule? | Each of these failed a test: ignoring the lease, retrying before the backoff, claiming an at-most-once row as in flight, skipping the `external_id` lookup, no comment coalescing, taking a human's comment that carries the marker, and not re-posting a deleted comment |
+| Hosted, demo-shop#8 (empty commit `1e8f80e` on `main`) | One `Intenzo` check run from `intenzo-ai`, with the run's id as `external_id`. It was created as queued when the PR opened and edited to "Verifying the preview … Baseline: `b6b60c7` (the merge base)" when the preview was ready, 12 s later. One comment from `intenzo-ai[bot]`, posted then edited in place. In Neon: 4 rows done, each in one attempt, and the spawn row pending (no executor until T2.5). Every delivery got 200 or 202 |
+| The App's own actions | They come back as webhooks: its check run's `check_run.created`, and its comment's `issue_comment.created` and `edited`. Intake stores them (they're Intenzo's own); nothing handles them yet |
+| CI's first run of the Postgres tests | All 3 passed, but the run failed on an unhandled error from teardown. `pool.end()` resolves before its connections have closed, so `DROP DATABASE … WITH (FORCE)` killed them mid-close (FATAL 57P01). A plain drop retried while the database is in use (55006) fixed it |
+| CI's log of the unit tests | msw refused a request in T2.3's draft-to-ready handler test, which still passed: the handler caught the error and went on without a baseline. The fake now fails any test that makes a request no route answers, and that test checks the baseline it reports |
+
+### Decisions
+
+1. **The check run is rendered from the run's row when it runs, like the comment, under an advisory lock per run.**
+   - *Why:* drainers can run a run's check-run rows out of order. Rendering the current state makes order irrelevant: whichever runs last shows the latest state. The lock keeps two drainers from both creating one.
+   - The key is therefore `check:{runId}:{status}`, not §16.4's `check:{runId}:{version}`: a run passes each status at most once.
+   - *Alternatives:* versioned PATCHes from the payload. That needs a stored version per check run, and gains nothing over rendering.
+2. **`outbox.lease_until` doubles as the retry time of a pending row that failed:** 10, 20, 40 and 80 s, then `failed` after 5 attempts.
+   - *Why:* no migration, and one claim query covers both "lease expired" and "backoff over".
+3. **Effects without an executor stay pending rather than failing:** spawn and cancel, until T2.5.
+4. **At-most-once is a property of the executor:** its rows are marked `done` as they're claimed.
+   - It's built and tested now; the agent mention that needs it comes with T5.4.
+5. **Every webhook drains after its event; there's no Cloud cron.**
+   - *Why:* Vercel's per-minute cron needs Pro (§3). The sweeper is a Modal cron calling `POST /api/internal/sweep`, so it comes with T2.5's Modal app.
+   - *Next:* until then, a failed effect is retried by the next event's drain. Deadlines (the `tick` fact) need the sweeper too.
+6. **A Postgres test layer (`*.pg.test.ts`, `pnpm test:pg`).**
+   - It runs in CI on a `postgres:18.6` service container, and by hand against a local server (`INTENZO_TEST_PG_URL`).
+   - It isn't part of `check:all`, because a machine without Postgres can't run it.
+   - Each test file creates a fresh database and drops it afterwards.
+   - *Alternatives:* Docker locally, as the roadmap planned. It isn't on this Mac, and installing it, or Postgres, waits for the owner's go-ahead.
+7. **The comment and check-run text is one status line per run until T2.7's report renderer.**
+
+---
+
 ## 2026-10-31 · Deployments and baseline resolution (T2.3, #20)
 
 The Cloud now handles `pull_request` and `deployment_status` (`apps/cloud/src/github/handlers.ts`). It acts as the App through installation tokens, and gives each run that starts verifying a baseline (`apps/cloud/src/runs/baseline.ts`). The checks:

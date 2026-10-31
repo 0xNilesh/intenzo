@@ -31,8 +31,9 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm test:contract`                                | Contract tests in every package                                                                                                           |
 | `pnpm test:browser`                                 | Browser tests in every package (needs Playwright Chromium, see below)                                                                     |
 | `pnpm test:live`                                    | Live model tests: real APIs, spends model credits, **run by hand only** (needs `META_API_KEY`, `BASETEN_API_KEY`)                         |
+| `pnpm test:pg`                                      | Postgres tests (`*.pg.test.ts`): a real Postgres server at `INTENZO_TEST_PG_URL` (default `localhost:5432`). CI runs them on its own one  |
 | `pnpm check`                                        | Typecheck + lint + format + unit + contract. **Run before every commit**                                                                  |
-| `pnpm check:all`                                    | `check` + browser tests: **exactly what CI runs. Run before every push**                                                                  |
+| `pnpm check:all`                                    | `check` + browser tests: **what CI runs, apart from `pnpm test:pg`. Run before every push** (and `pnpm test:pg` too if you have Postgres) |
 | `pnpm --filter @intenzo/core test`                  | Tests for one package                                                                                                                     |
 | `pnpm --filter @intenzo/core test schema`           | One package's tests whose file path matches `schema`. Not `pnpm test -- schema`, which runs everything                                    |
 | `pnpm probe:all [model…]`                           | Model capability probes (T0.2): real, billed API calls, results in `probes/results.json`                                                  |
@@ -155,6 +156,7 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 | Unit        | `*.test.ts`, next to the source           | Fast, no network, no browser, no real time. Table-driven for rule-heavy code                             |
 | Contract    | `*.contract.test.ts`                      | Pin behavior of things we don't own (model response shapes from recorded fixtures, Playwright internals) |
 | Browser     | `*.browser.test.ts`                       | Real Chromium against fixture pages or a local demo-shop; no external network                            |
+| Postgres    | `*.pg.test.ts`                            | A real Postgres server, for what PGlite's single connection can't show (two transactions racing)         |
 | Live        | `*.live.test.ts` (`@live` in the roadmap) | Real Meta / Baseten calls. They spend model credits, so they're run by hand and never in CI (for now)    |
 | E2E / gates | `scripts/`                                | Real GitHub → Cloud → Modal flows, run per the roadmap                                                   |
 
@@ -166,6 +168,7 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 | Unit tests              | ✅                                                |                                                               |
 | Contract tests          | ✅                                                |                                                               |
 | Browser tests           | ✅ (as soon as any `*.browser.test.ts` exists)    |                                                               |
+| Postgres tests          | ✅ (a `postgres:18.6` service container)          | `pnpm test:pg` with a local Postgres server                   |
 | Live model tests        |                                                   | ✅ `pnpm test:live` (not in CI for now: spends model credits) |
 | E2E / phase gates       |                                                   | run at the end of each phase (roadmap)                        |
 

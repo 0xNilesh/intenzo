@@ -22,11 +22,12 @@
 | Unit | Vitest | `pnpm test` | pure functions, fixtures, mocked HTTP (msw), an in-process Postgres (PGlite) |
 | Contract | Vitest | `pnpm test:contract` | model prompt/schema fixtures; the pinned Playwright internal API |
 | Browser | Vitest + Playwright | `pnpm test:browser` | local demo-shop: base on `:3000` (main), PR on `:3001` (branch worktree) |
+| Postgres | Vitest (`*.pg.test.ts`) | `pnpm test:pg` | a real Postgres server, for concurrency PGlite can't show (CI: a `postgres:18.6` service container) |
 | Live model | Vitest (`*.live.test.ts`, called `@live` below) | `pnpm test:live` | real Meta API / Baseten (costs credits; run on purpose) |
 | End-to-end | script | `pnpm test:e2e` | a real PR on `demo-shop` through GitHub → Cloud → Modal |
 | Phase gate | script | `pnpm gate:p<N>` | everything a phase promises, plus all earlier gates |
 
-- **CI on every PR:** the required `check` job runs typecheck, lint, format, unit, contract and browser tests for the whole workspace, so no PR can break earlier work. Live tests are run by hand (`pnpm test:live`) and stay out of CI for now, because they spend model credits. See [CONTRIBUTING.md §6](../CONTRIBUTING.md#6-testing-guidelines).
+- **CI on every PR:** the required `check` job runs typecheck, lint, format, unit, contract, Postgres and browser tests for the whole workspace, so no PR can break earlier work. Live tests are run by hand (`pnpm test:live`) and stay out of CI for now, because they spend model credits. See [CONTRIBUTING.md §6](../CONTRIBUTING.md#6-testing-guidelines).
 - **Regression rule:** every gate script runs `pnpm check:all` first. Gates from Phase 2 on also run the previous phase's gate.
 
 ## Milestones at a glance
@@ -274,17 +275,30 @@
 - [x] **Verify:** a demo-shop PR resolves the `main` preview as its baseline (shown in the logs). *(demo-shop#7: `baseline main@b6b60c7 (the merge base) at https://demo-shop-dly0m1skm-…`, `main`'s Preview, stored with drift 0.)*
 
 ### T2.4 Outbox and drainer
-- [ ] **Build:**
+- [x] **Build:**
   - outbox rows inside `advance()`'s transaction
   - drainer with `FOR UPDATE SKIP LOCKED` + lease
   - comment coalescing (rendered at drain time, advisory lock per group)
   - check run `external_id`
-  - at-most-once agent mention
-- [ ] **Tests:**
+  - at-most-once agent mention *(the mechanism; the mention itself comes with T5.4)*
+  - *Also:*
+    - the check run and comment executors, rendered from the database
+    - a drain after each event
+    - a status line per run until T2.7's report
+    - the Postgres test layer
+- [x] **Tests:**
   - **two drainers run concurrently** → exactly one comment POST and one check-run POST (msw counts)
   - a newer comment version supersedes an older pending one
   - a crash after the lease → re-executed after the lease expires
-- [ ] **Verify:** `pnpm --filter @intenzo/cloud test outbox` (against a local Postgres in Docker).
+  - *also:*
+    - backoff, then failed after 5
+    - an at-most-once effect is never repeated
+    - effects without an executor stay pending
+    - a check run found by `external_id`
+    - a comment found by its marker (a bot's only)
+    - a deleted comment posted again
+    - a request no fake route answers fails its test
+- [x] **Verify:** `pnpm --filter @intenzo/cloud test outbox` (against a local Postgres in Docker). *(The outbox tests pass on PGlite. The two-drainer tests ran on CI's `postgres:18.6`, since this Mac has neither Docker nor Postgres. Also checked live on demo-shop#8: one `Intenzo` check run and one comment, each created once and then edited when the preview was ready. DECISIONS 2026-10-31.)*
 
 ### T2.5 Modal worker shim and job protocol
 - [ ] **Build:**
