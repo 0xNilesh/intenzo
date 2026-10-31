@@ -1,19 +1,44 @@
 // The verify job's recorder (§21): one Chromium for the whole job, each lane recorded with the
 // observation protocol and its two videos rendered (§21.4), in a temporary folder that's removed
-// when the job ends.
+// when the job ends. Given the Meta key, it also explores (§20.3) with the same Chromium.
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { denyText } from "@intenzo/core";
 import { nextTakeDir, recordCriterion, renderVideos } from "@intenzo/core/browser";
+import { metaModelPort } from "@intenzo/core/models";
+import { explore } from "@intenzo/core/navigator";
 import { chromium, type Browser } from "playwright";
 
 import type { Recorder } from "./verify.ts";
 
-export function browserRecorder(): Recorder {
+export interface RecorderOptions {
+  /** The Meta Model API key; without it the recorder can't explore and jobs use fixture paths. */
+  modelApiKey?: string;
+}
+
+export function browserRecorder(options: RecorderOptions = {}): Recorder {
   const root = mkdtempSync(join(tmpdir(), "intenzo-job-"));
   let browser: Promise<Browser> | undefined;
+  const model = options.modelApiKey ? metaModelPort({ apiKey: options.modelApiKey }) : null;
   return {
+    ...(model && {
+      async explore({ origin, criterion, config, identity, bypass }) {
+        const chrome = await (browser ??= chromium.launch());
+        return explore(chrome, {
+          origin,
+          criterion,
+          model,
+          denyText: denyText(config),
+          allowedNavigationOrigins: config.guardrails.extra_navigation_origins,
+          startPath: config.start.default,
+          data: config.data,
+          ...(identity && { identity }),
+          ...(bypass && { bypass }),
+        });
+      },
+    }),
     async record({ side, origin, criterion, path, identity, bypass }) {
       const chrome = await (browser ??= chromium.launch());
       const outDir = nextTakeDir(root, criterion.id, side);
