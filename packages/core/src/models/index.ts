@@ -1,6 +1,7 @@
 export { BACKOFF_MS, META_BASE_URL, metaModelPort, type MetaPortOptions } from "./meta.ts";
 export {
   addUsage,
+  type ContentPart,
   extractJson,
   NO_USAGE,
   type ModelMessage,
@@ -9,6 +10,15 @@ export {
   type ModelResult,
   type ModelUsage,
   type ReasoningEffort,
+  textOf,
 } from "./port.ts";
 export { costUsd, USD_PER_M_TOKENS } from "./pricing.ts";
 export { scriptedPort, type ScriptedPort, type ScriptedReply } from "./scripted.ts";
+export {
+  TRANSCRIBE_MODEL,
+  TRANSCRIBE_USD_PER_HOUR,
+  transcribeCostUsd,
+  transcribeWav,
+  type TranscribeOptions,
+  type Transcript,
+} from "./transcribe.ts";

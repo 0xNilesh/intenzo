@@ -8,6 +8,7 @@ export {
   type IntentResult,
   type IntentSource,
 } from "./intent.ts";
+export { prepareTicketVideo, type TicketVideo } from "./media.ts";
 export {
   INTENT_JSON_SCHEMA,
   INTENT_SYSTEM,

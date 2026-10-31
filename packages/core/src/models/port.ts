@@ -3,9 +3,22 @@ import type { z } from "zod";
 // The model port (ARCHITECTURE §6, §14). Every model call in core goes through it, so tests and
 // the bench can swap the real APIs for recorded or scripted replies.
 
+/** One part of a multimodal message: media go inline as data URLs (DECISIONS 2026-10-30). */
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "video_url"; video_url: { url: string } };
+
 export interface ModelMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
+}
+
+/** A message's text: the string itself, or its text parts joined. */
+export function textOf(message: ModelMessage): string {
+  return typeof message.content === "string"
+    ? message.content
+    : message.content.flatMap((p) => (p.type === "text" ? [p.text] : [])).join("\n");
 }
 
 export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";

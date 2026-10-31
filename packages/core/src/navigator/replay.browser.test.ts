@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { recordCriterion } from "../browser/record.ts";
 import { html, startServer, type TestServer } from "../browser/testing.ts";
-import type { ModelRequest } from "../models/port.ts";
+import { type ModelRequest, textOf } from "../models/port.ts";
 import { scriptedPort } from "../models/scripted.ts";
 import { Criterion, DEFAULT_DENY_TEXT, type SavedPath } from "../schema/index.ts";
 import { explore } from "./explore.ts";
@@ -70,9 +70,8 @@ afterAll(async () => {
 
 const ref = (request: ModelRequest<unknown>, line: RegExp) =>
   /\[ref=([a-z0-9]+)\]/.exec(
-    request.messages
-      .at(-1)!
-      .content.split("\n")
+    textOf(request.messages.at(-1)!)
+      .split("\n")
       .find((l) => line.test(l))!,
   )![1]!;
 
