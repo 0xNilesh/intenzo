@@ -147,8 +147,14 @@ export const runs = pgTable(
     /** Why a run ended without verdicts: preview_not_ready, preview_failed, deadline_passed. */
     outcomeReason: text("outcome_reason").$type<OutcomeReason>(),
     prUrl: text("pr_url"),
+    /** The baseline (§17.3): a preview of the base branch, at the merge base or before it. */
     baseUrl: text("base_url"),
     baseSha: text("base_sha"),
+    /**
+     * Commits between the merge base and base_sha: 0 is the merge base itself. With drift, the
+     * report says so and unrequested-change detection is skipped (§24).
+     */
+    baseDrift: integer("base_drift"),
     intentVersionId: bigint("intent_version_id", { mode: "number" }).references(
       () => intentVersions.id,
     ),
