@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { scriptedPort } from "../models/scripted.ts";
-import { IntentReply, renderIntent, type TicketText } from "../prompts/intent.v1.ts";
+import type { IntentReply } from "../prompts/intent.v1.ts";
+import { renderIntent, type TicketText } from "../prompts/intent.v1.ts";
 import { ContextBundle, CriterionSet } from "../schema/index.ts";
 import { checklistItems, extractIntent, ticketHash } from "./intent.ts";
 
