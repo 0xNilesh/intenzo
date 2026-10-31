@@ -30,8 +30,12 @@ Once, with a Modal account:
 ```bash
 pipx install modal
 modal token new                                   # opens the browser to log in
-modal secret create intenzo-worker --from-dotenv .env.intenzo-modal
+modal secret create intenzo-worker --from-json <file>.json   # see below
 ```
+
+`--from-dotenv .env.intenzo-modal` would be simpler, but it needs `python-dotenv` in the CLI's
+environment (`pipx inject modal python-dotenv`). T2.5b instead wrote the three values to a temporary
+JSON file (owner-only, deleted right after) and used `--from-json`.
 
 `.env.intenzo-modal` (gitignored, mode 600) holds:
 
