@@ -414,6 +414,7 @@ export const VerifyJob = JobBase.extend({
 - **Attachments:** the ticket is fetched with `Accept: application/vnd.github.full+json`. Image and video URLs are taken from `body_html` (signed `private-user-images…?jwt=` URLs for private repos) and **downloaded immediately** in the same function (verify on day 1).
   - **Seen in T0.7, private repo:** a video's URL in `body_html` was a plain `https://github.com/user-attachments/assets/<uuid>` link, not a signed `?jwt=` URL. An authenticated GET with a user token downloaded it (302 to storage, then 200 `video/mp4`). Whether an App installation token can fetch it is untested; T4.2 must check, unless the demo repo is public by then.
 - If that fails, the bundle records `media_unavailable` and the report says so. The demo repo is public, so this doesn't affect it.
+- **Built in T4.8:** the spawn effect builds this bundle (`apps/cloud/src/bundle/build.ts`): the PR, its ticket (§17.2), the ticket's first recording downloaded and stored at `runs/{runId}/ticket/media-1.mp4`, and the diff. The worker gets signed GET URLs for the bundle and the recording (`mediaUrls`), and the run group keeps the ticket's reference and title for the comment. An intent version is reused when the ticket's hash (its text and the recording's sha256) matches. A bundle that can't be built leaves the job to the fixtures. Downloads try without credentials first, then the installation token, which only GitHub's hosts see; on a private repo GitHub answers 404 to both (T4.8), so the demo repo is public.
 - **Built in T2.7b:** the Cloud's spawn effect sends this VerifyJob, with `bundleUrl: null` until the Cloud builds bundles (P4), `intent: null` (the job computes it) and, since T3.5, `cachedPaths`: the group's saved paths for its latest intent version. It's checked against core's schema before it goes.
 
 ## 9. Worker events
@@ -728,6 +729,8 @@ pending ─► identity ─► [explore (PR, unrecorded)] ─► record_pr ─�
 1. GraphQL `closingIssuesReferences`. This only works for PRs into the **default branch**, or links made manually in the sidebar (T0.4: a PR into `develop` saying "Fixes #1" returned nothing).
 2. Otherwise, a regex over the PR body and title: `(fixes|closes|resolves|refs)? #(\d+)`, `owner/repo#n`, issue URLs.
 3. Otherwise `intentSource = pr_body`, and the comment says "intent taken from the PR description (unverified)".
+
+- **Built in T4.8** (`core/intent/ticket.ts`): the text is read first, "closes/fixes/resolves/refs #N" before a bare "#N" (an `&#35;` entity and `owner/repo#N` of another repo don't count); GraphQL isn't asked yet.
 
 ### 17.3 Finding the baseline (merge-base preview)
 1. Compare API `GET /repos/{o}/{r}/compare/{base}...{head}` → `merge_base_commit.sha`.
