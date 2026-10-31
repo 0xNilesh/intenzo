@@ -34,7 +34,8 @@ export function shownRun(groupRuns: readonly RunRow[]): RunRow | undefined {
 /** The PR lane's readings in a line: "+0 s $50.00 · +1 s $50.00 · after reload $45.00". */
 export function readingsLine(lane: LaneResult): string | null {
   const t0 = lane.tTriggerMs;
-  const parts = lane.readings
+  // Stored JSON: tolerate a lane without readings rather than fail the whole report.
+  const parts = (lane.readings ?? [])
     .filter((r) => r.phase !== "pre" && r.kind !== "absent")
     .map((r) => {
       const when =
