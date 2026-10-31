@@ -70,3 +70,12 @@ export {
   type VideoInput,
   type VideoOutputs,
 } from "./video.ts";
+export {
+  buildOutline,
+  LIST_KEEP,
+  OUTLINE_MAX_TOKENS,
+  refLocator,
+  renderOutline,
+  type Outline,
+  type OutlineOptions,
+} from "./outline.ts";
