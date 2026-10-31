@@ -21,8 +21,33 @@ const CloudEnv = z.object({
     ),
   /** Signs the worker's job tokens (§8, §29). 32 characters at least. */
   INTENZO_JOB_SECRET: z.string().min(32),
+  /** What Modal's cron sends to POST /api/internal/sweep (T2.5b). */
+  INTENZO_SWEEP_SECRET: z.string().min(32).optional(),
+  /**
+   * Modal (T2.5b): the spawn and cancel endpoints, their bearer secret, and the Cloud's own URL for
+   * the jobs to report to. Until all four are set, no job is spawned.
+   */
+  MODAL_SPAWN_URL: z.url().optional(),
+  MODAL_CANCEL_URL: z.url().optional(),
+  MODAL_ENDPOINT_SECRET: z.string().min(32).optional(),
+  INTENZO_CLOUD_URL: z.url().optional(),
 });
 export type CloudEnv = z.infer<typeof CloudEnv>;
+
+/** Where and how the Cloud reaches Modal, or null until every part of it is set. */
+export function modalSettings(env: CloudEnv) {
+  const { MODAL_SPAWN_URL, MODAL_CANCEL_URL, MODAL_ENDPOINT_SECRET, INTENZO_CLOUD_URL } = env;
+  if (!MODAL_SPAWN_URL || !MODAL_CANCEL_URL || !MODAL_ENDPOINT_SECRET || !INTENZO_CLOUD_URL) {
+    return null;
+  }
+  return {
+    spawnUrl: MODAL_SPAWN_URL,
+    cancelUrl: MODAL_CANCEL_URL,
+    secret: MODAL_ENDPOINT_SECRET,
+    cloudUrl: INTENZO_CLOUD_URL,
+  };
+}
+export type ModalSettings = NonNullable<ReturnType<typeof modalSettings>>;
 
 /** The parsed settings. Throws naming each missing or invalid variable, never its value. */
 export function cloudEnv(
