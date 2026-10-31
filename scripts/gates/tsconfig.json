@@ -7,5 +7,5 @@
     "noEmit": true,
     "lib": ["ES2023", "DOM"]
   },
-  "include": ["p1.ts", "p2.ts"]
+  "include": ["p1.ts", "p2.ts", "p3.ts"]
 }
