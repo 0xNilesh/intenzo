@@ -1,4 +1,4 @@
-// The report pages (/r/[runId], §26) come later; for now the root only says what this is.
+// The root only says what this is; each run's report is at /r/[runId] (§26).
 export default function Home() {
   return (
     <main>
