@@ -7,3 +7,5 @@ LICENSE
 docs/*.md
 demo/expected-comment.md
 apps/cloud/drizzle
+# Snapshot files hold rendered output byte for byte (core/report).
+**/__snapshots__/
