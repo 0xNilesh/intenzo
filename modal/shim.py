@@ -126,7 +126,9 @@ def run_job(
             exit_code, "crash"
         )
         return ended
-    except BaseException:
+    except BaseException as err:
+        # Modal's docs don't say what a cancelled input sees: the log line records it.
+        log(f"cancelled by {type(err).__module__}.{type(err).__name__}: {err}")
         ended = "cancelled"
         raise
     finally:
