@@ -1,6 +1,8 @@
-// The verify job (§19), with stub verdicts until the navigator (P3) and the judges (P4): the demo
-// ticket's criteria (fixtures/criteria) are each recorded along their hand-written path
-// (fixtures/paths) on the PR preview and, when the run has one, the base preview. The people's
+// The verify job (§19), with stub verdicts until the judges (P4): the demo ticket's criteria
+// (fixtures/criteria) are each recorded on the PR preview and, when the run has one, the base
+// preview. With the navigator (a recorder that can explore, T3.5), each PR side replays the run
+// group's cached path or explores for one (§19 3a–b), and new paths go back to the Cloud as
+// path_saved; without it, the hand-written paths (fixtures/paths) are used. The people's
 // videos are uploaded (§28) and each criterion gets the stub's fixed verdict, citing the PR
 // recording's evidence window, unless the PR side didn't complete (§22.1).
 import { readFileSync } from "node:fs";
@@ -8,6 +10,7 @@ import { readFileSync } from "node:fs";
 import {
   type ArtifactRef,
   type Criterion,
+  type IntenzoConfig,
   type LaneResult,
   type ReasonCode,
   type RunOutcome,
@@ -16,6 +19,7 @@ import {
   type Verdict,
   type VerifyJob,
 } from "@intenzo/core";
+import { PathCache, recordWithPath, type ExploreResult } from "@intenzo/core/navigator";
 
 import { type JobClient, StaleJobError } from "./client.ts";
 import { stubIntent, stubOutcome, stubVerdict } from "./stub.ts";
@@ -39,11 +43,22 @@ export interface RecordedLane {
   video: { humanFile: string; offsets: { human: number; judge: number } } | null;
 }
 
+export interface ExploreInput {
+  origin: string;
+  criterion: Criterion;
+  config: IntenzoConfig;
+  identity?: { hookPath: string; secret: string };
+  bypass?: string;
+}
+
 export interface Recorder {
   record(input: LaneInput): Promise<RecordedLane>;
+  /** Explores the PR app for a criterion's trigger (§20.3), when the worker has the navigator. */
+  explore?(input: ExploreInput): Promise<ExploreResult>;
   close(): Promise<void>;
 }
 
+const NO_TOKENS = { promptTokens: 0, cachedTokens: 0, completionTokens: 0, reasoningTokens: 0 };
 const PATHS_DIR = new URL("../../../../fixtures/paths/", import.meta.url);
 /** Takes tried per file before giving up: earlier jobs of the same run may have left some (§28). */
 const MAX_TAKES = 5;
@@ -82,7 +97,11 @@ const REASONS: Record<Exclude<LaneResult["status"], "completed">, ReasonCode> = 
 };
 
 /** The stub's fixed verdict on a real recording: it stands only when the PR side completed. */
-export function recordedVerdict(criterionId: string, pr: LaneResult | null): Verdict {
+export function recordedVerdict(
+  criterionId: string,
+  pr: LaneResult | null,
+  notFound?: Exclude<ExploreResult, { status: "found" }>,
+): Verdict {
   const fixed = stubVerdict(criterionId);
   if (pr?.status === "completed" && pr.tTriggerMs !== null) {
     const tt = pr.tTriggerMs;
@@ -90,8 +109,15 @@ export function recordedVerdict(criterionId: string, pr: LaneResult | null): Ver
   }
   const observed = pr
     ? `Not judged: the PR recording ended "${pr.status}".`
-    : "Not judged: the PR side wasn't recorded.";
-  const reasonCode = pr && pr.status !== "completed" ? REASONS[pr.status] : "infra_error";
+    : notFound
+      ? `Not judged: the navigator couldn't reach the trigger (${notFound.status}: ${notFound.reason}).`
+      : "Not judged: the PR side wasn't recorded.";
+  const reasonCode =
+    pr && pr.status !== "completed"
+      ? REASONS[pr.status]
+      : notFound
+        ? REASONS[notFound.status]
+        : "infra_error";
   const judge = { ...fixed.judges[0]!, verdict: "inconclusive" as const, observed };
   return {
     ...fixed,
@@ -143,38 +169,106 @@ export async function verify(
   const bypass = job.secrets?.bypass;
   const verdicts: Verdict[] = [];
 
+  const identity = hookPath && hookSecret ? { hookPath, secret: hookSecret } : undefined;
+  const cache = new PathCache(job.cachedPaths);
+
+  /** Records one side, uploads its video and returns the redacted lane, or null if it crashed. */
+  const recordSide = async (
+    side: "pr" | "base",
+    origin: string,
+    criterion: Criterion,
+    path: SavedPath,
+  ): Promise<LaneResult | null> => {
+    try {
+      const { lane, video } = await recorder.record({
+        side,
+        origin,
+        criterion,
+        path,
+        ...(identity && { identity }),
+        ...(bypass && { bypass }),
+      });
+      let cited = lane;
+      if (video) {
+        const body = readFileSync(video.humanFile);
+        const human = { name: "human.mp4", contentType: "video/mp4", body };
+        const humanVideo = await uploadTake(client, lane, job.runId, human);
+        cited = { ...lane, humanVideo, videoOffsets: video.offsets };
+      }
+      log(`${criterion.id} ${side}: ${lane.status}, ${video ? "video uploaded" : "no video"}`);
+      // Nothing a page or a tool said about a secret leaves the worker.
+      return JSON.parse(redact(JSON.stringify(cited))) as LaneResult;
+    } catch (err) {
+      if (err instanceof StaleJobError) throw err;
+      log(redact(`${criterion.id} ${side}: not recorded: ${(err as Error).message}`));
+      return null;
+    }
+  };
+
+  /** The navigator's run, with a crash (a lane that wouldn't open) counted as setup_failed. */
+  const explore = async (criterion: Criterion): Promise<ExploreResult> => {
+    try {
+      return await recorder.explore!({
+        origin: job.prUrl,
+        criterion,
+        config: job.config,
+        ...(identity && { identity }),
+        ...(bypass && { bypass }),
+      });
+    } catch (err) {
+      if (err instanceof StaleJobError) throw err;
+      const reason = redact(`the navigator crashed: ${(err as Error).message}`).slice(0, 300);
+      return { status: "setup_failed", reason, steps: [], ms: 0, usage: NO_TOKENS, modelCalls: 0 };
+    }
+  };
+
   for (const criterion of intent.criteria) {
     if (job.only && !job.only.includes(criterion.id)) continue;
     await client.alive(); // a superseded job stops here (StaleJobError)
-    const path = pathFor(criterion.id, job.cachedPaths);
     const lanes: LaneResult[] = [];
-    for (const [side, origin] of sides) {
-      if (!path) break; // nothing to record until the navigator finds a path (P3)
-      try {
-        const { lane, video } = await recorder.record({
-          side,
-          origin,
-          criterion,
-          path,
-          ...(hookPath && hookSecret && { identity: { hookPath, secret: hookSecret } }),
-          ...(bypass && { bypass }),
-        });
-        let cited = lane;
-        if (video) {
-          const body = readFileSync(video.humanFile);
-          const human = { name: "human.mp4", contentType: "video/mp4", body };
-          const humanVideo = await uploadTake(client, lane, job.runId, human);
-          cited = { ...lane, humanVideo, videoOffsets: video.offsets };
+    let path: SavedPath | null;
+    let notFound: Exclude<ExploreResult, { status: "found" }> | undefined;
+
+    if (recorder.explore) {
+      // §19 3a–b: the cached path, else explore; a cached path that breaks is explored again.
+      const outcome = await recordWithPath<LaneResult | null>({
+        cached: cache.get(criterion.id),
+        explore: () => explore(criterion),
+        record: (p) => recordSide("pr", job.prUrl, criterion, p),
+        laneOf: (lane) => lane ?? { status: "error" },
+      });
+      if (outcome.kind === "recorded") {
+        path = outcome.path;
+        if (outcome.recording) lanes.push(outcome.recording);
+        if (outcome.explored) {
+          cache.put(path);
+          await client.send({ kind: "path_saved", path });
         }
-        // Nothing a page or a tool said about a secret leaves the worker.
-        lanes.push(JSON.parse(redact(JSON.stringify(cited))) as LaneResult);
-        log(`${criterion.id} ${side}: ${lane.status}, ${video ? "video uploaded" : "no video"}`);
-      } catch (err) {
-        if (err instanceof StaleJobError) throw err;
-        log(redact(`${criterion.id} ${side}: not recorded: ${(err as Error).message}`));
+        log(`${criterion.id}: path from ${outcome.source}, take ${outcome.take}`);
+      } else {
+        path = null;
+        notFound = outcome.explored;
+        if (outcome.recording) lanes.push(outcome.recording);
+        cache.discard(criterion.id);
+        log(redact(`${criterion.id}: ${notFound.status}: ${notFound.reason}`));
+      }
+      if (path && job.baseUrl) {
+        const base = await recordSide("base", job.baseUrl, criterion, path);
+        if (base) lanes.push(base);
+      }
+    } else {
+      path = pathFor(criterion.id, job.cachedPaths);
+      for (const [side, origin] of sides) {
+        if (!path) break; // no hand-written path for this criterion
+        const lane = await recordSide(side, origin, criterion, path);
+        if (lane) lanes.push(lane);
       }
     }
-    const verdict = recordedVerdict(criterion.id, lanes.find((l) => l.side === "pr") ?? null);
+    const verdict = recordedVerdict(
+      criterion.id,
+      lanes.find((l) => l.side === "pr") ?? null,
+      notFound,
+    );
     verdicts.push(verdict);
     await client.send({ kind: "criterion_verdict", verdict, lanes });
   }

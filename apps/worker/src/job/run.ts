@@ -38,7 +38,10 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
         });
         return EXIT.finished;
       case "verify": {
-        const recorder = (options.recorder ?? browserRecorder)();
+        const modelApiKey = process.env.META_API_KEY ?? process.env.MODEL_API_KEY;
+        const recorder = options.recorder
+          ? options.recorder()
+          : browserRecorder(modelApiKey ? { modelApiKey } : {});
         let outcome: RunOutcome;
         try {
           outcome = await verify(job, client, recorder, options.log ?? console.log);
