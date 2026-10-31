@@ -10,7 +10,8 @@
     "./navigator": "./src/navigator/index.ts",
     "./models": "./src/models/index.ts",
     "./intent": "./src/intent/index.ts",
-    "./coverage": "./src/coverage/index.ts"
+    "./coverage": "./src/coverage/index.ts",
+    "./judge": "./src/judge/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
