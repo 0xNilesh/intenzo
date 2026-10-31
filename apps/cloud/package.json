@@ -18,7 +18,8 @@
     "test:browser": "vitest run --project browser --passWithNoTests",
     "test:pg": "vitest run --project postgres",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "repo:secrets": "node src/secrets/cli.ts"
   },
   "dependencies": {
     "@intenzo/core": "workspace:*",
