@@ -5,6 +5,28 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · P3 gate closed, and hosted runs explore (#31)
+
+This supersedes the P3 gate entry's "`gate:p2` not run". `gate:p2` ran where `apps/cloud/.env.local` exists, on `main` at `c2ada41` with P3 merged, and P3's code was then deployed and checked on a hosted run.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| `pnpm gate:p2` | **Passed**: 8 test runs, CI green at `c2ada41`, and the hosted run's 8 lanes still match P1's ground truth |
+| Modal's `run_job` | Had **no secret at all**: only the web endpoints got `intenzo-worker`. Adding `META_API_KEY` there, as first planned, wouldn't have reached the worker, so jobs would have kept replaying the hand-written paths |
+| Hosted run, demo-shop#14 (the almost-right code, no hand-written paths) | Check run complete 137 s after opening the PR; the run took 2 m 9 s on Modal, 37 s more than with the fixture paths. Four `path_saved` events: Wonder found each criterion as `goto /cart → fill "Discount code" → click "Apply"`, with its own watch labels. Verdicts are still the stub's (C2 fails) |
+| Its `finished` event | Reports `costUsd: 0`: model calls aren't counted until P4's ledger. The four explores cost about $0.05–0.07 at Wonder's list price |
+
+### Decisions
+
+1. **The worker gets the Meta key in a Modal secret of its own, `intenzo-models`** (`META_API_KEY` only), attached to `run_job` alone.
+   - *Why:* the worker drives a browser on untrusted previews; it never needs the endpoints' bearer or the sweep's secret.
+   - *Alternatives:* attach `intenzo-worker` to `run_job` too, which hands the worker both.
+2. **Hosted runs now explore** with Wonder for any criterion the run group has no saved path for, and replay saved paths after that. That's a few cents of Wonder calls per new PR.
+
+---
+
 ## 2026-10-31 · P3 gate (#31)
 
 `pnpm gate:p3` (`scripts/gates/p3.ts`) on demo-shop's two branches served locally (`pr/discount-almost-right` on :3001, `main` on :3000), with Wonder as the navigator and no hand-written paths. The takes were written to a temporary folder.

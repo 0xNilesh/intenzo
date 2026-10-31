@@ -434,7 +434,8 @@
 - [x] **Verify:** an explored path replays on **both** PR and base (`intenzo explore` C2, then `intenzo record` on :3001 and :3000: PR $50.00 at +0/+1/+3 s and $45.00 after the reload, base `trigger_absent`).
 
 ### ✅ Phase 3 gate: `pnpm gate:p3`
-- `gate:p2` passes, plus all P3 tests. *(2026-10-31: all P3 tests pass; `gate:p2` still to run, it needs the Cloud's database settings, `apps/cloud/.env.local`.)*
+- **Passed 2026-10-31** (#31): `gate:p2` passed on the machine with the Cloud's settings, on `main` with P3 merged, and the live part below on demo-shop served locally. A hosted run then explored C1–C4 on Modal too (DECISIONS 2026-10-31 · P3 gate closed).
+- `gate:p2` passes, plus all P3 tests. *(2026-10-31: all P3 tests pass, and `gate:p2` passed at `c2ada41`.)*
 - **Live:** explore succeeds for **C1–C4 on the PR preview, 3 runs in a row** with no hand-written paths. The saved paths replay on the base preview; C3's toast and C4's canvas are reachable. Explore time per criterion is logged (feeds the §27 update). *(2026-10-31: passed, 12/12 explored and replayed, 2 steps and 5.5–7.3 s per criterion, $0.164 in all.)*
 
 **What we have after P3:** Intenzo navigates a real app by itself from a criterion description and leaves behind replayable, verified paths. The hand-written fixtures are no longer needed.

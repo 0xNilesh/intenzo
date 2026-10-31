@@ -170,6 +170,7 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
   - Its `failed` event uses seq 1,000,000.
   - The endpoints take a bearer secret (`MODAL_ENDPOINT_SECRET`, from the Modal Secret `intenzo-worker`).
   - The worker image never contains the repo root (`.env` files, the App's key).
+- **Since the P3 gate:** `run_job` gets the Modal secret `intenzo-models`, which holds only `META_API_KEY`, for the navigator (and later the judges). The web endpoints keep `intenzo-worker`.
 - **Built in T2.7b:** the worker image has ffmpeg (Debian's) and Chromium with its system libraries, for the Playwright version the lockfile pins. Both are installed before the sources are copied in, so a code change doesn't download the browser again.
 
 ---
