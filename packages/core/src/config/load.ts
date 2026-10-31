@@ -58,20 +58,33 @@ export function parseConfig(text: string): ConfigResult {
  * config files are a problem, since it's unclear which one is meant.
  */
 export function readConfig(repoDir: string): { file: string | null; result: ConfigResult } {
-  const present = CONFIG_FILENAMES.filter((name) => existsSync(join(repoDir, name)));
-  if (present.length > 1) {
+  return configFromFiles(
+    CONFIG_FILENAMES.filter((name) => existsSync(join(repoDir, name))).map((name) => ({
+      name,
+      text: readFileSync(join(repoDir, name), "utf8"),
+    })),
+  );
+}
+
+/**
+ * The config from the config files a repo has, however they were read (a checkout, or GitHub's
+ * contents API in the Cloud): none → the defaults, one → parsed, two → a problem.
+ */
+export function configFromFiles(files: readonly { name: string; text: string }[]): {
+  file: string | null;
+  result: ConfigResult;
+} {
+  if (files.length > 1) {
+    const names = files.map((f) => f.name).join(" and ");
     return {
       file: null,
-      result: {
-        ok: false,
-        problems: [{ path: "", message: `found both ${present.join(" and ")}; keep one` }],
-      },
+      result: { ok: false, problems: [{ path: "", message: `found both ${names}; keep one` }] },
     };
   }
-  const [file] = present;
-  if (!file)
+  const [found] = files;
+  if (!found)
     return { file: null, result: { ok: true, config: IntenzoConfig.parse({ version: 1 }) } };
-  return { file, result: parseConfig(readFileSync(join(repoDir, file), "utf8")) };
+  return { file: found.name, result: parseConfig(found.text) };
 }
 
 /** Renders problems for a PR comment or the CLI: "line 3: policy.auto_merge: unknown key". */
