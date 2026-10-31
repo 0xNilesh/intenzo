@@ -63,6 +63,9 @@ jobs:
       - name: Contract tests
         run: pnpm test:contract
 
+      - name: Modal shim tests
+        run: pnpm test:modal
+
       - name: Postgres tests
         run: pnpm test:pg
         env:
