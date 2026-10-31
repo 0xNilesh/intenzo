@@ -625,6 +625,26 @@ describe("the verify job with a context bundle (§8, §18)", () => {
     expect(typeof port.requests[0]!.messages[1]!.content).toBe("string");
   });
 
+  it("tries a failed intent call once more (a 404 model_not_found came back once)", async () => {
+    let asked = 0;
+    const flaky = scriptedPort((request) => {
+      if (request.stage === "intent" && asked++ === 0) return { criteria: "not a list" };
+      return models()
+        .call(request as never)
+        .then((r) => (r.ok ? r.output : null));
+    });
+    const { ready } = await runWithBundle({}, { models: flaky, retryDelayMs: 1 });
+    expect(flaky.requests.map((r) => r.stage)).toEqual(["intent", "intent", "coverage"]);
+    expect(ready.intent.criteria).toHaveLength(2);
+  });
+
+  it("fails the job rather than report an empty intent when the ticket can't be read", async () => {
+    const broken = scriptedPort(() => ({ criteria: "not a list" }));
+    await expect(runWithBundle({}, { models: broken, retryDelayMs: 1 })).rejects.toThrow(
+      /^the ticket couldn't be read: the intent call failed/,
+    );
+  });
+
   it("falls back to the demo's fixtures without a model to read the ticket", async () => {
     const { ready } = await runWithBundle({}, { models: undefined, readRecording: undefined });
     expect(ready.intent.criteria.map((c) => c.id)).toEqual(["C1", "C2", "C3", "C4"]);

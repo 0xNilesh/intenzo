@@ -162,6 +162,20 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
     });
   });
 
+  it("never reuses an intent with no criteria: the job reads the ticket again", async () => {
+    await t.db.insert(intentVersions).values({
+      runGroupId: groupId,
+      ticketHash: HASH,
+      intentJson: { criteria: [], intentSource: "linked_issue_video", ticketHash: HASH },
+    });
+    await drainWith(async () => ({
+      bundleUrl: "https://private.blob.example/b.json",
+      ticketHash: HASH,
+      bundle: {} as never,
+    }));
+    expect(calls[0]!.body).toMatchObject({ intent: null });
+  });
+
   it("remembers the ticket, so the comment can name it", async () => {
     await drainWith(async () => ({
       bundleUrl: "https://private.blob.example/b.json",
