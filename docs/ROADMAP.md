@@ -386,6 +386,7 @@
   - *Also the P2 gate's end-to-end check:* two pushes 7 s apart superseded the first run (its check run `neutral`), and the PR kept one comment, showing the latest run.
 
 ### ✅ Phase 2 gate: `pnpm gate:p2` + manual e2e
+- **Passed 2026-10-31** (#25): `pnpm gate:p2` with T2.7b's live run on demo-shop#13 as the end-to-end check. All 8 hosted lanes (C1–C4 × PR + base) match `fixtures/ground-truth.json`, the report plays their videos, and the superseded run's check run is `neutral`. The local `gate:p1` was replaced by the same ground truth scored on the hosted recordings, and the e2e ran once, not three times (DECISIONS 2026-10-31 · P2 gate).
 - `gate:p1` passes, plus all P2 unit tests.
 - **E2E:**
   - open a PR on demo-shop (almost-right branch) → within about 3 min a comment appears with a **real video** from Modal and a check run (stub verdicts)
