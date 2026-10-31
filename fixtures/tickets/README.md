@@ -9,4 +9,4 @@ the rest is the body.
 | `prose.md` | The same feature in prose, without a checklist (no chart)                       |
 | `empty.md` | A title and no description: no criteria, and no model call                      |
 
-The real demo ticket, demo-shop #5, is a PM video (T4.2).
+The recording itself is `probes/demo/pm-ticket.mp4` (gitignored; `pnpm demo:pm-video` makes it).

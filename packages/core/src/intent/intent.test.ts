@@ -138,6 +138,67 @@ describe("extractIntent (§18)", () => {
   });
 });
 
+describe("extractIntent with the PM's recording (T4.2)", () => {
+  const VIDEO = "data:video/mp4;base64,AAAA";
+
+  it("sends the transcript as untrusted text and the video as a video part", async () => {
+    const port = scriptedPort([
+      reply(
+        criterion("The total drops to $45.00", {
+          sourceMediaAt: 9400,
+          sourceQuote: "so this fifty dollars should become forty-five",
+        }),
+      ),
+    ]);
+    const result = await extractIntent(port, ticketFile("5.md"), {
+      transcript: "When I apply SAVE10, the order total should drop ten percent right away.",
+      video: { dataUrl: VIDEO },
+      mediaHashes: ["video-sha"],
+    });
+    const user = port.requests[0]!.messages[1]!.content as {
+      type: string;
+      text?: string;
+      video_url?: { url: string };
+    }[];
+    expect(user.map((p) => p.type)).toEqual(["text", "video_url"]);
+    expect(user[0]!.text).toContain('<untrusted source="transcript">\nWhen I apply SAVE10');
+    expect(user[1]!.video_url!.url).toBe(VIDEO);
+    expect(result.intent.intentSource).toBe("linked_issue_video");
+    expect(result.intent.criteria[0]!.sourceMediaAt).toBe(9400);
+    expect(result.intent.criteria[0]!.timingMs).toBeUndefined();
+    expect(result.intent.ticketHash).toBe(ticketHash(ticketFile("5.md"), ["video-sha"]));
+  });
+
+  it("asks once more when a criterion doesn't say when the recording shows it", async () => {
+    const port = scriptedPort([
+      reply(criterion("The total drops"), criterion("The chart shows", { sourceMediaAt: 30_000 })),
+      reply(
+        criterion("The total drops", { sourceMediaAt: 9400 }),
+        criterion("The chart shows", { sourceMediaAt: 30_000 }),
+      ),
+    ]);
+    const result = await extractIntent(port, ticketFile("5.md"), {
+      transcript: "…",
+      video: { dataUrl: VIDEO, durationMs: 36_500 },
+    });
+    expect(result).toMatchObject({ ok: true, calls: 2 });
+    const first = port.requests[0]!.messages[1]!.content as { type: string; text?: string }[];
+    expect(first[0]!.text).toContain("The PM's screen recording (36.5 s) is attached as a video.");
+    expect(port.requests[1]!.messages.at(-1)!.content).toContain(
+      'Criterion 1 ("The total drops") has no sourceMediaAt',
+    );
+  });
+
+  it("reads a ticket whose text says nothing, when it has a recording", async () => {
+    const port = scriptedPort([reply(criterion("x", { sourceMediaAt: 1000 }))]);
+    const { intent } = await extractIntent(port, ticketFile("empty.md"), {
+      video: { dataUrl: VIDEO },
+    });
+    expect(port.requests).toHaveLength(1);
+    expect(intent.criteria).toHaveLength(1);
+  });
+});
+
 describe("checklistItems", () => {
   it("reads markdown task items, checked or not", () => {
     expect(checklistItems("Intro\n- [ ] one\n* [x] two\n  + [X] three \n- not a task")).toEqual([

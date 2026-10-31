@@ -33,6 +33,8 @@ export interface IntentOptions {
   mediaHashes?: readonly string[];
   /** The PM video's transcript (T4.2). */
   transcript?: string;
+  /** The PM video itself, for Spark to watch (T4.2): a data URL from prepareTicketVideo. */
+  video?: { dataUrl: string; durationMs?: number };
   timeoutMs?: number;
 }
 
@@ -72,7 +74,7 @@ export function ticketHash(ticket: TicketText, mediaHashes: readonly string[] = 
 }
 
 /** Rules the reply breaks, worded for the model's retry. */
-function broken(reply: IntentReply, checklist: readonly string[]): string[] {
+function broken(reply: IntentReply, checklist: readonly string[], recording: boolean): string[] {
   const problems: string[] = [];
   if (checklist.length > 0 && reply.criteria.length !== checklist.length) {
     problems.push(
@@ -82,6 +84,12 @@ function broken(reply: IntentReply, checklist: readonly string[]): string[] {
   reply.criteria.forEach((c, i) => {
     if (c.kind !== "not_verifiable_in_ui" && !c.trigger.trim()) {
       problems.push(`Criterion ${i + 1} ("${c.text}") has no trigger: say what to do in the app.`);
+    }
+    // §18: where it's shown in the video comes only from Spark watching it (no transcript timings).
+    if (recording && c.sourceMediaAt === null) {
+      problems.push(
+        `Criterion ${i + 1} ("${c.text}") has no sourceMediaAt: say when the recording says or shows it, in ms from the start.`,
+      );
     }
   });
   return problems;
@@ -113,7 +121,8 @@ export async function extractIntent(
   options: IntentOptions = {},
 ): Promise<IntentResult> {
   const hash = ticketHash(ticket, options.mediaHashes);
-  const intentSource = options.intentSource ?? "linked_issue";
+  const fromVideo = Boolean(options.video || options.transcript);
+  const intentSource = options.intentSource ?? (fromVideo ? "linked_issue_video" : "linked_issue");
   const empty = (problems: string[], usage = NO_USAGE, calls = 0): IntentResult => ({
     ok: problems.length === 0,
     intent: { criteria: [], intentSource, ticketHash: hash },
@@ -122,14 +131,27 @@ export async function extractIntent(
     calls,
   });
   const text = [ticket.title, ticket.body, ...ticket.comments].join("\n");
-  if (!ticket.body.trim() && ticket.comments.length === 0 && !options.transcript) {
+  if (!ticket.body.trim() && ticket.comments.length === 0 && !fromVideo) {
     return empty([]); // nothing to read: no call
   }
 
   const checklist = checklistItems(text);
   const messages = [
     { role: "system" as const, content: INTENT_SYSTEM },
-    { role: "user" as const, content: renderIntent(ticket, options.transcript) },
+    {
+      role: "user" as const,
+      content: options.video
+        ? [
+            {
+              type: "text" as const,
+              text: renderIntent(ticket, options.transcript, {
+                ...(options.video.durationMs && { durationMs: options.video.durationMs }),
+              }),
+            },
+            { type: "video_url" as const, video_url: { url: options.video.dataUrl } },
+          ]
+        : renderIntent(ticket, options.transcript),
+    },
   ];
   let usage = NO_USAGE;
   let reply: IntentReply | undefined;
@@ -160,7 +182,7 @@ export async function extractIntent(
     usage = addUsage(usage, result.usage);
     if (!result.ok) return empty([`the intent call failed: ${result.error}`], usage, calls);
     reply = result.output;
-    problems = broken(reply, checklist);
+    problems = broken(reply, checklist, Boolean(options.video));
     if (problems.length === 0) break;
   }
 

@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { recordCriterion } from "../browser/record.ts";
 import { html, startServer, type TestServer } from "../browser/testing.ts";
 import { scriptedPort } from "../models/scripted.ts";
-import type { ModelRequest } from "../models/port.ts";
+import { type ModelRequest, textOf } from "../models/port.ts";
 import { Criterion, DEFAULT_DENY_TEXT } from "../schema/index.ts";
 import { explore, startPathFor } from "./explore.ts";
 
@@ -63,7 +63,7 @@ afterAll(async () => {
 
 /** The ref of the outline line matching `line`, from the step's prompt. */
 function ref(request: ModelRequest<unknown>, line: RegExp): string {
-  const prompt = request.messages.at(-1)!.content;
+  const prompt = textOf(request.messages.at(-1)!);
   const found = prompt.split("\n").find((l) => line.test(l));
   if (!found) throw new Error(`no outline line matches ${line}`);
   return /\[ref=([a-z0-9]+)\]/.exec(found)![1]!;
