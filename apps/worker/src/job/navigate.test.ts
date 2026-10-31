@@ -178,7 +178,12 @@ const job = (callback: string, cachedPaths: SavedPath[] = []) => ({
 });
 
 const run = (j: unknown, recorder: () => Recorder) =>
-  runJob(j, { client: (x) => jobClient(x, { retryDelayMs: 1 }), recorder, log: () => {} });
+  runJob(j, {
+    client: (x) => jobClient(x, { retryDelayMs: 1 }),
+    recorder,
+    log: () => {},
+    judges: null, // stub verdicts: no model is ever called from a unit test
+  });
 
 describe("the verify job with the navigator", () => {
   it("explores every criterion when nothing is cached, saves the paths and replays them on both sides", async () => {
@@ -186,7 +191,8 @@ describe("the verify job with the navigator", () => {
     const fake = navigatingRecorder("Apply");
     expect(await run(job(cloud.base), fake.recorder)).toBe(EXIT.finished);
 
-    expect(fake.explored.map((e) => `${e.criterion.id} ${e.origin}`)).toEqual(
+    // Criteria run two at a time (§19 recording slots), so the order is compared sorted.
+    expect(fake.explored.map((e) => `${e.criterion.id} ${e.origin}`).sort()).toEqual(
       ["C1", "C2", "C3", "C4"].map((id) => `${id} ${PR}`),
     );
     expect(fake.explored[0]).toMatchObject({
@@ -194,15 +200,17 @@ describe("the verify job with the navigator", () => {
       config: { start: { default: "/cart" } },
     });
     const saved = cloud.events.filter((e) => e.kind === "path_saved");
-    expect(saved.map((e) => e.kind === "path_saved" && e.path.criterionId)).toEqual([
+    expect(saved.map((e) => (e.kind === "path_saved" ? e.path.criterionId : "")).sort()).toEqual([
       "C1",
       "C2",
       "C3",
       "C4",
     ]);
     // No hand-written path is used: every recording follows an explored path.
-    expect(fake.recorded.map((r) => `${r.criterion.id} ${r.side} ${button(r.path)}`)).toEqual(
-      ["C1", "C2", "C3", "C4"].flatMap((id) => [`${id} pr Apply`, `${id} base Apply`]),
+    expect(
+      fake.recorded.map((r) => `${r.criterion.id} ${r.side} ${button(r.path)}`).sort(),
+    ).toEqual(
+      ["C1", "C2", "C3", "C4"].flatMap((id) => [`${id} pr Apply`, `${id} base Apply`]).sort(),
     );
   });
 

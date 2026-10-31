@@ -1,11 +1,11 @@
 // Runs one job and reports how it went (§9). Whatever happens, the Cloud hears of it: finished, or
 // failed with a code. The one exception is a 410, after which the worker stops without a word.
-import type { RunOutcome } from "@intenzo/core";
+import { type Judge, judgesFromEnv } from "@intenzo/core/judge";
 
 import { type JobClient, jobClient, StaleJobError } from "./client.ts";
 import { JobPayload, type SleepJob } from "./payload.ts";
 import { browserRecorder } from "./recorder.ts";
-import { type Recorder, redactor, verify } from "./verify.ts";
+import { type Recorder, redactor, verify, type VerifyResult } from "./verify.ts";
 
 /** Exit codes: the Modal shim reports `failed` itself unless the job finished or was stale. */
 export const EXIT = { finished: 0, failed: 1, stale: 3 } as const;
@@ -17,6 +17,8 @@ export interface RunOptions {
   recorder?: () => Recorder;
   /** Where progress goes (Modal's logs); never a secret. */
   log?: (line: string) => void;
+  /** The two judges; by default from the environment (both keys), null for stub verdicts. */
+  judges?: readonly [Judge, Judge] | null;
 }
 
 export async function runJob(payload: unknown, options: RunOptions = {}): Promise<number> {
@@ -42,16 +44,21 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
         const recorder = options.recorder
           ? options.recorder()
           : browserRecorder(modelApiKey ? { modelApiKey } : {});
-        let outcome: RunOutcome;
+        const judges = options.judges === undefined ? judgesFromEnv(process.env) : options.judges;
+        let result: VerifyResult;
         try {
-          outcome = await verify(job, client, recorder, options.log ?? console.log);
+          result = await verify(job, client, {
+            recorder,
+            judges,
+            log: options.log ?? console.log,
+          });
         } finally {
           await recorder.close();
         }
         await client.send({
           kind: "finished",
-          outcome,
-          costUsd: 0, // no model calls yet: the verdicts are the stub's
+          outcome: result.outcome,
+          costUsd: Math.round(result.costUsd * 1e6) / 1e6,
           timings: { total_ms: Date.now() - startedAt },
         });
         return EXIT.finished;
