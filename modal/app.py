@@ -90,7 +90,18 @@ model_secrets = [modal.Secret.from_name("intenzo-models")]
 app = modal.App("intenzo-worker")
 
 
-@app.function(image=worker_image, secrets=model_secrets, cpu=4.0, memory=8192, timeout=TIMEOUT_S)
+# Not preemptible: Modal restarts a preempted function on the same input, which for a verify job
+# means a browser killed mid-recording and a second run of the same job (P4: a preemption turned a
+# demo-shop run into four inconclusive verdicts). It bills CPU and memory at 3x: about $0.025 for
+# a two-minute job (modal.com/docs/guide/preemption).
+@app.function(
+    image=worker_image,
+    secrets=model_secrets,
+    cpu=4.0,
+    memory=8192,
+    timeout=TIMEOUT_S,
+    nonpreemptible=True,
+)
 def run_job(payload: dict) -> str:
     import shim
 
