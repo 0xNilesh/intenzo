@@ -31,6 +31,14 @@ const CloudEnv = z.object({
   MODAL_CANCEL_URL: z.url().optional(),
   MODAL_ENDPOINT_SECRET: z.string().min(32).optional(),
   INTENZO_CLOUD_URL: z.url().optional(),
+  /**
+   * The two Blob stores (§28), each reached with a read-write token or, when connected through
+   * Vercel's OIDC, its store id. Until one is set, uploads to that store are refused (T2.6).
+   */
+  PUBLIC_BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+  PUBLIC_BLOB_STORE_ID: z.string().min(1).optional(),
+  PRIVATE_BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+  PRIVATE_BLOB_STORE_ID: z.string().min(1).optional(),
 });
 export type CloudEnv = z.infer<typeof CloudEnv>;
 
@@ -57,4 +65,16 @@ export function cloudEnv(
   if (parsed.success) return parsed.data;
   const names = [...new Set(parsed.error.issues.map((issue) => String(issue.path[0])))];
   throw new Error(`Intenzo Cloud env vars missing or invalid: ${names.join(", ")}`);
+}
+
+export type BlobAuth = { token: string } | { storeId: string };
+
+/** How the Cloud reaches each Blob store (§28): its token, else its store id with Vercel's OIDC. */
+export function blobStores(env: CloudEnv): { public: BlobAuth | null; private: BlobAuth | null } {
+  const auth = (token?: string, storeId?: string): BlobAuth | null =>
+    token ? { token } : storeId ? { storeId } : null;
+  return {
+    public: auth(env.PUBLIC_BLOB_READ_WRITE_TOKEN, env.PUBLIC_BLOB_STORE_ID),
+    private: auth(env.PRIVATE_BLOB_READ_WRITE_TOKEN, env.PRIVATE_BLOB_STORE_ID),
+  };
 }

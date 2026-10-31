@@ -35,9 +35,10 @@ export function isCurrentJob(run: RunRow | undefined, jobId: string): run is Run
   return run !== undefined && run.currentJobId === jobId && run.state !== "done";
 }
 
-async function authorize(
+/** The job token's claims and its run, or the 401 to answer. Every worker route starts here. */
+export async function authorizeJob(
   request: Request,
-  deps: WorkerApiDeps,
+  deps: Pick<WorkerApiDeps, "db" | "secret" | "now">,
 ): Promise<{ claims: JobClaims; run: RunRow | undefined } | Response> {
   const token = bearerToken(request);
   const nowS = Math.floor(deps.now().getTime() / 1000);
@@ -49,7 +50,7 @@ async function authorize(
 
 /** POST /api/worker/events */
 export async function handleWorkerEvent(request: Request, deps: WorkerApiDeps): Promise<Response> {
-  const auth = await authorize(request, deps);
+  const auth = await authorizeJob(request, deps);
   if (auth instanceof Response) return auth;
   const { claims, run } = auth;
 
@@ -105,7 +106,7 @@ export async function handleWorkerEvent(request: Request, deps: WorkerApiDeps): 
 
 /** GET /api/worker/alive: whether the job should go on (§12). */
 export async function handleAlive(request: Request, deps: WorkerApiDeps): Promise<Response> {
-  const auth = await authorize(request, deps);
+  const auth = await authorizeJob(request, deps);
   if (auth instanceof Response) return auth;
   if (!isCurrentJob(auth.run, auth.claims.jobId)) {
     return reply(410, { error: "this job isn't current any more: stop" });
