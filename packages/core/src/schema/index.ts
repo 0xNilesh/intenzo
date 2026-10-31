@@ -3,6 +3,9 @@ export { CoverageMap, Criterion, CriterionId, CriterionSet, ReproHints } from ".
 export {
   LoggedStep,
   MAX_WAIT_MS,
+  NavAction,
+  NavOp,
+  OutlineRef,
   SameOriginPath,
   SavedPath,
   Step,
