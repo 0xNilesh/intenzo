@@ -3,6 +3,7 @@
 // INTENZO_TEST_PG_URL (a local Postgres, or CI's service container), migrated like production and
 // dropped afterwards.
 import { randomBytes } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -41,7 +42,18 @@ export async function testPg(): Promise<{ db: Db; close: () => Promise<void> }> 
     db,
     close: async () => {
       await pool.end();
-      await admin.query(`drop database ${name} with (force)`);
+      // pool.end() resolves once it has asked each connection to close, not once they're closed.
+      // Dropping the database with FORCE would kill those still closing, and their pg clients
+      // would raise the error: wait until Postgres has let them go instead.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await admin.query(`drop database ${name}`);
+          break;
+        } catch (err) {
+          if ((err as { code?: string }).code !== "55006" || attempt === 50) throw err;
+          await sleep(100);
+        }
+      }
       await admin.end();
     },
   };
