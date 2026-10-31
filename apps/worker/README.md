@@ -75,6 +75,18 @@ pnpm intenzo intent --ticket fixtures/tickets/5.md --video probes/demo/pm-ticket
 The ticket file's first `# ` line is its title. One call, two if the reply breaks the checklist
 rule: about $0.02. Needs `META_API_KEY` in `.env`.
 
+## `intenzo coverage` (T4.3)
+
+Maps each criterion to the PR's changed files with Spark 1.3 (ARCHITECTURE §18, `coverage.v1`),
+and lists the routes the changed files belong to. The diff is a ContextBundle diff
+(`{"files": [{"path", "status", "additions", "deletions", "patch"}]}`).
+
+```bash
+pnpm intenzo coverage --criteria fixtures/criteria --diff out/almost-right.diff.json
+```
+
+One call, about $0.02. Needs `META_API_KEY` in `.env`.
+
 ## `intenzo job` (T2.5a, T2.7b)
 
 Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,

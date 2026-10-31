@@ -772,6 +772,8 @@ Muse Code, or Spark 1.3 if Muse Code is CLI-only (coverage.v1): criteria + diff 
    + deterministic route candidates (Next.js app/ and pages/ file → route rules)
 ```
 
+- **Built in T4.3** (`core/coverage`): Spark 1.3 (Muse Code is CLI-only, DECISIONS 2026-10-30). The diff goes in an `<untrusted>` block, cut at 60k characters with a count of the files left out. Code holds the reply to the diff: a path the diff doesn't change is dropped, `covered` without a file becomes `unclear`, and a criterion the reply skips is `unclear`. A failed call makes every criterion `unclear`, never `uncovered`; an empty diff makes no call (all `uncovered`). `routeOf` follows Next.js: route groups and private folders add nothing, a colocated file belongs to its folder's route, API handlers and app/'s shared root files have none. `pnpm intenzo coverage` runs it.
+
 ## 19. Verify workflow
 
 ```
