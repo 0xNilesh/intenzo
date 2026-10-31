@@ -877,6 +877,8 @@ durableTarget(el):                     // el = the aria-ref locator the model ch
 isSameElement(a, b) = a.evaluate((x, y) => x === y, await b.elementHandle())
 ```
 - Each candidate is **verified to resolve to exactly the chosen element** before it's saved, so a target can never silently point at a different "Add to cart".
+- Verification goes through the recorder's own `locate()`, which matches names as substrings and takes the first match, so a role + name that also finds a second element is never saved (T3.3).
+- **Nothing in `durableTarget()` takes an aria snapshot.** Any snapshot, even a locator's default-mode `ariaSnapshot()`, replaces the one outline refs resolve against, and the step's other refs (its watch elements) would stop resolving. The navigator passes the exact role and name from the outline line; otherwise an in-page estimate is used, and the check above makes a wrong estimate harmless (T3.3).
 - `buildSavedPath` **auto-adds two region watch targets:**
   1. the nearest ancestor of the trigger element that is a `form`, `dialog`, `region` or landmark (else `main`)
   2. the page-level **live regions** (§21.3)

@@ -414,12 +414,12 @@
 - [x] **Verify:** `pnpm --filter @intenzo/core test guard`.
 
 ### T3.3 Durable targets
-- [ ] **Build:** `durableTarget()` with the candidate order and **same-element verification** (§20.4).
-- [ ] **Tests (fixture with 3 identical "Add to cart" buttons, one with a test id):**
+- [x] **Build:** `durableTarget()` with the candidate order and **same-element verification** (§20.4).
+- [x] **Tests (fixture with 3 identical "Add to cart" buttons, one with a test id):**
   - the target chosen for the 2nd button replays to the **2nd** button
   - a test id is preferred when present
   - a role+name match that resolves to the wrong element is never saved
-- [ ] **Verify:** `pnpm --filter @intenzo/core test:browser durable`.
+- [x] **Verify:** `pnpm --filter @intenzo/core test:browser durable`.
 
 ### T3.4 Explore loop (Wonder)
 - [ ] **Build:** `explore()` (§20.3): start route choice, Wonder `navigate.v1`, history window, budget (25 steps / 120 s), `trigger_done` → `SavedPath` with auto region + live-region watch targets; `give_up` → `setup_failed` / `trigger_absent`.
