@@ -16,3 +16,6 @@ out/
 bench/results/raw/
 __pycache__/
 .venv/
+# Next.js
+next-env.d.ts
+*.tsbuildinfo
