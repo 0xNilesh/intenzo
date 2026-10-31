@@ -5,6 +5,19 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Judge rules (T4.5, #36)
+
+`core/judge/rules.ts`: the deterministic rules around the two judges (§22.1, §22.3, §19 e), moved from the go/no-go (`scripts/gonogo/lib/combine.ts`) and completed. 49 table-driven unit tests; with the bundle's, `pnpm --filter @intenzo/core test judge` runs 54. No model calls.
+
+### Decisions
+
+1. **Two inconclusive judges combine to `judges_disagree`**, as in the go/no-go: §7 has no "both unsure" reason, and the report shows each judge's own words.
+2. **A `trigger_absent` lane that the judges pass, or fail on an `uncovered` criterion, becomes inconclusive with `precondition_unmet`** (§22.1). §7 has no closer code: the control the trigger needs isn't there.
+3. **The isolation cap comes after the trigger rules**, so a lane missing both says `precondition_unmet`, the more useful of the two.
+4. **A fail is re-recorded once to confirm it; a tie once to break it.** A tie is settled only by an agreed verdict one of the first two judges gave; a fail that doesn't repeat is `flaky`.
+
+---
+
 ## 2026-10-31 · Judge bundle (T4.4, #35)
 
 `core/judge` builds the bundle both judges get (§22.2) and `prompts/judge.v1.ts` holds their prompt, both moved from the go/no-go (T0.3, `scripts/gonogo/lib`). Checked with 5 new unit tests (a file snapshot of C2's bundle) and a bundle built from C2 recorded live on the almost-right preview and on main.

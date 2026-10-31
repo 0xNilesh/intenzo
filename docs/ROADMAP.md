@@ -473,15 +473,16 @@
   - *Live, on the almost-right preview:* the still at Tt+1000 shows the "Discount (SAVE10) −$5.00" line and the boxed order total still at **$50.00**, with the order summary region labelled. The bundle built from that lane and main's carries 15 PR readings and "the trigger control isn't there at step 2" for the base.
 
 ### T4.5 `valueMatches` and the combination rules
-- [ ] **Build:** token matching, both-judge combination (§22.3), re-record rules (§19 e), pre-judge rules (§22.1), aggregation.
-- [ ] **Tests (table-driven, the most important unit tests in the repo):**
+- [x] **Build:** token matching, both-judge combination (§22.3), re-record rules (§19 e), pre-judge rules (§22.1), aggregation.
+- [x] **Tests (table-driven, the most important unit tests in the repo):**
   - `5.00` vs `$45.00` → no match; `45` vs `$45.00` → match; `"This code has expired"` vs `+ alert "This code has expired"` → match; empty citation → no match
   - agree/disagree/wrong_target combinations
   - **no judge-shopping:** disagree → re-record → an agreed verdict not among the first two → inconclusive
   - agreed fail → re-record → agreed pass → `flaky`
   - `trigger_absent` can never give `pass`
   - `no_isolation` caps the verdict
-- [ ] **Verify:** `pnpm --filter @intenzo/core test judge`.
+- [x] **Verify:** `pnpm --filter @intenzo/core test judge`.
+  - *2 files, 54 tests passed.* Turning off the no-judge-shopping check fails its test, as checked by hand.
 
 ### T4.6 Live judges and the judge queue
 - [ ] **Build:** Spark Open + Spark 1.3 clients through `ModelPort`; recording slots (2) + judge queue (4); liveness checks.

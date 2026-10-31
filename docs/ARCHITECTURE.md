@@ -1051,6 +1051,8 @@ final = A'.verdict == B'.verdict ∈ {pass, fail}  → that verdict (reason agre
 - For `ui_visual` criteria, readings are optional: the judges decide from the video and annotated frames, with agreement still required.
 - **Evidence window** = from the step log: `[Tt − 1000, Tt + 3000]` (`+ reload` if persistence). The judge's `atMs` is used only as a chapter hint in the report.
 
+- **Built in T4.5** (`core/judge/rules.ts`, from the go/no-go's `combine.ts`): `valueMatches`, `checkJudge`, `combine`, the §19 e re-record rule (`rerecordFor`, `afterRerecord`), the §22.1 pre-judge (`preJudge`) and its caps (`capVerdict`). Without the judges' own reason, two inconclusive judges combine to `judges_disagree`. A `trigger_absent` lane whose judges pass, or fail on an `uncovered` criterion, becomes inconclusive with `precondition_unmet`; a lane without isolation is capped with `no_isolation`, after that. Aggregation is T2.7a's `aggregate`.
+
 ### 22.4 Aggregation
 `any fail → fail; else any inconclusive → inconclusive; else pass`
 
