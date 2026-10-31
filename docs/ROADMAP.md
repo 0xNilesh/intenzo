@@ -485,8 +485,17 @@
   - *2 files, 54 tests passed.* Turning off the no-judge-shopping check fails its test, as checked by hand.
 
 ### T4.6 Live judges and the judge queue
-- [ ] **Build:** Spark Open + Spark 1.3 clients through `ModelPort`; recording slots (2) + judge queue (4); liveness checks.
-- [ ] **Tests:** `@live` on the P1 recordings: C2 → agreed `fail` citing the +1 s reading; C1, C3, C4 → agreed `pass`.
+*Split in two (issue #37): the judges themselves first, then the worker's queue around them. T4.6a's PR is "Part of #37"; T4.6b's closes it.*
+
+#### T4.6a The judges
+- [x] **Build:** Spark Open + Spark 1.3 clients through `ModelPort`; one criterion judged on one take with the §22 rules; its `Verdict`.
+- [x] **Tests:** `@live` on the P1 recordings: C2 → agreed `fail` citing the +1 s reading; C1, C3, C4 → agreed `pass`.
+- [x] **Verify:** the live test.
+  - *Live, on the almost-right preview (and main as the base):* C1, C3, C4 agreed `pass`; C2 agreed `fail`, both judges citing the order total at Tt+1001 ms ($50.00). Spark Open answered in 3.5–5.7 s, Spark 1.3 in 7.2–10.6 s; the 8 calls cost $0.066, $0.028 of it Baseten.
+
+#### T4.6b The judge queue in the worker
+- [ ] **Build:** recording slots (2) + judge queue (4); the §19 e re-record; liveness checks; the verify job's verdicts from the judges.
+- [ ] **Tests:** the queue's limits; a fail re-recorded once; a stale job stops; no judges without both keys.
 - [ ] **Verify:** `pnpm intenzo run --local --pr :3001 --base :3000 --ticket demo/42`.
 
 ### T4.7 Streaming comment

@@ -1053,6 +1053,8 @@ final = A'.verdict == B'.verdict ∈ {pass, fail}  → that verdict (reason agre
 
 - **Built in T4.5** (`core/judge/rules.ts`, from the go/no-go's `combine.ts`): `valueMatches`, `checkJudge`, `combine`, the §19 e re-record rule (`rerecordFor`, `afterRerecord`), the §22.1 pre-judge (`preJudge`) and its caps (`capVerdict`). Without the judges' own reason, two inconclusive judges combine to `judges_disagree`. A `trigger_absent` lane whose judges pass, or fail on an `uncovered` criterion, becomes inconclusive with `precondition_unmet`; a lane without isolation is capped with `no_isolation`, after that. Aggregation is T2.7a's `aggregate`.
 
+- **Built in T4.6a** (`core/judge/judges.ts`): `judgeCriterion` asks both judges at once with the same messages (the system prompt and the bundle's parts), at effort `low`, then checks, combines and caps; §22.1 cases ask nobody. Spark Open goes through `sparkOpenPort` (Baseten: `max_tokens`, no structured outputs, the reply extracted from the text), Spark 1.3 through the Meta port with its strict schema. `verdictOf` makes the §7 `Verdict`: the window `[Tt − 1 s, Tt + 3 s]`, the primary judge's account as `observed`, each judge's answer by name.
+
 ### 22.4 Aggregation
 `any fail → fail; else any inconclusive → inconclusive; else pass`
 
