@@ -170,7 +170,8 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
   - Its `failed` event uses seq 1,000,000.
   - The endpoints take a bearer secret (`MODAL_ENDPOINT_SECRET`, from the Modal Secret `intenzo-worker`).
   - The worker image never contains the repo root (`.env` files, the App's key).
-- **Since the P3 gate:** `run_job` gets the Modal secret `intenzo-models`, which holds only `META_API_KEY`, for the navigator (and later the judges). The web endpoints keep `intenzo-worker`.
+- **Since the P3 gate:** `run_job` gets the Modal secret `intenzo-models`, which holds only `META_API_KEY` and `BASETEN_API_KEY`, for the navigator and the judges. The web endpoints keep `intenzo-worker`.
+- **Since T4.7:** `run_job` is `nonpreemptible` (CPU and memory at 3x): Modal restarts a preempted function on the same input, which for a verify job meant a browser killed mid-run and four inconclusive verdicts. The worker exits at once on SIGTERM, before Playwright's own handler can keep it going.
 - **Built in T2.7b:** the worker image has ffmpeg (Debian's) and Chromium with its system libraries, for the Playwright version the lockfile pins. Both are installed before the sources are copied in, so a code change doesn't download the browser again.
 
 ---
@@ -1133,6 +1134,8 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
   - Text from tickets and models is escaped for the table (`|`, `<`, `>`, `&`), and every `@` gets a zero-width space after it, so a criterion can't break the table or notify anyone.
   - The evidence cell is the clip (`▶ 0:09–0:13`) when the verdict cites a window and the PR side has a video: the window plus the video's offset (§21.4). Otherwise it links to the criterion on the report.
   - Above GitHub's 65,536 characters, the collapsed sections go first (earlier runs, then readings), and only then is the text cut.
+
+- **Built in T4.7:** a failed or inconclusive row reads `Expected · Readings · Observed`. The readings line is the watched element's values after the trigger, or the live regions' changes when no element was watched; region snapshots stay in the report. A `finished` event's cost and timings are kept on the run, so the final stage shows ⏱ and 💲. Streaming is T2.7a's re-render on every result event.
 
 ### 26.2 Check run
 - Name `Intenzo`, `external_id = runId`. The summary is the same table. Up to 50 annotations on the diff lines that coverage maps to failing criteria.

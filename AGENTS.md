@@ -446,6 +446,8 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **A check run without `details_url` links to the App's homepage**, and intenzo-ai's is set to `https://intenzo-cloud.vercel.app.` (a stray period). Intenzo sends the run's report as `details_url` (T2.7a).
 - **The Vercel project is linked at the repo root** (`.vercel/`), so run `vercel env …` from there: with `--cwd apps/cloud` it finds no project. Pipe a secret into `vercel env add NAME production --sensitive` from its file, never as an argument (T2.7b).
 - **Playwright's error messages can quote request headers** in their call log, such as the bypass header. The worker redacts the job's secrets from every lane, log line and crash message (T2.7b).
+- **Modal functions are preemptible by default**, and a preempted one restarts on the same input. `run_job` is `nonpreemptible` (T4.7).
+- **Playwright installs its own SIGTERM handler** (`handleSIGTERM`), which keeps Node alive to close the browser. The worker's `intenzo job` exits on SIGTERM first (T4.7).
 - **A Modal secret only reaches the functions that list it.** `run_job` gets `intenzo-models` (the Meta key); the web endpoints get `intenzo-worker`. A key added to the wrong secret silently leaves the worker without it (P3 gate).
 
 **Next.js (demo-shop, T0.5–T0.6)**
