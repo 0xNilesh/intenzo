@@ -9,6 +9,7 @@ import { installationTokens } from "./github/app-auth.ts";
 import { drainOutbox } from "./outbox/drain.ts";
 import { githubExecutors } from "./outbox/github-effects.ts";
 import { jobExecutors } from "./outbox/job-effects.ts";
+import { secretsKey } from "./secrets/seal.ts";
 
 /** Where the report pages are: INTENZO_CLOUD_URL, set on Vercel. */
 export const reportBaseUrl = (env: { INTENZO_CLOUD_URL?: string }) =>
@@ -29,10 +30,18 @@ export function cloud() {
   const log = (line: string) => console.log(line);
   // Spawn and cancel run only once Modal is configured; until then those rows wait in the outbox.
   const modal = modalSettings(env);
+  const sealKey = env.INTENZO_SECRETS_KEY ? secretsKey(env.INTENZO_SECRETS_KEY) : null;
   const executors = {
     ...githubExecutors({ db, github, reportBaseUrl: reportBaseUrl(env) }),
     ...(modal &&
-      jobExecutors({ db, modal, jobSecret: env.INTENZO_JOB_SECRET, newJobId: randomUUID, now })),
+      jobExecutors({
+        db,
+        modal,
+        jobSecret: env.INTENZO_JOB_SECRET,
+        secretsKey: sealKey,
+        newJobId: randomUUID,
+        now,
+      })),
   };
   return {
     env,
