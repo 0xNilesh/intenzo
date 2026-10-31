@@ -849,7 +849,7 @@ explore(criterion, lane):
                              outline, history(last 6), lastResult})      // `expected` NOT included
     if a.status == give_up:
         return a.reason == trigger_not_found && setupDone(history) ? TriggerAbsent(screens) : SetupFailed(a.reason)
-    guard(a):  goto same-origin (or extra_navigation_origins); ref exists; element text ∉ deny_text
+    guard(a):  goto same-origin (or extra_navigation_origins); ref exists; element text ∉ deny_text   // navigator/guard.ts
     el = page.locator(`aria-ref=${a.action.ref}`)           // must resolve to exactly 1 element
     if !el and failures ≥ 2 → visionFallback (§20.5)
     execute(a.action, el); await settle(page)               // §20.3.1
@@ -857,6 +857,8 @@ explore(criterion, lane):
     if a.status == trigger_done: return buildSavedPath(history, a.watch)   // §20.4
   return SetupFailed("budget")
 ```
+
+- **The guard (T3.2, `navigator/guard.ts`)** resolves each `goto` path against the lane origin (a path like `/\\evil.example` passes the schema but lands elsewhere), requires every ref, watch refs included, to be in the current outline and resolve to exactly one element, and matches `deny_text` against the element's text, `aria-label`, `title` and value as **whole words or phrases**, case-insensitively ("pay" stops "Pay now", not "Display"). Each refusal's message is written for the model, since it goes back as the step's result.
 
 #### 20.3.1 `settle(page)`
 Wait until **both** conditions hold, capped at 2 s:
