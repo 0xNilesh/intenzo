@@ -12,7 +12,7 @@ import { verifyJobToken } from "../jobs/token.ts";
 import { advance } from "../runs/advance.ts";
 import type { Fact } from "../runs/transition.ts";
 import { drainOutbox } from "./drain.ts";
-import { jobExecutors, PLACEHOLDER_SECONDS, spawnExecutor } from "./job-effects.ts";
+import { jobExecutors, spawnExecutor } from "./job-effects.ts";
 
 const MODAL: ModalSettings = {
   spawnUrl: "https://sumithprabhu--intenzo-worker-spawn.modal.run",
@@ -101,10 +101,9 @@ describe("the spawn effect", () => {
       endpoint: "spawn",
       auth: `Bearer ${MODAL.secret}`,
       body: {
-        type: "sleep",
+        type: "stub",
         jobId: job,
         runId: RUN,
-        seconds: PLACEHOLDER_SECONDS,
         callback: { baseUrl: MODAL.cloudUrl },
       },
     });
