@@ -5,6 +5,28 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Streaming comment, live (T4.7, #38)
+
+The comment's stages, checked live on demo-shop#15 with both judges on Modal, and the fixes that run needed. 3 new unit tests and a new snapshot (the criteria listed before any verdict).
+
+### What we found
+
+| Check | Result |
+|---|---|
+| The first hosted run with judges | **Four inconclusive in 38 s.** Modal preempted the container; the shim stopped the worker with SIGTERM, but Playwright's own SIGTERM handler kept Node alive five seconds to close the browser, and the job raced on with a dead one, posting verdicts and `finished`. Modal restarts a preempted function on the same input |
+| The second run, after the fixes | waiting for the preview → criteria listed (0/4) at +25 s → C3 ✅ +49 s → C1 ✅ +57 s → C4 ✅ +74 s → C2 ❌ +86 s (after its re-record) → **❌ 3/4 passed**, "Judges: Spark Open + Spark 1.3", ⏱ 1 m 8 s |
+| Its cost | The worker reported $0.104 (navigator and judges), but the Cloud didn't keep it: no 💲 in the comment |
+| C2's readings line | "+0 s Subtotal $50.00 Discount (SAVE10) −$5.00 Total $50.00 Canvas tote bag …": the navigator chose the order summary's box as the "order total" element, so the element's text is the whole summary. The judges still cited $50.00 correctly |
+
+### Decisions
+
+1. **`run_job` is `nonpreemptible`** (CPU and memory at 3x, about $0.025 for a two-minute job), and **the worker exits at once on SIGTERM or SIGINT**, so a stopped job posts nothing more.
+2. **A `finished` event's cost and timings are kept on the run**, for the final stage's ⏱ and 💲.
+3. **A failed row shows the readings between what was expected and what the judges saw**, as §26.1 draws it, and the readings line keeps to the watched element (or the live regions' changes).
+4. *Open for the P4 gate:* the golden test needs C2's line to read "+0 s $50.00 · +1 s $50.00 · …", so the navigator must watch the total itself, not its container. That's a `navigate.v1` change, checked by the gate's runs.
+
+---
+
 ## 2026-10-31 · The judge queue in the worker (T4.6b, #37)
 
 The verify job judges now: two recording slots and a judge queue, the §19 e re-record, liveness checks, and the spend in `finished`. `pnpm intenzo run --local` runs it without the Cloud. Checked with 9 new worker tests and two local runs on the almost-right and main previews.

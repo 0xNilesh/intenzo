@@ -500,9 +500,10 @@
   - *Live, on the almost-right and main previews with `fixtures/tickets/42.md`:* C1 ✅, C2 ❌ (confirmed on a second take, both judges citing $50.00 at Tt+1002), C3 ✅, C4 ✅; 50 s, $0.081. The first run had C3 inconclusive (`wrong_target`) until the judge prompt said a box around a container, or a message read from the live regions, isn't a wrong target.
 
 ### T4.7 Streaming comment
-- [ ] **Build:** `intent_ready` → criteria list; each `criterion_verdict` → re-render; `finished` → final table.
-- [ ] **Tests:** renderer snapshots for each stage; the comment never shows a superseded run.
-- [ ] **Verify:** watch the comment update live on a real PR.
+- [x] **Build:** `intent_ready` → criteria list; each `criterion_verdict` → re-render; `finished` → final table.
+- [x] **Tests:** renderer snapshots for each stage; the comment never shows a superseded run.
+- [x] **Verify:** watch the comment update live on a real PR.
+  - *Live, demo-shop#15 (the almost-right code, both judges on Modal):* waiting for the preview → the 4 criteria listed (⏳, 0/4 judged) at +25 s → C3 ✅ at +49 s, C1 ✅ +57 s, C4 ✅ +74 s → C2 ❌ at +86 s after its re-record → "❌ 3/4 passed", "Judges: Spark Open + Spark 1.3", ⏱ 1 m 8 s. The first run on that PR was preempted by Modal and came back all inconclusive, which `nonpreemptible` and the worker's SIGTERM exit now prevent.
 
 ### ✅ Phase 4 gate: `pnpm gate:p4`
 - `gate:p3` passes, plus all P4 tests.
