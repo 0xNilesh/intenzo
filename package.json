@@ -30,6 +30,8 @@
     "demo:pm-video": "pnpm --filter @intenzo/scripts demo:pm-video",
     "gate:p0": "pnpm --filter @intenzo/scripts gate:p0",
     "gate:p1": "pnpm --filter @intenzo/scripts gate:p1",
+    "db:generate": "pnpm --filter @intenzo/cloud db:generate",
+    "db:migrate": "pnpm --filter @intenzo/cloud db:migrate",
     "intenzo": "node apps/worker/src/main.ts"
   },
   "devDependencies": {

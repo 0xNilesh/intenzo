@@ -6,3 +6,4 @@ pnpm-lock.yaml
 LICENSE
 docs/*.md
 demo/expected-comment.md
+apps/cloud/drizzle

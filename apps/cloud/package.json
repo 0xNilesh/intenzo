@@ -9,12 +9,17 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
     "test:contract": "vitest run --project contract --passWithNoTests",
-    "test:browser": "vitest run --project browser --passWithNoTests"
+    "test:browser": "vitest run --project browser --passWithNoTests",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@intenzo/core": "workspace:*"
+    "@intenzo/core": "workspace:*",
+    "drizzle-orm": "0.45.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.13",
+    "drizzle-kit": "0.31.11",
     "vitest": "5.0.5"
   }
 }
