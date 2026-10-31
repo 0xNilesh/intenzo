@@ -5,6 +5,44 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Artifact upload (T2.6, #23)
+
+The worker uploads its files straight to Blob through presigned URLs the Cloud hands out per file (`POST /api/worker/upload-tokens`, `apps/cloud/src/artifacts/upload-tokens.ts`, `apps/worker/src/job/upload.ts`). The checks:
+
+- 27 new unit tests across core, the Cloud and the worker.
+- Deliberately broken rules, to check the tests catch them.
+- A live upload into both stores (demo-shop#11).
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Vercel Blob today ([docs](https://vercel.com/docs/vercel-blob), Aug–Sep 2026) | **A store is private or public, fixed at creation.** Private blobs are read only with authentication: through a function, or a signed GET URL (at most 7 days). Uploads can be **presigned PUT URLs** for one exact path, with content types, a size cap and no overwrite signed in |
+| Live, with demo-shop#11's running job | The worker's `uploadArtifacts()` stored a test video in `intenzo-private` (the store shows 1 object, 22.28 KB). A GIF uploaded to `intenzo-public` came back from its public URL identical (200 `image/gif`, 48,823 bytes). A second upload onto the same take was refused by Blob ("This blob already exists"), and a path outside the run got 403 |
+| Do the tests catch a broken rule? | Each of these failed a test: accepting any run's path, and presigning with `allowOverwrite` |
+| `@vercel/blob` 2.8.2 | Calls its control API (`POST https://vercel.com/api/blob/signed-token`) with its own copy of `undici`, which msw can't intercept: a first test reached vercel.com with a fake token (harmless, refused). The test now points the SDK at a local stand-in with its documented `VERCEL_BLOB_API_URL` override. Presigned URLs encode the flags as `"false"`, and the SDK checks the token's scope (path, operations, expiry) before signing |
+| Vercel CLI 48.5 vs 64.5 | 48.5 had no private stores. 64.5.0 (Oct 16; the newest at least two weeks old) has `blob create-store --access` and `vercel api`, but no prefix for a store's env vars. Connected with `--environment production`, a store got only `BLOB_READ_WRITE_TOKEN`, which the second store would collide with. The public API's store endpoints take no prefix either |
+| The CLI's side effects | `create-store` pulled the development env into the repo root's `.env.local` (mode 644) and appended `.env*` to `.gitignore`, which would hide the committed `.env.example`. Both times the `.gitignore` change was reverted and the file set to 600. `env ls` prints the start of non-sensitive values, and agents can't delete a store ("cannot be performed non-interactively") |
+| The dashboard's connection with the prefix `PUBLIC_BLOB` | Added `PUBLIC_BLOB_STORE_ID` and `PUBLIC_BLOB_WEBHOOK_PUBLIC_KEY`: OIDC, with no read-write token. `issueSignedToken({ storeId })` worked with the function's OIDC token |
+
+### Decisions
+
+1. **Uploads use presigned PUT URLs, one per file, refusing to overwrite**, instead of §28's client tokens.
+   - *Why:* the worker holds no Blob credential at all, and the path, the content types, the size cap and the no-overwrite rule are signed into the URL and enforced by Blob.
+   - The Cloud checks the path is a plain one under `runs/{runId}/` of the job's own run, and the job is current.
+2. **What each store takes:**
+   - **Public** (up to 20 MB): GIFs, PNGs, WebPs and JPEGs. GitHub's image proxy has to fetch them.
+   - **Private** (up to 500 MB): videos, traces, bundles and stills.
+   - URLs are valid 15 minutes.
+3. **Each store is reached however it was connected:** `intenzo-public` through OIDC (`PUBLIC_BLOB_STORE_ID`), `intenzo-private` with `PRIVATE_BLOB_READ_WRITE_TOKEN`.
+   - The CLI connected the private store with a generic `BLOB_READ_WRITE_TOKEN`. Its value was copied into the sensitive `PRIVATE_BLOB_READ_WRITE_TOKEN` and the generic one removed.
+   - The public store was reconnected in the dashboard with the prefix `PUBLIC_BLOB`, by the owner, after the CLI refused to let an agent delete and recreate it.
+   - The code takes a token or a store id for either store.
+4. **Core's `takePath()` is the one place that builds §28's take paths.**
+5. *Next:* T2.7 reads private videos back for the report, through signed GET URLs.
+
+---
+
 ## 2026-10-31 · Modal shim (T2.5b, #22)
 
 The Modal app `intenzo-worker` is deployed in workspace `sumithprabhu07` (`modal/app.py`), with the shim in `modal/shim.py`. The Cloud spawns and cancels its jobs from the outbox, and Modal's cron sweeps the Cloud every minute. The checks:
