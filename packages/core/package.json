@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./browser": "./src/browser/index.ts",
     "./navigator": "./src/navigator/index.ts",
-    "./models": "./src/models/index.ts"
+    "./models": "./src/models/index.ts",
+    "./intent": "./src/intent/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
