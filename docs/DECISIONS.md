@@ -5,6 +5,36 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Webhook intake (T2.1, #18)
+
+`apps/cloud` is now a Next.js 16.4.3 app with `POST /api/github/webhook`. It was checked two ways. Its 49 unit tests include every §12 event type from the T0.4 fixtures, run against a real in-process Postgres. Then `next start`, with a migrated PGlite socket server, received real fixture deliveries over HTTP. The hosted check (App registered, Neon, a real PR on demo-shop) is still pending.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Fixture deliveries through `next start` + node-postgres | `pull_request.opened` → 202; the same delivery again → 200 `duplicate`; `deployment_status` → 202; Vercel's `check_run` → 200 `ignored`; a wrong secret → 401. The work `after()` deferred then marked both stored rows processed |
+| `deployment_status` payloads | They carry `"check_run": null`. The first envelope schema only allowed the key to be absent, so it answered them with 400 |
+| A 64-bit id stored through `$1::jsonb` | `9007199254740993` reads back with every digit; `JSON.parse` turns it into `…992` |
+| A duplicate insert (`ON CONFLICT DO NOTHING`) | Still uses up an identity value, so row ids have gaps. Nothing relies on them being dense |
+
+### Decisions
+
+1. **Unit tests use a real Postgres, in-process (PGlite), with the production migrations.**
+   - *Why:* the rules worth testing live in SQL: the unique `delivery_id`, `ON CONFLICT`, jsonb. PGlite runs them with no Docker and no network, in about a second per test file, so they stay in the unit layer and run in CI.
+   - *Alternatives:* an in-memory fake would test our assumptions about Postgres, not Postgres. Docker isn't on every machine; it isn't on the one this was built on.
+   - *Next:* T2.4's two-drainers test needs real concurrent connections, which PGlite (one connection) can't give, so that test needs a Postgres server (Docker locally, a service container in CI).
+2. **The payload is stored as the request body cast to jsonb in SQL, never as `JSON.parse` output.**
+   - *Why:* T0.4 found 64-bit ids that `JSON.parse` rounds; Postgres keeps them exact.
+3. **Intake stores only §12 events, and only Intenzo's own check runs. Everything else gets 200 and is dropped.**
+   - *Why:* this is T0.4's decision 6. The App receives `check_suite` and every app's `check_run` on each push; storing them would bury the events that matter.
+4. **Dispatch is deferred with Next's `after()`, not `waitUntil()` from `@vercel/functions`.**
+   - *Why:* both Next.js and Vercel recommend `after()` from Next 15.1 on. On Vercel it extends the function the way `waitUntil` does. §12 is updated.
+5. **The real App gets its own credentials file (`GITHUB_APP_ENV=.env.intenzo-app`), next to T0.4's throwaway App.**
+   - *Why:* the scripts kept one App's credentials in `.env.github-app`, so a second registration meant `--force` over the first. Only gitignored `.env.<name>` files are accepted, and `.env.example` is refused, because git commits that one.
+
+---
+
 ## 2026-10-30 · Video outputs (T1.7, #16)
 
 Measured on 5 synthetic lanes (the cart page, a fill and a click, then the page painted red at a known canonical time), recorded with `openLane`, aligned with `alignVideo` and rendered with `renderVideos`. `video.browser.test.ts` runs the same check on every PR.

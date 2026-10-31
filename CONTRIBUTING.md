@@ -44,6 +44,8 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm gate:p0`                                      | The Phase 0 gate: `check:all`, CI, probes, ground truth, decisions, golden comment, demo ticket                                           |
 | `pnpm gate:p1`                                      | The Phase 1 gate: `check:all`, then C1–C4 recorded on both local demo-shop branches 3 runs in a row, against `fixtures/ground-truth.json` |
 | `pnpm intenzo record --path … --pr … [--base …]`    | Records a SavedPath with the §21.3 protocol (T1.6) and prints the readings. Takes go to `out/runs/`                                       |
+| `pnpm db:generate` / `pnpm db:migrate`              | Write a migration for a change to `apps/cloud/src/db/schema.ts` / apply them to `DATABASE_URL_UNPOOLED` (else `DATABASE_URL`) (T2.1)      |
+| `pnpm --filter @intenzo/cloud dev`                  | Intenzo Cloud locally (Next.js); env vars in `apps/cloud/.env.local` (see `apps/cloud/README.md`)                                         |
 
 The test layer is picked by file suffix (§6). `test:e2e` and `gate:p<N>` are added as the roadmap reaches them. For browser tests, install Chromium once with `pnpm --filter @intenzo/core exec playwright install chromium`.
 
