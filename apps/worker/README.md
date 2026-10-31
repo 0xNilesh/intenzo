@@ -60,6 +60,18 @@ pnpm intenzo record --path out/paths/C2.json --pr http://localhost:3001 --base h
 - **Exit code:** 0 when a path was found, 1 for `setup_failed` or `trigger_absent`, 2 for usage
   errors.
 
+## `intenzo intent` (T4.1)
+
+Reads a text ticket's criteria with Spark 1.3 (ARCHITECTURE §18, `intent.v1`) and prints them,
+with the tokens and the list-price cost. A checklist ticket gets one criterion per item.
+
+```bash
+pnpm intenzo intent --ticket fixtures/tickets/42.md [--out out/intent.json]
+```
+
+The ticket file's first `# ` line is its title. One call, two if the reply breaks the checklist
+rule: about $0.02. Needs `META_API_KEY` in `.env`.
+
 ## `intenzo job` (T2.5a, T2.7b)
 
 Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,

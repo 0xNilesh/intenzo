@@ -2,6 +2,7 @@
 //   pnpm intenzo <command> [options]
 import { JOB_USAGE, runJobCommand } from "./job/command.ts";
 import { EXPLORE_USAGE, runExplore } from "./explore.ts";
+import { INTENT_USAGE, runIntent } from "./intent.ts";
 import { RECORD_USAGE, runRecord, UsageError } from "./record.ts";
 
 const USAGE = `Usage: pnpm intenzo <command>
@@ -9,11 +10,14 @@ const USAGE = `Usage: pnpm intenzo <command>
 Commands:
   record   Record a SavedPath on the PR (and base) app with the observation protocol
   explore  Let the navigator find a criterion's trigger on the PR app and save the path
+  intent   Read a text ticket's criteria with Spark 1.3 (intent.v1)
 ${JOB_USAGE}
 
 ${RECORD_USAGE}
 
-${EXPLORE_USAGE}`;
+${EXPLORE_USAGE}
+
+${INTENT_USAGE}`;
 
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
@@ -22,6 +26,8 @@ async function main(argv: string[]): Promise<number> {
       return runRecord(rest);
     case "explore":
       return runExplore(rest);
+    case "intent":
+      return runIntent(rest);
     case "job":
       return runJobCommand(rest);
     case undefined:

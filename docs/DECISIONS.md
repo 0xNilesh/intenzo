@@ -5,6 +5,26 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Intent from text tickets (T4.1, #32)
+
+`core/intent` turns a ticket into criteria with Spark 1.3 (`intent.v1`), and `pnpm intenzo intent` runs it. Checked with 15 new unit tests (scripted replies) and one live call on `fixtures/tickets/42.md`.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Live, `42.md` (4 checklist items) | 4 criteria in order, matching C1–C4, with concrete values: "$50.00 to $45.00", "This code has expired", `persistence` on C2, `repro.startPath` /cart |
+| Its cost | 1 call: 952 input and 4,020 output tokens, 3,455 of them reasoning: $0.018 at list price |
+| Spark 1.3's list price | $1.25 / $0.15 / $4.25 per million input / cached / output tokens (dev.meta.ai/docs/pricing-rate-limits, read 2026-10-31); Voice Transcribe $0.18 an hour of audio. Now in `core/models/pricing.ts` |
+
+### Decisions
+
+1. **"Right away" and "at once" count as "instantly"**, so they get `timingMs` 1000 like "instantly" and "immediately" (§18). *Why:* the demo PM says "right away" for C2; without it, C2 would carry no timing claim.
+2. **An empty ticket makes no model call** and yields no criteria. Falling back to the PR body (labelled `pr_body`) is the Cloud's choice when it builds the bundle (P4).
+3. **After one retry, a reply that still breaks a rule is returned with its problems listed**, not thrown away, so a run can go on and the problems reach the logs.
+
+---
+
 ## 2026-10-31 · P3 gate closed, and hosted runs explore (#31)
 
 This supersedes the P3 gate entry's "`gate:p2` not run". `gate:p2` ran where `apps/cloud/.env.local` exists, on `main` at `c2ada41` with P3 merged, and P3's code was then deployed and checked on a hosted run.

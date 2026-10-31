@@ -447,9 +447,10 @@
 **Goal:** real criteria from a PM video ticket, and real verdicts from two Meta judges, streamed into the PR comment.
 
 ### T4.1 Intent from text tickets
-- [ ] **Build:** the `intent.v1` prompt + render + schema; checklist 1:1 validation (one retry); `timingMs` defaulting for "instantly"; `ticket_hash`.
-- [ ] **Tests:** fixture tickets (checklist, prose, empty) → expected criteria shapes; a checklist mismatch triggers a retry; the hash doesn't change when only the diff changes.
-- [ ] **Verify:** `pnpm intenzo intent --ticket fixtures/tickets/42.md`.
+- [x] **Build:** the `intent.v1` prompt + render + schema; checklist 1:1 validation (one retry); `timingMs` defaulting for "instantly"; `ticket_hash`.
+- [x] **Tests:** fixture tickets (checklist, prose, empty) → expected criteria shapes; a checklist mismatch triggers a retry; the hash doesn't change when only the diff changes.
+- [x] **Verify:** `pnpm intenzo intent --ticket fixtures/tickets/42.md`.
+  - *Live, Spark 1.3:* 4 criteria, one per checklist item, matching C1–C4: C2 "the order total changes from $50.00 to $45.00", within 1000 ms, surviving a reload; C3 copy "This code has expired"; C4 `ui_visual`; `repro.startPath` /cart. One call, 952 input and 4,020 output tokens (3,455 reasoning), $0.018.
 
 ### T4.2 Intent from the PM video
 - [ ] **Build:** ffmpeg → PCM → Voice Transcribe (the approach chosen in P0) → transcript with timings; ffmpeg → 2 fps frames/MP4 → Spark 1.3 video; `sourceQuote` + `sourceMediaAt`; `repro.startPath`.
