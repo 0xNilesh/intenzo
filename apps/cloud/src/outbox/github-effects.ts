@@ -4,17 +4,20 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { checkRunPayload, commentMarker, renderComment } from "@intenzo/core";
+
 import type { Db } from "../db/db.ts";
-import { repoConfig } from "../db/repos.ts";
 import { installations, outbox, repos, runGroups, runs } from "../db/schema.ts";
 import type { GitHub } from "../github/api.ts";
+import { reportModel } from "../report/model.ts";
 import type { EffectExecutor } from "./drain.ts";
-import { checkRunFields, commentBody, commentMarker } from "./render.ts";
 
 export interface GitHubEffectDeps {
   db: Db;
   /** A client acting as the App's installation. */
   github: (installationId: number) => GitHub;
+  /** Where the report pages live: https://intenzo-cloud.vercel.app */
+  reportBaseUrl: string;
 }
 
 export function githubExecutors(deps: GitHubEffectDeps): Record<string, EffectExecutor> {
@@ -57,7 +60,18 @@ export function checkRunExecutor(deps: GitHubEffectDeps): EffectExecutor {
           .where(eq(runs.id, runId));
         const { run, repo, installation } = ctx!;
         const github = deps.github(installation.ghInstallationId);
-        const fields = checkRunFields(run, repoConfig(repo).policy.inconclusive_conclusion);
+        const model = await reportModel(tx, run.runGroupId, deps.reportBaseUrl, runId);
+        const payload = checkRunPayload(model!);
+        const fields = {
+          status: payload.status,
+          ...(payload.conclusion && { conclusion: payload.conclusion }),
+          ...(run.startedAt && { started_at: run.startedAt.toISOString() }),
+          ...(payload.status === "completed" && {
+            completed_at: (run.finishedAt ?? new Date()).toISOString(),
+          }),
+          output: payload.output,
+          actions: payload.actions,
+        };
 
         // §16.4: a check run created by a drainer that died before saving its id is found by
         // its external_id, not created twice.
@@ -118,8 +132,9 @@ export function commentExecutor(deps: GitHubEffectDeps): EffectExecutor {
           .where(eq(runGroups.id, groupId));
         const { group, repo, installation } = ctx!;
         const github = deps.github(installation.ghInstallationId);
-        const groupRuns = await tx.select().from(runs).where(eq(runs.runGroupId, groupId));
-        const body = commentBody(group, groupRuns);
+        const model = await reportModel(tx, groupId, deps.reportBaseUrl);
+        if (!model) return null; // a group without runs has nothing to say yet
+        const body = renderComment(model);
         const comments = `/repos/${repo.fullName}/issues/${group.prNumber}/comments`;
 
         let id = group.commentId;

@@ -1,7 +1,7 @@
 // The run state machine (§16) as pure functions, so every rule is a table-driven test. The
 // database layer loads a run group, asks decide() what a fact changes, and writes the changed runs
 // and their effects in one transaction (§16.4; the effects become outbox rows in T2.4).
-import type { RunOutcome } from "@intenzo/core";
+import { type CheckConclusion, conclusionFor, type RunOutcome } from "@intenzo/core";
 
 export type RunState = "waiting_inputs" | "verifying" | "reporting" | "done";
 
@@ -73,7 +73,8 @@ export type Fact =
   /** The run's current job reported `failed`, with its error code (§9; the shim's `cancelled`, …). */
   | { kind: "job_failed"; runId: string; code: string };
 
-export type CheckConclusion = "success" | "failure" | "neutral" | "cancelled";
+// §22.5's conclusions live in core/report, which renders the check run; the machine uses the same.
+export { type CheckConclusion, conclusionFor } from "@intenzo/core";
 
 export type Effect =
   /** The run's `Intenzo` check run should now look like this (§26.2). */
@@ -166,26 +167,6 @@ function finish(
     run: { ...run, state: "done", outcome, outcomeReason: reason, finishedAt: now },
     effects,
   };
-}
-
-/** §22.5, plus: Intenzo's own errors never block a merge, and a superseded run is neutral (§16.3). */
-export function conclusionFor(
-  outcome: RunOutcome,
-  inconclusive: Group["inconclusiveConclusion"],
-): CheckConclusion {
-  switch (outcome) {
-    case "pass":
-      return "success";
-    case "fail":
-      return "failure";
-    case "inconclusive":
-      return inconclusive;
-    case "cancelled":
-      return "cancelled";
-    case "error":
-    case "superseded":
-      return "neutral";
-  }
 }
 
 /** What one fact changes in a group: runs to create, runs that change, and the effects. */

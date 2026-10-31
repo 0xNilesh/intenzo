@@ -10,6 +10,10 @@ import { drainOutbox } from "./outbox/drain.ts";
 import { githubExecutors } from "./outbox/github-effects.ts";
 import { jobExecutors } from "./outbox/job-effects.ts";
 
+/** Where the report pages are: INTENZO_CLOUD_URL, set on Vercel. */
+export const reportBaseUrl = (env: { INTENZO_CLOUD_URL?: string }) =>
+  env.INTENZO_CLOUD_URL ?? "http://localhost:3000";
+
 /** Installation tokens live for an hour, so one token cache per function instance. */
 let tokens: { key: string; mint: (installationId: number) => Promise<string> } | undefined;
 
@@ -26,7 +30,7 @@ export function cloud() {
   // Spawn and cancel run only once Modal is configured; until then those rows wait in the outbox.
   const modal = modalSettings(env);
   const executors = {
-    ...githubExecutors({ db, github }),
+    ...githubExecutors({ db, github, reportBaseUrl: reportBaseUrl(env) }),
     ...(modal &&
       jobExecutors({ db, modal, jobSecret: env.INTENZO_JOB_SECRET, newJobId: randomUUID, now })),
   };

@@ -68,7 +68,11 @@ async function freshGroup() {
 const drainer = () =>
   drainOutbox({
     db: t.db,
-    executors: githubExecutors({ db: t.db, github: () => githubClient(async () => "ghs_test") }),
+    executors: githubExecutors({
+      db: t.db,
+      github: () => githubClient(async () => "ghs_test"),
+      reportBaseUrl: "https://intenzo-cloud.vercel.app",
+    }),
     now: () => new Date(),
     log: () => {},
   });
