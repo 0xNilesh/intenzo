@@ -429,9 +429,9 @@
 - [x] **Verify:** `pnpm intenzo explore --criterion fixtures/criteria/C2.json --pr http://localhost:3001`; inspect the saved path and the step count.
 
 ### T3.5 Replay and path cache
-- [ ] **Build:** replay a `SavedPath` through the recorder (P1); a step failure on a cached path → discard, explore once, re-record; a path cache per run group + intent version.
-- [ ] **Tests:** a renamed button in a fixture → replay fails → re-explore succeeds → a new take is recorded.
-- [ ] **Verify:** an explored path replays on **both** PR and base.
+- [x] **Build:** replay a `SavedPath` through the recorder (P1); a step failure on a cached path → discard, explore once, re-record; a path cache per run group + intent version (the Cloud's `saved_paths`, filled by `path_saved` and sent back as `cachedPaths`).
+- [x] **Tests:** a renamed button in a fixture → replay fails → re-explore succeeds → a new take is recorded.
+- [x] **Verify:** an explored path replays on **both** PR and base (`intenzo explore` C2, then `intenzo record` on :3001 and :3000: PR $50.00 at +0/+1/+3 s and $45.00 after the reload, base `trigger_absent`).
 
 ### ✅ Phase 3 gate: `pnpm gate:p3`
 - `gate:p2` passes, plus all P3 tests.

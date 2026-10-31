@@ -412,7 +412,7 @@ export const VerifyJob = JobBase.extend({
 - **Attachments:** the ticket is fetched with `Accept: application/vnd.github.full+json`. Image and video URLs are taken from `body_html` (signed `private-user-images…?jwt=` URLs for private repos) and **downloaded immediately** in the same function (verify on day 1).
   - **Seen in T0.7, private repo:** a video's URL in `body_html` was a plain `https://github.com/user-attachments/assets/<uuid>` link, not a signed `?jwt=` URL. An authenticated GET with a user token downloaded it (302 to storage, then 200 `video/mp4`). Whether an App installation token can fetch it is untested; T4.2 must check, unless the demo repo is public by then.
 - If that fails, the bundle records `media_unavailable` and the report says so. The demo repo is public, so this doesn't affect it.
-- **Built in T2.7b:** the Cloud's spawn effect sends this VerifyJob, with `bundleUrl: null` until the Cloud builds bundles (P4), `intent: null` (the job computes it) and no `cachedPaths` until the navigator saves some (P3). It's checked against core's schema before it goes.
+- **Built in T2.7b:** the Cloud's spawn effect sends this VerifyJob, with `bundleUrl: null` until the Cloud builds bundles (P4), `intent: null` (the job computes it) and, since T3.5, `cachedPaths`: the group's saved paths for its latest intent version. It's checked against core's schema before it goes.
 
 ## 9. Worker events
 
@@ -801,6 +801,12 @@ VerifyJob (Modal: 4 CPU, 8 GB, timeout 900 s; Node limit 870 s)
   - Each lane's `human.mp4` goes to the private store, in the first take number no earlier job of the run used (Blob refuses to overwrite, §28).
   - The verdict is the stub's fixed one, with the window `[Tt − 1 s, Tt + 3 s]` of the PR lane, when that lane completed. Otherwise it's inconclusive with §22.1's reason (`trigger_absent` counts as `precondition_unmet` until the judges look at it).
   - The job's secrets are replaced with `[redacted]` in every lane, log line and crash message before they leave the worker: Playwright's call logs can quote request headers.
+- **Built in T3.5, the path cache and replay** (`core/navigator/replay.ts`, the worker's verify job, the Cloud's `saved_paths`):
+  - With the Meta key in its environment, the worker's recorder can explore. Each PR side goes through `recordWithPath()` (step 3a–b): the cached path replays; with none, the navigator explores once and the path it saves is recorded; a cached path whose replay breaks on one of its own steps (`setup_failed` or `trigger_absent` at a step) is discarded, explored once more and recorded as the next take. A replay that completes, or fails some other way, is never re-explored.
+  - A newly explored path goes to the Cloud as `path_saved`, which upserts it under the run group, criterion and the run's intent version (a path that arrives before `intent_ready` is dropped). The base side replays the PR's path.
+  - The Cloud sends the group's saved paths for its **latest** intent version: the job only works its intent out at step 0, and a stale path is caught by the replay rule above.
+  - When the navigator can't reach the trigger, the criterion is inconclusive with the navigator's reason and no base side is recorded.
+  - Without the key, jobs still use the hand-written paths, so the hosted behaviour changes only once the worker's Modal secret holds `META_API_KEY`.
 
 ## 20. Navigator: the exploration loop
 
