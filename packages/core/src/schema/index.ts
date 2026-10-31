@@ -1,4 +1,4 @@
-export { ArtifactRef } from "./artifact.ts";
+export { ArtifactRef, takePath } from "./artifact.ts";
 export { CoverageMap, Criterion, CriterionId, CriterionSet, ReproHints } from "./criterion.ts";
 export {
   LoggedStep,
