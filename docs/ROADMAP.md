@@ -505,6 +505,12 @@
 - [x] **Verify:** watch the comment update live on a real PR.
   - *Live, demo-shop#15 (the almost-right code, both judges on Modal):* waiting for the preview → the 4 criteria listed (⏳, 0/4 judged) at +25 s → C3 ✅ at +49 s, C1 ✅ +57 s, C4 ✅ +74 s → C2 ❌ at +86 s after its re-record → "❌ 3/4 passed", "Judges: Spark Open + Spark 1.3", ⏱ 1 m 8 s. The first run on that PR was preempted by Modal and came back all inconclusive, which `nonpreemptible` and the worker's SIGTERM exit now prevent.
 
+### T4.8 Hosted intent: the PR's ticket and its recording
+*Added 2026-10-31 (DECISIONS · Hosted intent): P4's goal has a PM's video become criteria on hosted runs, but no task built §8's context bundle, so hosted jobs still read the fixtures.*
+- [x] **Build:** the Cloud's context bundle at spawn (the PR, its ticket by §17.2, the ticket's recording downloaded and stored privately, the diff), signed URLs for the worker, an intent version reused by ticket hash; the worker reads the ticket and recording into criteria and maps coverage from the diff, the judges' caps getting each criterion's coverage.
+- [x] **Tests:** the bundle's content, a recording that can't be downloaded, no ticket; the spawn sends the bundle and reuses an intent version, and goes on without a bundle; the worker's criteria from the ticket and recording, a reused intent, text alone, the fixtures without a model.
+- [ ] **Verify:** a demo-shop PR that closes #5 gets criteria read from the PM's recording, in a hosted run.
+
 ### ✅ Phase 4 gate: `pnpm gate:p4`
 - `gate:p3` passes, plus all P4 tests.
 - **Golden test:** on the almost-right PR, the hosted run's comment matches `demo/expected-comment.md` (verdict per criterion, the readings line for C2) in **3 of 3 runs**.
