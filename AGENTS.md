@@ -426,6 +426,10 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **`deployment_status` payloads carry `"check_run": null`.** Webhook schemas must accept `null` wherever GitHub may send it (T2.1).
 - **The Vercel CLI doesn't read `.gitignore`.** Deploying from the repo root would upload `.env`, `.env.github-app` and the App's `.pem` without `.vercelignore`. Keep it.
 - **A Vercel project created by the CLI keeps the "Other" preset** when its Root Directory is set later; `apps/cloud/vercel.json` pins Next.js.
+- **`commits/{sha}/pulls` lists every open PR that _contains_ the commit**, not only those whose head it is. Compare `head.sha` (T2.3).
+- **A Vercel redeploy adds a second `success` status, with a new URL, to the same GitHub deployment.** Read a deployment's newest status, not its first (T2.3).
+- **Next 16 (Turbopack) traces the whole project into a function** when any bundled module calls `fs` with a dynamic path, even code the function never runs. Mark such calls `/*turbopackIgnore: true*/`, as core's `readConfig()` does, and check the trace count in `.next/server/app/**/route.js.nft.json` (T2.3).
+- **msw 3 renamed `onUnhandledRequest` to `onUnhandledFrame`**, and `http`/`HttpResponse` come from `msw/http` (T2.3).
 
 **Next.js (demo-shop, T0.5–T0.6)**
 

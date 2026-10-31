@@ -5,6 +5,53 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Deployments and baseline resolution (T2.3, #20)
+
+The Cloud now handles `pull_request` and `deployment_status` (`apps/cloud/src/github/handlers.ts`). It acts as the App through installation tokens, and gives each run that starts verifying a baseline (`apps/cloud/src/runs/baseline.ts`). The checks:
+
+- 84 new unit tests in `apps/cloud` (and 2 in core), against msw-mocked GitHub and PGlite.
+- Deliberately broken rules, to check the tests catch them.
+- A throwaway PR on demo-shop (#7), read back from the Cloud's logs, Neon and GitHub's delivery log.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| The T0.4 deliveries played through the handlers | PR #2 opened, pushed, then its Preview deployed: the pushed run verifies that preview, with the merge base's Preview as its baseline. The merge base's Production deployment is skipped before its status is read |
+| Do the tests catch a broken rule? | Each of these failed at least one test: dropping the production check (from matching, the deployments lookup or the handler), the PR-head check, the fact's own preview, the first-parent walk, the drift limit, or the guard that keeps a failure from replacing a success |
+| Hosted, demo-shop#7 (empty commit `b4e35b0` on `main` `b6b60c7`) | The Cloud's log: `run c550bcd3 (b4e35b0 #1, opened): waiting_inputs`, then 14 s later `verifying https://demo-shop-60b7pwtbw-…`, then `baseline main@b6b60c7 (the merge base) at https://demo-shop-dly0m1skm-…`, which is `main`'s Preview. In Neon: `base_sha` `b6b60c7`, `base_drift` 0, `main`'s deployment backfilled from the API, `.intenzo.yml` read from `main`. All 5 deliveries were processed with no error; GitHub logged 202 or 200 for each |
+| Vercel's deployments on demo-shop | `main` deploys as Preview (its production branch is `release`), so every `main` commit has a baseline. A redeploy added a second `success` status, with a new URL, to the *same* GitHub deployment. No deployment is ever marked `inactive` |
+| `commits/{sha}/pulls` | Lists the open PRs that *contain* the commit, not only those whose head it is |
+| Next 16 build once the Cloud imports values from `@intenzo/core` | Turbopack traced the whole project into the webhook function: 250 files, the Cloud's own sources and tests among them. The cause was `readConfig()`'s file reads on a dynamic path. With `/*turbopackIgnore: true*/` it traces 199 files and no sources |
+
+### Decisions
+
+1. **A deployment advances the open PRs whose head is that commit, found with GitHub's `commits/{sha}/pulls` (§16.2).**
+   - *Why:*
+     - GitHub knows a PR's head even before Intenzo has handled the push. A preview of a commit the PR has already moved past therefore starts nothing, instead of starting a run that the push would supersede.
+     - Closed PRs drop out the same way.
+   - *Alternatives:* looking the commit up in our own `runs`. It saves one call, but it would start that doomed run, and it can't tell that a PR has closed until a `closed` handler exists.
+2. **Production is recognized by name, and the rule errs toward production:** an environment that starts with "prod" or says "production" is never used, on either side, whatever `preview.environment_prefix` says.
+   - It's checked before a deployment's status is even read.
+   - `repos.prod_domains` is checked as well.
+3. **A failure never replaces a stored success for the same commit and environment.**
+   - *Why:* the earlier deployment still serves the commit at its URL, so a failed redeploy mustn't hide a working preview.
+4. **The baseline is resolved when a run starts verifying, and stored on the run.** The columns are `base_url`, `base_sha` and a new `base_drift`, which the report and §24 need.
+   - If the lookup fails, that's logged and the run goes on without a baseline, as §17.3 says for a missing one.
+   - *Next:* T2.4 moves the lookup into executing the spawn effect, so the outbox retries it.
+5. **`.intenzo.yml` is read from the default branch on each PR event and stored in `repos.config_json`; deployment events use the stored copy.**
+   - *Why:* a PR mustn't be able to change the rules it's verified under.
+   - A config with problems is logged and nothing runs.
+   - *Next:* T2.7 reports config problems on the PR.
+6. **Repos and installations are added from any event**, because installation events aren't handled yet.
+7. **Tests mock GitHub with msw 3**, as the roadmap asks, plus PGlite for the database.
+8. *Next:*
+   - The effects (check runs, the comment, spawn) are only logged until T2.4's outbox runs them.
+   - Nothing ends a run whose PR is closed, and nothing applies `policy.run_on` or `allow_forks` yet.
+   - demo-shop#7's run stays `verifying` until the sweeper's deadline exists.
+
+---
+
 ## 2026-10-31 · Run state machine and tables (T2.2, #19)
 
 `apps/cloud/src/runs/transition.ts` holds the §16 machine as pure functions; `apps/cloud/src/db/schema.ts` holds every §11 table (migration `0001_run_tables`). 27 table-driven tests cover the machine and 7 cover the tables, all on PGlite. `pnpm db:migrate` applied both migrations to Neon.
