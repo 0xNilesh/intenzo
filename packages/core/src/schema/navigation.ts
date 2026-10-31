@@ -105,3 +105,57 @@ export const SavedPath = z
     }
   });
 export type SavedPath = z.infer<typeof SavedPath>;
+
+/** An element id from the current page outline: e12, or f1e3 inside an iframe (§20.1). */
+export const OutlineRef = z
+  .string()
+  .regex(/^(f\d+)?e\d+$/, { message: "must be a ref from the outline, like e12" });
+
+/** One navigator action as the model names it: a Step whose element is an outline ref (§20.2). */
+export const NavOp = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("goto"), path: SameOriginPath }),
+  z.object({ op: z.literal("click"), ref: OutlineRef }),
+  z.object({ op: z.literal("fill"), ref: OutlineRef, value: z.string() }),
+  z.object({ op: z.literal("select"), ref: OutlineRef, option: z.string() }),
+  z.object({ op: z.literal("press"), key: z.string().min(1) }),
+  z.object({
+    op: z.literal("scroll"),
+    direction: z.enum(["up", "down"]),
+    ref: OutlineRef.optional(),
+  }),
+  z.object({ op: z.literal("wait"), ms: z.number().int().positive().max(MAX_WAIT_MS) }),
+  z.object({ op: z.literal("back") }),
+  /** Show a collapsed landmark or a cut list in full in the next outline. */
+  z.object({ op: z.literal("expand"), ref: OutlineRef }),
+]);
+export type NavOp = z.infer<typeof NavOp>;
+
+/** The model's reply on each explore step (§20.2). */
+export const NavAction = z
+  .object({
+    thought: z.string(),
+    phase: z.enum(["setup", "trigger"]),
+    action: NavOp.optional(),
+    status: z.enum(["continue", "trigger_done", "give_up"]),
+    /** The elements the criterion is about, named when the trigger is done. */
+    watch: z.array(z.object({ label: z.string().min(1), ref: OutlineRef })).optional(),
+    reason: z.enum(["precondition_unmet", "trigger_not_found", "blocked"]).optional(),
+  })
+  .superRefine((a, ctx) => {
+    const issue = (path: string, message: string) =>
+      ctx.addIssue({ code: "custom", path: [path], message });
+    if (a.status === "give_up") {
+      if (a.action) issue("action", "give_up takes no action");
+      if (!a.reason) issue("reason", "give_up needs a reason");
+      return;
+    }
+    if (!a.action) issue("action", `${a.status} needs an action`);
+    if (a.reason) issue("reason", "only give_up has a reason");
+    if (a.status === "trigger_done") {
+      if (!a.watch?.length) issue("watch", "trigger_done needs at least one watch element");
+      if (a.action?.op === "expand") issue("action", "expand can't be the trigger");
+    } else if (a.watch) {
+      issue("watch", "only trigger_done names watch elements");
+    }
+  });
+export type NavAction = z.infer<typeof NavAction>;
