@@ -402,11 +402,11 @@
 **Goal:** Intenzo reaches each criterion's trigger by itself and saves replayable paths.
 
 ### T3.1 Outline wrapper (`core/browser/outline.ts`)
-- [ ] **Build:** `_snapshotForAI()` wrapper + pruning (banner collapse, list collapse, ~6k token cap); an `aria-ref` locator helper; the `data-iz-ref` fallback behind a flag.
-- [ ] **Tests:**
-  - **contract test** on a fixture page: snapshot contains `[ref=eN]`, `aria-ref=eN` resolves, iframe content is included
+- [x] **Build:** AI snapshot (`page.ariaSnapshot({ mode: "ai" })`, public since Playwright 1.64; it replaced `_snapshotForAI()`) wrapper + pruning (banner collapse, list collapse, ~6k token cap); a ref locator helper (`page.getByRef`); the `data-iz-ref` fallback behind a flag.
+- [x] **Tests:**
+  - **contract test** (`outline.browser.test.ts`: it needs Chromium, which CI installs only before the browser layer) on a fixture page: snapshot contains `[ref=eN]`, `aria-ref=eN` resolves, iframe content is included
   - the pruning test keeps the cap
-- [ ] **Verify:** `pnpm test:contract -- outline`; print the outline for demo-shop `/products`.
+- [x] **Verify:** `pnpm --filter @intenzo/core test:browser outline`; print the outline for demo-shop `/products`.
 
 ### T3.2 Action guard
 - [ ] **Build:** `NavAction` validation; guards for same-origin `goto`, refs that exist, `deny_text`, the allowed op set.

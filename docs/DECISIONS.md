@@ -5,6 +5,29 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · The navigator's outline (T3.1, #26)
+
+Measured with Playwright 1.64.1 (pinned) against a fixture page (`packages/core/src/browser/outline.browser.test.ts`) and local demo-shop `/products`.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| `page._snapshotForAI()` (what §20.1 planned on) | **Gone**: `TypeError: p._snapshotForAI is not a function` |
+| `page.ariaSnapshot({ mode: "ai" })` | Public and documented: aria YAML with `[ref=eN]` on every node, `[cursor=pointer]` on clickables, `/url:` under links, iframe content with `fNeM` refs |
+| `page.getByRef(ref)` | Resolves a ref against the frame's latest snapshot, iframe refs included; two identical "Add to cart" buttons get distinct refs |
+| demo-shop `/products` | 383 tokens on turn 1, 327 with the banner collapsed (cap 6,000) |
+
+### Decisions
+
+1. **The outline uses the public `page.ariaSnapshot({ mode: "ai" })` and `page.getByRef`.**
+   - *Why:* the internal API no longer exists, and the public one gives the same snapshot Playwright MCP uses.
+   - *Alternatives:* the `data-iz-ref` fallback, kept behind `buildOutline(page, { fallback: true })` and tested.
+2. **The contract test runs in the browser layer** (`outline.browser.test.ts`), since CI installs Chromium only after the contract layer.
+3. **Collapsed landmarks drop their controls' refs**, and the model asks for them with an `expand` of the landmark's ref. This keeps `Outline.refs` equal to the refs in the text, so the guard (T3.2) can reject anything else.
+
+---
+
 ## 2026-10-31 · P2 gate (#25)
 
 `pnpm gate:p2` (`scripts/gates/p2.ts`) checks the hosted walking skeleton without creating anything, and passed on 2026-10-31 against T2.7b's live run on demo-shop#13.
