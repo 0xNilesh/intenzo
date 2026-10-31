@@ -54,7 +54,10 @@ node apps/worker/src/main.ts job job.json
   store; GIFs and stills to the public one (ARCHITECTURE §28).
 - **Jobs:**
   - A `sleep` job (`seconds`, `aliveEverySeconds`) exercises the protocol and the shim.
-  - A `verify` job answers `failed` (`not_implemented`) until T2.7.
+  - A `stub` job (T2.7a) reports the demo's criteria (`fixtures/criteria`, C1–C4) with fixed
+    verdicts, C2 failing and the others passing, then finishes `fail`. The Cloud spawns it until
+    the worker records for real (T2.7b).
+  - A `verify` job answers `failed` (`not_implemented`) until T2.7b.
 
 ## Tests
 

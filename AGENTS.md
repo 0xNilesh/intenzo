@@ -441,6 +441,8 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - **msw's `"error"` strategy only makes the request throw**, and code that catches errors hides it. `src/github/fake-github.ts` records unanswered requests and fails the test in `afterEach` (T2.4).
 - **pg's `pool.end()` resolves before its connections have closed.** Dropping their database `WITH (FORCE)` then kills them mid-close and their clients raise FATAL 57P01; retry a plain `DROP DATABASE` while it reports 55006 instead (T2.4).
 - **An App receives the events its own actions cause:** its check run's `check_run.created`, its comment's `issue_comment.created` and `edited` (T2.4).
+- **GitHub's API doesn't return a check run's requested actions** (neither REST nor GraphQL). Look for the buttons in the Checks tab (T2.7a).
+- **A check run without `details_url` links to the App's homepage**, and intenzo-ai's is set to `https://intenzo-cloud.vercel.app.` (a stray period). Intenzo sends the run's report as `details_url` (T2.7a).
 
 **Next.js (demo-shop, T0.5–T0.6)**
 

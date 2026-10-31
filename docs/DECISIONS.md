@@ -5,6 +5,37 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · The report: comment, check run and page (T2.7a, #24)
+
+The comment and the check run are now rendered by `core/report` from one report model, which the Cloud builds from the database on every change (`apps/cloud/src/report/model.ts`). Each run has a page at `/r/{runId}`. The worker's results (`intent_ready`, `criterion_verdict`, `criterion_evidence`) are stored, and the job the Cloud spawns is a stub that reports the demo's criteria with fixed verdicts. The checks:
+
+- 34 more unit tests than `main` (core +27, the Cloud +6 after the T2.4 renderer's tests moved to core, the worker +1), with a snapshot of the comment for each outcome in `packages/core/src/report/__snapshots__/`.
+- A live run on demo-shop#12.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Live, demo-shop#12 | The run took 13 s, from its preview being ready to its end. The comment read "❌ 3/4 passed · attempt 1": the four criteria, C2's expected and observed text, the baseline (`b6b60c7`, the merge base), the judges and a report link per criterion. The check run completed as `failure`, titled "3/4 passed", with the same table. `/r/{runId}` answered 200 with the four verdicts, and a malformed id 404. A second commit added "Earlier runs (1)" to the same comment |
+| The check run's Details link | A check run without a `details_url` links to the App's homepage, and intenzo-ai's is set to `https://intenzo-cloud.vercel.app.` (a stray period). Each check run now links to its run's report; the second commit's did |
+| Reading the buttons back | Neither GitHub's REST check-run object nor GraphQL's `CheckRun` has the requested actions, so they can only be seen in the Checks tab. The PATCH that carried them succeeded: the conclusion and title came in the same request |
+| GitHub's comment limit | 65,536 characters (§26.1). Above it the comment drops its collapsed sections, earlier runs first, then the readings, before it cuts any text |
+
+### Decisions
+
+1. **One report model renders both the comment and the check run** (`ReportModel` in `core/report`), rebuilt from the database each time, so the two always agree (§26.1, §26.2).
+   - *Why:* they share one table, and a renderer without I/O is pinned by snapshot tests with no database.
+   - The Cloud's T2.4 renderer (`outbox/render.ts`) is gone, and `conclusionFor` moved to core.
+2. **Ticket and model text is escaped before it reaches GitHub:** `|`, `<`, `>` and `&` in table cells, and a zero-width space after every `@`, so a criterion can't break the table or notify anyone (§29).
+3. **The report page is a capability URL in v0:** anyone with a run's link sees its report. Run ids are random UUIDs, and private videos play through signed GET URLs valid for an hour, made each time the page renders.
+   - *Why:* the demo's reviewers open it from the PR without logging in.
+   - *Alternatives:* GitHub OAuth with a repo-access check, which §28 plans for private repos. Recorded as risk R13.
+4. **Each check run's Details link is its own run's report**, so a superseded run's check run keeps pointing at that run.
+5. **The Cloud spawns a `stub` job until T2.7b.** It reports `fixtures/criteria` C1–C4 with fixed verdicts (C2 fails, the others pass), judged by `stub`, then finishes `fail`.
+6. *Next:* T2.7b records real videos on Modal and cites them as the stub's evidence.
+
+---
+
 ## 2026-10-31 · Artifact upload (T2.6, #23)
 
 The worker uploads its files straight to Blob through presigned URLs the Cloud hands out per file (`POST /api/worker/upload-tokens`, `apps/cloud/src/artifacts/upload-tokens.ts`, `apps/worker/src/job/upload.ts`). The checks:
