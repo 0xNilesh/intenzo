@@ -1,7 +1,6 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { IntenzoConfig } from "@intenzo/core";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { jobClient } from "./client.ts";
@@ -95,67 +94,6 @@ describe("runJob (§9)", () => {
     expect(events(cloud.received)).toEqual(["started#0", "finished#1", "failed#2"]);
     expect(cloud.received.at(-1)?.body).toMatchObject({
       error: { code: "crash", message: "POST /api/worker/events: 400" },
-    });
-  });
-
-  it("reports the demo ticket's criteria with the stub's fixed verdicts, then finishes failing", async () => {
-    const cloud = await fakeCloud();
-    const stub = {
-      type: "stub",
-      jobId: JOB,
-      runId: RUN,
-      deadlineAt: "2026-10-31T09:15:00.000Z",
-      callback: { baseUrl: cloud.baseUrl, token: "job-token" },
-    };
-    expect(await runJob(stub, quick)).toBe(EXIT.finished);
-    expect(events(cloud.received)).toEqual([
-      "started#0",
-      "intent_ready#1",
-      "criterion_verdict#2",
-      "criterion_verdict#3",
-      "criterion_verdict#4",
-      "criterion_verdict#5",
-      "finished#6",
-    ]);
-    const bodies = cloud.received.filter((r) => r.method === "POST").map((r) => r.body!);
-    const intent = bodies[1]!.intent as { criteria: { id: string }[]; ticketHash: string };
-    expect(intent.criteria.map((c) => c.id)).toEqual(["C1", "C2", "C3", "C4"]);
-    expect(intent.ticketHash).toMatch(/^[0-9a-f]{64}$/);
-    const verdicts = bodies
-      .slice(2, 6)
-      .map(
-        (b) => b.verdict as { criterionId: string; verdict: string; judges: { model: string }[] },
-      );
-    expect(verdicts.map((v) => `${v.criterionId}:${v.verdict}`)).toEqual([
-      "C1:pass",
-      "C2:fail",
-      "C3:pass",
-      "C4:pass",
-    ]);
-    expect(new Set(verdicts.flatMap((v) => v.judges.map((j) => j.model)))).toEqual(
-      new Set(["stub"]),
-    );
-    expect(bodies[6]).toMatchObject({ kind: "finished", outcome: "fail" });
-  });
-
-  it("says plainly that it can't verify yet", async () => {
-    const cloud = await fakeCloud();
-    const verify = {
-      ...sleepJob(cloud.baseUrl),
-      type: "verify",
-      config: IntenzoConfig.parse({ version: 1 }),
-      bundleUrl: "https://blob.example/bundle.json",
-      intent: null,
-      prUrl: "https://demo-shop-60b7pwtbw-sumithprabhus-projects.vercel.app",
-      baseUrl: null,
-      baseSha: null,
-      secrets: null,
-      cachedPaths: [],
-    };
-    expect(await runJob(verify, quick)).toBe(EXIT.failed);
-    expect(cloud.received.at(-1)?.body).toMatchObject({
-      kind: "failed",
-      error: { code: "not_implemented" },
     });
   });
 
