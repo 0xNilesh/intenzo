@@ -5,11 +5,16 @@
 // hand-written paths (fixtures/paths) are used. The people's videos are uploaded (§28).
 // With both judges' keys (T4.6b), each criterion is judged (§22) in a queue apart from the
 // recording slots, re-recorded once when §19 e says so; without them, it gets the stub's verdict.
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   type ArtifactRef,
+  ContextBundle,
+  type CoverageMap,
   type Criterion,
+  type CriterionSet,
   type IntenzoConfig,
   type LaneResult,
   type ReasonCode,
@@ -28,7 +33,20 @@ import {
   rerecordFor,
   verdictOf,
 } from "@intenzo/core/judge";
-import { costUsd, type ModelUsage } from "@intenzo/core/models";
+import { COVERAGE_MODEL, mapCoverage } from "@intenzo/core/coverage";
+import {
+  extractIntent,
+  INTENT_MODEL,
+  prepareTicketVideo,
+  type TicketVideo,
+} from "@intenzo/core/intent";
+import {
+  costUsd,
+  metaModelPort,
+  type ModelPort,
+  type ModelUsage,
+  transcribeCostUsd,
+} from "@intenzo/core/models";
 import {
   NAVIGATOR_MODEL,
   PathCache,
@@ -173,6 +191,12 @@ async function uploadTake(
 
 export interface VerifyDeps {
   recorder: Recorder;
+  /** The Meta key: the job reads its ticket (intent) and maps coverage with it (§18). */
+  metaKey?: string;
+  /** The model port for intent and coverage; by default the Meta API with metaKey. */
+  models?: ModelPort;
+  /** Reads the PM's recording from its signed URL (transcript and video); injectable for tests. */
+  readRecording?: (url: string) => Promise<TicketVideo>;
   /** Spark Open and Spark 1.3 (judgesFromEnv); null: stub verdicts. */
   judges?: readonly [Judge, Judge] | null;
   log: (line: string) => void;
@@ -219,8 +243,71 @@ export async function verify(
   const queue = new Limiter(JUDGE_SLOTS);
   let spent = 0;
   const spend = (model: string, usage: ModelUsage) => (spent += costUsd(model, usage) ?? 0);
-  const intent = job.intent ?? stubIntent();
-  await client.send({ kind: "intent_ready", intent, coverage: { items: [], routes: [] } });
+
+  /** The ticket's criteria (§18): its text, and the PM's recording when it has one (T4.2). */
+  const readIntent = async (bundle: ContextBundle, models: ModelPort): Promise<CriterionSet> => {
+    const ticket = bundle.ticket
+      ? {
+          ref: bundle.ticket.ref,
+          title: bundle.ticket.title,
+          body: bundle.ticket.body,
+          comments: bundle.ticket.comments,
+        }
+      : { ref: "PR body", title: bundle.pr.title, body: bundle.pr.body, comments: [] };
+    let recording: TicketVideo | undefined;
+    const [url] = bundle.mediaUrls;
+    const read = deps.readRecording ?? (deps.metaKey ? readRecordingFrom(deps.metaKey) : null);
+    if (url && read) {
+      try {
+        recording = await read(url);
+        spent += transcribeCostUsd(recording.transcript.audioDurationMs ?? 0);
+      } catch (err) {
+        log(
+          redact(`the ticket's recording couldn't be read: ${(err as Error).message}`).slice(
+            0,
+            300,
+          ),
+        );
+      }
+    }
+    const result = await extractIntent(models, ticket, {
+      intentSource: bundle.ticket ? (recording ? "linked_issue_video" : "linked_issue") : "pr_body",
+      ...(recording && {
+        transcript: recording.transcript.text,
+        video: {
+          dataUrl: recording.dataUrl,
+          ...(recording.transcript.audioDurationMs && {
+            durationMs: recording.transcript.audioDurationMs,
+          }),
+        },
+        mediaHashes: [recording.mediaHash],
+      }),
+    });
+    spend(INTENT_MODEL, result.usage);
+    for (const p of result.problems) log(redact(`intent: ${p}`).slice(0, 300));
+    log(
+      `intent: ${result.intent.criteria.length} criteria from ${ticket.ref}${recording ? " and its recording" : ""}`,
+    );
+    return result.intent;
+  };
+
+  // §19 step 0: the bundle's ticket and recording become the criteria, unless the Cloud reused an
+  // intent version; the diff maps them to the files the PR changed. Without a bundle or a model
+  // key, the demo's fixture criteria stand in (stub.ts).
+  const bundle = job.bundleUrl ? await fetchBundle(job.bundleUrl) : null;
+  const models = deps.models ?? (deps.metaKey ? metaModelPort({ apiKey: deps.metaKey }) : null);
+  let intent = job.intent;
+  if (!intent && bundle && models) intent = await readIntent(bundle, models);
+  intent ??= stubIntent();
+  let coverage: CoverageMap = { items: [], routes: [] };
+  if (bundle && models && intent.criteria.length > 0 && bundle.diff.files.length > 0) {
+    const mapped = await mapCoverage(models, intent.criteria, bundle.diff);
+    spend(COVERAGE_MODEL, mapped.usage);
+    for (const p of mapped.problems) log(redact(`coverage: ${p}`));
+    coverage = mapped.coverage;
+  }
+  await client.send({ kind: "intent_ready", intent, coverage });
+  const coverageOf = (id: string) => coverage.items.find((i) => i.criterionId === id)?.status;
 
   const hookPath = job.config.isolation.session_hook;
   const hookSecret = job.secrets?.hookSecret;
@@ -344,6 +431,7 @@ export async function verify(
           criterion,
           pr.judge,
           recorded.base?.judge ?? null,
+          coverageOf(criterion.id),
         );
         for (const call of judged.calls) {
           spend(call.model, call.usage);
@@ -405,6 +493,29 @@ export async function verify(
   const criteria = intent.criteria.filter((c) => !job.only || job.only.includes(c.id));
   const verdicts = await Promise.all(criteria.map(verifyOne));
   return { outcome: judges ? aggregateOutcome(verdicts) : stubOutcome(verdicts), costUsd: spent };
+}
+
+/** The bundle the Cloud stored for the run (§8), through its signed URL. */
+async function fetchBundle(url: string): Promise<ContextBundle> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) throw new Error(`the context bundle: HTTP ${response.status}`);
+  return ContextBundle.parse(await response.json());
+}
+
+/** Downloads the PM's recording from its signed URL, then transcribes and encodes it (§18). */
+function readRecordingFrom(apiKey: string): (url: string) => Promise<TicketVideo> {
+  return async (url) => {
+    const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const dir = mkdtempSync(join(tmpdir(), "intenzo-ticket-"));
+    try {
+      const file = join(dir, "recording.mp4");
+      writeFileSync(file, new Uint8Array(await response.arrayBuffer()));
+      return await prepareTicketVideo(file, { apiKey });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
 }
 
 /** §22.4 over the judges' verdicts; no criteria at all is inconclusive. */

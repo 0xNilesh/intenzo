@@ -108,6 +108,84 @@ const drain = (secretsKey?: Buffer | null) =>
   });
 const run = async () => (await t.db.select().from(runs).where(eq(runs.id, RUN)))[0]!;
 
+describe("the spawn effect's context bundle (§8, T4.8)", () => {
+  const HASH = "c".repeat(64);
+  const CRITERIA = ["C1"].map((id) => ({
+    id,
+    text: "SAVE10 adds a discount line",
+    trigger: "apply SAVE10",
+    setup: [],
+    expected: "a SAVE10 −$5.00 line",
+    watch: ["discount line"],
+    kind: "ui_behavior",
+    persistence: false,
+    inferred: false,
+  }));
+  const drainWith = (
+    bundle: NonNullable<Parameters<typeof jobExecutors>[0]["bundle"]>,
+    lines: string[] = [],
+  ) =>
+    drainOutbox({
+      db: t.db,
+      executors: jobExecutors({ ...deps(), bundle, log: (l) => lines.push(l) }),
+      now: () => T0,
+      log: () => {},
+    });
+
+  it("sends the bundle's signed URL, and the intent an earlier run read from the same ticket", async () => {
+    await t.db.insert(intentVersions).values({
+      runGroupId: groupId,
+      ticketHash: HASH,
+      intentJson: { criteria: CRITERIA, intentSource: "linked_issue_video", ticketHash: HASH },
+    });
+    const asked: unknown[] = [];
+    await drainWith(async (target) => {
+      asked.push(target);
+      return {
+        bundleUrl: "https://private.blob.example/bundle.json?sig=1",
+        ticketHash: HASH,
+        bundle: {} as never,
+      };
+    });
+    expect(asked).toEqual([
+      {
+        installationId: 177107116,
+        repo: "sumithprabhu/demo-shop",
+        prNumber: 7,
+        runId: RUN,
+        isFork: false,
+      },
+    ]);
+    expect(calls[0]!.body).toMatchObject({
+      bundleUrl: "https://private.blob.example/bundle.json?sig=1",
+      intent: { criteria: [{ id: "C1" }], ticketHash: HASH },
+    });
+  });
+
+  it("lets the job read a ticket no earlier run has read", async () => {
+    await drainWith(async () => ({
+      bundleUrl: "https://private.blob.example/b.json",
+      ticketHash: "d".repeat(64),
+      bundle: {} as never,
+    }));
+    expect(calls[0]!.body).toMatchObject({
+      bundleUrl: "https://private.blob.example/b.json",
+      intent: null,
+    });
+  });
+
+  it("starts the job without a bundle when it can't be built, and says why", async () => {
+    const lines: string[] = [];
+    await drainWith(async () => {
+      throw new Error("GET /repos/sumithprabhu/demo-shop/pulls/7: 502 Bad Gateway");
+    }, lines);
+    expect(calls[0]!.body).toMatchObject({ bundleUrl: null, intent: null });
+    expect(lines).toEqual([
+      "run 00000000: no context bundle: GET /repos/sumithprabhu/demo-shop/pulls/7: 502 Bad Gateway",
+    ]);
+  });
+});
+
 describe("the spawn effect", () => {
   it("starts a job on Modal with a token for it, and makes it the run's current job", async () => {
     await drain();

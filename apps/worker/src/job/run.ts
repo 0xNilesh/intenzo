@@ -47,9 +47,17 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
         const judges = options.judges === undefined ? judgesFromEnv(process.env) : options.judges;
         let result: VerifyResult;
         try {
+          const metaKey = process.env.META_API_KEY ?? process.env.MODEL_API_KEY;
+
           result = await verify(job, client, {
             recorder,
+
             judges,
+
+            // Tests pass judges: null, so a unit test never reads a ticket with a model either.
+
+            ...(judges && metaKey && { metaKey }),
+
             log: options.log ?? console.log,
           });
         } finally {

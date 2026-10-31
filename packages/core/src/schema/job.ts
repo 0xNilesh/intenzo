@@ -38,6 +38,8 @@ export const ContextBundle = z.object({
     .nullable(),
   images: z.array(ArtifactRef),
   media: z.array(ArtifactRef),
+  /** Signed GET URLs for `media`, in order, valid for the job: the worker holds no Blob key (§28). */
+  mediaUrls: z.array(z.url()).default([]),
   /** True when the ticket had media Cloud couldn't download; the report says so (§8). */
   mediaUnavailable: z.boolean().default(false),
   diff: z.object({
