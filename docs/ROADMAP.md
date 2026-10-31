@@ -337,7 +337,10 @@
     - no spawn for a run that moved on
     - cancel with nothing to cancel
     - the sweep's secret and deadlines
-- [ ] **Verify:** `modal deploy`, spawn a test job, cancel it, and check the Cloud logs.
+- [x] **Verify:** `modal deploy`, spawn a test job, cancel it, and check the Cloud logs.
+  - *demo-shop#10:* its job was cancelled through Modal while current. The shim logged `cancelled by modal.exception.InputCancellation`, the Cloud stored `failed (cancelled)`, and the run and its check run ended as cancelled.
+  - *demo-shop#9:* a push stopped the first job through the stale guard, and the second job ran to `finished`.
+  - DECISIONS 2026-10-31.
 
 ### T2.6 Artifact upload
 - [ ] **Build:** two Blob stores with explicit env prefixes; `/api/worker/upload-tokens` issues a per-file token only for paths under `runs/{runId}/`.
