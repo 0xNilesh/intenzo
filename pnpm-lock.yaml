@@ -130,6 +130,9 @@ importers:
       '@intenzo/core':
         specifier: workspace:*
         version: link:../packages/core
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
       playwright:
         specifier: 1.64.1
         version: 1.64.1
@@ -137,6 +140,9 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@types/pg':
+        specifier: 8.23.1
+        version: 8.23.1
       '@types/ws':
         specifier: 8.18.2
         version: 8.18.2
