@@ -5,6 +5,28 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · P3 gate (#31)
+
+`pnpm gate:p3` (`scripts/gates/p3.ts`) on demo-shop's two branches served locally (`pr/discount-almost-right` on :3001, `main` on :3000), with Wonder as the navigator and no hand-written paths. The takes were written to a temporary folder.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| `pnpm check:all` | 8 test runs, all passed |
+| `pnpm gate:p2` | **Not run**: it reads the Cloud's database, and this checkout has no `apps/cloud/.env.local` |
+| Explore, 3 runs × C1–C4 | **12/12 found**, every one in 2 steps (fill the code, click Apply), 5.5–7.3 s (mean: C1–C3 6.3 s, C4 5.5 s) |
+| Replay on the PR | Every lane completed and held P1's facts: the discount line at +0/+1/+3 s, the total at $50.00 until a reload ($45.00 after), the "This code has expired" toast in the live regions, the chart reached |
+| Replay on the base | Every lane `trigger_absent` at the code field, with its PRE readings; every video aligned |
+| Spend | $0.164 of Wonder calls ($0.011–0.018 an explore) |
+
+### Decisions
+
+1. **The gate scores explored paths with P1's facts, not P1's labels** (`scripts/gates/lib/p3.ts`): the navigator chooses its own watch labels, so a label-by-label comparison would fail paths that read the right things.
+2. **The gate exits 2, not 0, while `gate:p2` hasn't run**, so P3 isn't closed on a partial check. *Next:* run `pnpm gate:p2` where `apps/cloud/.env.local` exists, then close #31.
+
+---
+
 ## 2026-10-31 · The explore loop on Wonder (T3.4, #29)
 
 Wonder (`muse-wonder-1.0`) explored each of the demo ticket's criteria on demo-shop's almost-right branch (served locally on :3001), with no hand-written path (`packages/core/src/navigator/explore.live.test.ts`, and `pnpm intenzo explore` for C2).

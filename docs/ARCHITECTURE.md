@@ -1180,7 +1180,7 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 |---|---|---|
 | Criteria posted | 20–40 s after the preview is ready (intent is reused on later runs) | Transcribe + Spark video, first run only |
 | **Warm, cached path, all pass**, 4 criteria | **verdicts ≈ 90–120 s** after the preview is ready | 2 recording slots: 4 criteria × (PR + base ≈ 25 s) / 2 ≈ 50 s; the judge queue overlaps recording, and the last judge finishes about 10 s after the last recording (T0.3, `low` effort: slowest of both judges p50 6.4 s, max 9.4 s); coverage overlaps |
-| **First run with a failure** | verdicts ≈ 3–5 min; evidence streams 30–60 s later | exploration (5–25 Wonder calls per criterion) + intent + re-recording the failing lane + SAM |
+| **First run with a failure** | verdicts ≈ 3–5 min; evidence streams 30–60 s later | exploration + intent + re-recording the failing lane + SAM. Measured in the P3 gate on demo-shop: **2 Wonder calls and 5.5–7.3 s per criterion** (mean 6.1 s, 12 runs), about $0.014 each, so exploring 4 criteria adds about 25 s when done one at a time |
 | Fix loop (button → agent → Vercel rebuild → new run) | ≈ 3–4 min | the agent ≈ 60–90 s, the Vercel build ≈ 60 s, the new run reuses intent and paths |
 
 All numbers get re-measured on Friday with the walking skeleton, and this table is updated.
