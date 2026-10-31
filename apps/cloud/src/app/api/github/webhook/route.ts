@@ -13,6 +13,8 @@ import { installationTokens } from "../../../../github/app-auth.ts";
 import { createDispatcher } from "../../../../github/dispatch.ts";
 import { eventHandlers } from "../../../../github/handlers.ts";
 import { handleWebhook } from "../../../../github/intake.ts";
+import { drainOutbox } from "../../../../outbox/drain.ts";
+import { githubExecutors } from "../../../../outbox/github-effects.ts";
 
 /** Installation tokens live for an hour, so one token cache per function instance. */
 let tokens: { key: string; mint: (installationId: number) => Promise<string> } | undefined;
@@ -25,6 +27,9 @@ export async function POST(request: Request): Promise<Response> {
   const key = `${app.appId}\n${app.privateKey}`;
   if (tokens?.key !== key) tokens = { key, mint: installationTokens(app, now) };
   const { mint } = tokens;
+  const github = (installationId: number) => githubClient(() => mint(installationId));
+  const log = (line: string) => console.log(line);
+  const executors = githubExecutors({ db, github });
 
   return handleWebhook(request, {
     secret: env.GITHUB_APP_WEBHOOK_SECRET,
@@ -33,10 +38,11 @@ export async function POST(request: Request): Promise<Response> {
     dispatch: createDispatcher({
       handlers: eventHandlers({
         db,
-        github: (installationId) => githubClient(() => mint(installationId)),
+        github,
         now,
         newRunId: randomUUID,
-        log: (line) => console.log(line),
+        log,
+        drain: () => drainOutbox({ db, executors, now, log }),
       }),
       markProcessed: (id, at) => markProcessed(db, id, at),
       markFailed: (id, error) => markFailed(db, id, error),
