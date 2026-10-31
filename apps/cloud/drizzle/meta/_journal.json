@@ -22,6 +22,13 @@
       "when": 1793435867708,
       "tag": "0002_base_drift",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793439964394,
+      "tag": "0003_job_events",
+      "breakpoints": true
     }
   ]
 }

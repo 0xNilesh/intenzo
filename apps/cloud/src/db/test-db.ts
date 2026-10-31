@@ -22,7 +22,7 @@ export async function testDb() {
 /** Empties every table and adds demo-shop's installation and repo, as T2.1 installed them. */
 export async function resetWithDemoShop(db: Db) {
   await db.execute(
-    sql`truncate ${schema.outbox}, ${schema.criteriaResults}, ${schema.savedPaths}, ${schema.modelCalls}, ${schema.runs}, ${schema.intentVersions}, ${schema.runGroups}, ${schema.deployments}, ${schema.repos}, ${schema.installations}, ${schema.webhookEvents} restart identity cascade`,
+    sql`truncate ${schema.outbox}, ${schema.jobEvents}, ${schema.criteriaResults}, ${schema.savedPaths}, ${schema.modelCalls}, ${schema.runs}, ${schema.intentVersions}, ${schema.runGroups}, ${schema.deployments}, ${schema.repos}, ${schema.installations}, ${schema.webhookEvents} restart identity cascade`,
   );
   const [installation] = await db
     .insert(schema.installations)

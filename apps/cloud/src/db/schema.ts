@@ -178,6 +178,26 @@ export const runs = pgTable(
   ],
 );
 
+/**
+ * Every event a worker reported for a run's current job (§9), stored once: `(job_id, seq)` is unique,
+ * so a retried POST is ignored. Events from a job that isn't current are answered 410, not stored.
+ */
+export const jobEvents = pgTable(
+  "job_events",
+  {
+    id: id(),
+    jobId: uuid("job_id").notNull(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => runs.id),
+    seq: integer("seq").notNull(),
+    kind: text("kind").notNull(),
+    payloadJson: jsonb("payload_json").notNull(),
+    receivedAt: at("received_at").notNull(),
+  },
+  (t) => [unique().on(t.jobId, t.seq)],
+);
+
 export const criteriaResults = pgTable(
   "criteria_results",
   {
