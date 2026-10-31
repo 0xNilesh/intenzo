@@ -477,9 +477,9 @@ deployments     id, repo_id, sha, environment, url, state, gh_deployment_id, rec
 run_groups      id, repo_id, pr_number, ticket_ref, state(open|merged|closed), comment_id,
                 agent_attempts, billed_at, judged_runs, UNIQUE(repo_id, pr_number)
 intent_versions id, run_group_id, ticket_hash, intent_json, UNIQUE(run_group_id, ticket_hash)
-runs            id UUID, run_group_id, head_sha, attempt_no, trigger, state, outcome,
+runs            id UUID, run_group_id, head_sha, attempt_no, trigger, state, outcome, outcome_reason,
                 pr_url, base_url, base_sha, intent_version_id, coverage_json,
-                current_job_id, modal_call_id, check_run_id, deadline_at,
+                current_job_id, modal_call_id, check_run_id, created_at, deadline_at,
                 started_at, finished_at, cost_usd, timings_json,
                 UNIQUE(run_group_id, head_sha, attempt_no)
 criteria_results id, run_id, criterion_id, verdict, reason_code, evidence_json, lanes_json, judges_json,
@@ -488,11 +488,13 @@ saved_paths     id, run_group_id, criterion_id, intent_version_id, path_json, UN
 outbox          id, run_id, group_id, effect, idem_key UNIQUE, payload_json,
                 status(pending|in_flight|done|failed), lease_until, attempts, external_id, last_error, created_at
 model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in, tokens_out,
-                video_s, frames, cost_usd, cache_hit, error
+                video_s, frames, cost_usd, cache_hit, error, created_at
 ```
 
 - `webhook_events.payload_json` is the request body cast to `jsonb` in SQL, never `JSON.parse` output, so 64-bit ids keep every digit (T0.4, T2.1). `processed_at` is set when dispatch finishes; a failed dispatch leaves it null and fills `error`.
 - Migrations live in `apps/cloud/drizzle/` (`pnpm db:generate`, `pnpm db:migrate`). Unit tests apply the same migrations to an in-process Postgres (PGlite).
+- `runs.created_at` orders a group's runs (§16.3) and times the wait for a preview (§16.1). `runs.outcome_reason` says why a run ended without verdicts: `preview_not_ready`, `preview_failed` or `deadline_passed` (T2.2).
+- CHECK constraints keep `runs.state`, `run_groups.state` and `outbox.status` to their values, and make the outcome non-null exactly when `runs.state = 'done'` (§16.1).
 
 ## 12. GitHub App manifest
 
@@ -578,6 +580,8 @@ sequenceDiagram
 ## 16. State machines
 
 ### 16.1 Run (state and outcome are separate)
+
+The machine is `apps/cloud/src/runs/transition.ts` (T2.2). `transition()` applies one step to one run. `decide()` works out what one fact (a PR action, a preview, a failed preview, the sweeper's tick) changes in a run group: runs to create, runs that change, and their effects. Both are pure; the database layer loads, decides and writes in one transaction (§16.4).
 
 ```
 state:   waiting_inputs ─► verifying ─► reporting ─► done
@@ -968,6 +972,7 @@ final = A'.verdict == B'.verdict ∈ {pass, fail}  → that verdict (reason agre
 
 ### 22.5 Check conclusion
 - `pass → success`, `fail → failure`, `inconclusive → policy.inconclusive_conclusion`.
+- `superseded → neutral` (§16.3), `error → neutral` (Intenzo's own failures never block a merge), `cancelled → cancelled` (T2.2).
 - **Note:** `neutral` satisfies required status checks. Teams that want "inconclusive blocks merge" should set `failure`. The comment explains which policy is active.
 
 ## 23. Evidence

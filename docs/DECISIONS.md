@@ -5,6 +5,38 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Run state machine and tables (T2.2, #19)
+
+`apps/cloud/src/runs/transition.ts` holds the §16 machine as pure functions; `apps/cloud/src/db/schema.ts` holds every §11 table (migration `0001_run_tables`). 27 table-driven tests cover the machine and 7 cover the tables, all on PGlite. `pnpm db:migrate` applied both migrations to Neon.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| The six roadmap cases and seven edge cases | All pass as sequences of timed facts through `decide()`, comparing the runs and effects after each fact |
+| Do the tests catch a broken rule? | Timing out at `>` instead of `>=` 20 min failed 5 tests. A push that didn't supersede failed 2 |
+| A run from `decide()` written to `runs` and read back | Equal field for field |
+| Neon after `pnpm db:migrate` | 11 tables, 2 migrations; `runs_state` and `runs_outcome_when_done` present |
+
+### Decisions
+
+1. **`decide()` per run group, next to `transition()` per run.**
+   - *Why:* four of the roadmap's six cases are about runs that don't exist yet: creating one, superseding the active one, re-opening a timed-out one. A function of one run can't express those. `decide()` returns the runs to create, the runs that change and the effects, so the database layer stays load → decide → write (§16.4).
+2. **`runs` gains `created_at` and `outcome_reason`; `model_calls` gains `created_at`.**
+   - *Why:* §16.3 orders runs by `created_at` and §16.1 times the preview wait from it, but §11 didn't list it. The comment has to say *why* a run ended without verdicts ("preview not ready"), which an outcome alone can't. §30's timeline needs `model_calls` in order.
+3. **The database enforces the states too:** CHECK constraints on the state columns, and the outcome is set exactly when a run is done.
+   - *Why:* the machine is the only intended writer, but a bug in a later handler would otherwise store a run that's "done" with no outcome.
+4. **`error → neutral` and `cancelled → cancelled` on the check run, alongside §22.5.**
+   - *Why:* "fail toward inconclusive" (CONTRIBUTING §5): Intenzo's own failure mustn't block a merge.
+5. **Edge rules, as tested:**
+   - a push to a draft PR supersedes the active run without starting one
+   - another ready event for the same commit adds no run
+   - a redeploy of a commit that's already verifying changes nothing
+   - a reporting run is superseded like any other unfinished run (§16.3)
+   - *Next:* the handlers that load a group and write the decision come with T2.3 (deployments) and T2.4 (the outbox for the effects). `policy.run_on` isn't applied yet.
+
+---
+
 ## 2026-10-31 · Webhook intake (T2.1, #18)
 
 `apps/cloud` is now a Next.js 16.4.3 app with `POST /api/github/webhook`, live at https://intenzo-cloud.vercel.app. It was checked three ways:

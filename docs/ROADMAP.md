@@ -237,15 +237,16 @@
 - [x] **Verify:** install the App on demo-shop, open a test PR, and see the row in `webhook_events`. *(demo-shop#6: `pull_request.opened` and the Preview `deployment_status` for its head SHA stored and processed; GitHub's log shows 202 for every stored delivery and 200 for the ignored ones.)*
 
 ### T2.2 Database and the run state machine
-- [ ] **Build:** the Drizzle schema (§11) with the `pg` driver and migrations; `transition(run, inputs)` as a pure function.
-- [ ] **Tests (table-driven):**
+- [x] **Build:** the Drizzle schema (§11) with the `pg` driver and migrations; `transition(run, inputs)` as a pure function. *(`apps/cloud/src/db/schema.ts` + migration `0001_run_tables`; `apps/cloud/src/runs/transition.ts`: `transition()` per run and `decide()` per run group, since creating, superseding and re-opening runs are group decisions.)*
+- [x] **Tests (table-driven):**
   - PR opened, then deployment
   - deployment, then PR opened
   - draft → ready without a new deployment (found by lookup)
   - a deployment for a SHA with no open PR (ignored)
   - a new SHA supersedes the active run
   - a 20-minute timeout, then a late deployment re-opens the run
-- [ ] **Verify:** `pnpm --filter @intenzo/cloud test transition`; `pnpm db:migrate` against Neon.
+  - *also: a late preview after 2 h, a failed preview, the 15-minute deadline, repeated ready events, a push to a draft, a redeploy, a reopened PR, and the §22.5 conclusions; the tables' unique keys and checks run on PGlite*
+- [x] **Verify:** `pnpm --filter @intenzo/cloud test transition`; `pnpm db:migrate` against Neon. *(27 tests pass; Neon has all 11 tables after 2 migrations.)*
 
 ### T2.3 Deployments and baseline resolution
 - [ ] **Build:**
