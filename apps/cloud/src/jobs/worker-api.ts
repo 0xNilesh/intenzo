@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import type { Db } from "../db/db.ts";
 import { jobEvents, runs } from "../db/schema.ts";
 import { advance } from "../runs/advance.ts";
+import { requestComment, RESULT_EVENTS, storeResult } from "./results.ts";
 import type { Fact } from "../runs/transition.ts";
 import { bearerToken, type JobClaims, verifyJobToken } from "./token.ts";
 
@@ -100,6 +101,10 @@ export async function handleWorkerEvent(request: Request, deps: WorkerApiDeps): 
       newRunId: deps.newRunId,
     });
     if (decision.effects.length > 0) await deps.drain();
+  } else if (RESULT_EVENTS.has(event.kind)) {
+    await storeResult(deps.db, run, event);
+    await requestComment(deps.db, run.runGroupId);
+    await deps.drain();
   }
   return reply(202, { status: "accepted" });
 }

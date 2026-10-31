@@ -1,8 +1,10 @@
-import { eq } from "drizzle-orm";
+import { readFileSync } from "node:fs";
+
+import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { ensureRunGroup } from "../db/repos.ts";
-import { jobEvents, outbox, runs } from "../db/schema.ts";
+import { criteriaResults, intentVersions, jobEvents, outbox, runs } from "../db/schema.ts";
 import { resetWithDemoShop, testDb } from "../db/test-db.ts";
 import { advance } from "../runs/advance.ts";
 import type { Fact } from "../runs/transition.ts";
@@ -165,6 +167,91 @@ describe("POST /api/worker/events (§9)", () => {
       state: "done",
       outcome: "cancelled",
       outcomeReason: "worker_failed",
+    });
+  });
+});
+
+describe("the events that add to the report (§9, §26.1)", () => {
+  const FIXTURES = new URL("../../../../fixtures/criteria/", import.meta.url);
+  const criteria = ["C1", "C2"].map((id) =>
+    JSON.parse(readFileSync(new URL(`${id}.json`, FIXTURES), "utf8")),
+  );
+  const intent = { criteria, intentSource: "linked_issue", ticketHash: "b".repeat(64) };
+  const coverage = { items: [], routes: ["/cart"] };
+  const judge = {
+    model: "stub",
+    verdict: "fail",
+    targetCorrect: true,
+    citedReadings: [],
+    citedValue: null,
+    atMs: null,
+    observed: "The total stayed $50.00.",
+  };
+  const verdict = {
+    criterionId: "C2",
+    verdict: "fail",
+    reasonCode: "agreed",
+    evidenceWindow: { startMs: 1_000, endMs: 5_000 },
+    observed: "The total stayed $50.00.",
+    judges: [judge, judge],
+  };
+  const comments = async () =>
+    (await t.db.select().from(outbox).orderBy(asc(outbox.id)))
+      .filter((r) => r.effect === "comment")
+      .map((r) => r.idemKey);
+
+  it("stores the criteria, a verdict and its evidence, re-rendering the comment after each", async () => {
+    const before = (await comments()).length;
+    await send({ kind: "intent_ready", jobId: JOB, seq: 1, intent, coverage });
+    const [stored] = await t.db.select().from(intentVersions);
+    expect(stored).toMatchObject({ ticketHash: intent.ticketHash });
+    expect((await run()).intentVersionId).toBe(stored!.id);
+
+    expect(
+      (await send({ kind: "criterion_verdict", jobId: JOB, seq: 2, verdict, lanes: [] })).status,
+    ).toBe(202);
+    const gif = { store: "public", path: `runs/${RUN}/C2/evidence.gif`, contentType: "image/gif" };
+    const still = { store: "public", path: `runs/${RUN}/C2/still.png`, contentType: "image/png" };
+    await send({ kind: "criterion_evidence", jobId: JOB, seq: 3, criterionId: "C2", gif, still });
+    expect(await t.db.select().from(criteriaResults)).toMatchObject([
+      {
+        runId: RUN,
+        criterionId: "C2",
+        verdict: "fail",
+        reasonCode: "agreed",
+        evidenceJson: { window: verdict.evidenceWindow, observed: verdict.observed, gif, still },
+      },
+    ]);
+    // One comment re-render per event, and a drain to post it.
+    expect((await comments()).length).toBe(before + 3);
+    expect(drains).toBe(3);
+  });
+
+  it("replaces a criterion's verdict when it's judged again, keeping its evidence", async () => {
+    await send({ kind: "criterion_verdict", jobId: JOB, seq: 1, verdict, lanes: [] });
+    const gif = { store: "public", path: `runs/${RUN}/C2/evidence.gif`, contentType: "image/gif" };
+    await send({
+      kind: "criterion_evidence",
+      jobId: JOB,
+      seq: 2,
+      criterionId: "C2",
+      gif,
+      still: gif,
+    });
+    const passing = {
+      ...verdict,
+      verdict: "pass",
+      observed: "It changed to $45.00.",
+      judges: [
+        { ...judge, verdict: "pass" },
+        { ...judge, verdict: "pass" },
+      ],
+    };
+    await send({ kind: "criterion_verdict", jobId: JOB, seq: 3, verdict: passing, lanes: [] });
+    const [row] = await t.db.select().from(criteriaResults);
+    expect(row).toMatchObject({
+      verdict: "pass",
+      evidenceJson: { observed: "It changed to $45.00.", gif },
     });
   });
 });
