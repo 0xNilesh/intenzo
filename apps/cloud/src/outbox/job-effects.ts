@@ -1,14 +1,15 @@
-// The outbox's job effects (§16.3, §16.4): spawn a run's job on Modal when the run starts verifying,
-// and cancel it when the run ends any other way (superseded, past its deadline). Until T2.7b makes
-// it a VerifyJob, the job is the stub: it reports the demo ticket's criteria with fixed verdicts
-// (apps/worker/src/job/stub.ts), through Modal, the shim and the job protocol.
+// The outbox's job effects (§16.3, §16.4): spawn a run's VerifyJob on Modal when the run starts
+// verifying (§8), and cancel it when the run ends any other way (superseded, past its deadline).
+import { VerifyJob } from "@intenzo/core";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Db } from "../db/db.ts";
-import { runs } from "../db/schema.ts";
+import { repoConfig } from "../db/repos.ts";
+import { repos, runGroups, runs } from "../db/schema.ts";
 import type { ModalSettings } from "../env.ts";
 import { signJobToken, tokenExpiry } from "../jobs/token.ts";
+import { type RepoSecrets, repoSecrets } from "../secrets/repo-secrets.ts";
 import type { EffectExecutor } from "./drain.ts";
 
 /** §16.1's verifying deadline, for a run that somehow has none. */
@@ -19,6 +20,8 @@ export interface JobEffectDeps {
   modal: ModalSettings;
   /** INTENZO_JOB_SECRET, which signs the job's token. */
   jobSecret: string;
+  /** INTENZO_SECRETS_KEY, which opens the repos' sealed secrets; null when it isn't set. */
+  secretsKey: Buffer | null;
   newJobId: () => string;
   now: () => Date;
 }
@@ -33,6 +36,16 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
   return {
     run: async (row) => {
       const runId = row.runId!;
+      const [ctx] = await deps.db
+        .select({ group: runGroups, repo: repos })
+        .from(runs)
+        .innerJoin(runGroups, eq(runs.runGroupId, runGroups.id))
+        .innerJoin(repos, eq(runGroups.repoId, repos.id))
+        .where(eq(runs.id, runId));
+      if (!ctx) return null;
+      // §29: nothing secret reaches a fork's code. Opened before the job becomes current, so a
+      // job that can't be built leaves the run as it was.
+      const secrets = ctx.group.fromFork ? null : jobSecrets(deps.secretsKey, ctx.repo);
       // A fresh job id on every attempt: a job an earlier attempt may have started is stale from
       // here on (410) and stops itself, so a run never has two live jobs.
       const jobId = deps.newJobId();
@@ -43,8 +56,8 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
         .returning();
       if (!run) return null; // the run has moved on: nothing to start
       const deadlineAt = run.deadlineAt ?? new Date(deps.now().getTime() + DEFAULT_DEADLINE_MS);
-      const job = {
-        type: "stub",
+      const job = VerifyJob.parse({
+        type: "verify",
         jobId,
         runId,
         deadlineAt: deadlineAt.toISOString(),
@@ -52,7 +65,16 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
           baseUrl: deps.modal.cloudUrl,
           token: signJobToken(deps.jobSecret, { jobId, runId, exp: tokenExpiry(deadlineAt) }),
         },
-      };
+        config: repoConfig(ctx.repo),
+        // Until P4 there's no context bundle, and the job computes the intent itself (§19 step 0).
+        bundleUrl: null,
+        intent: null,
+        prUrl: run.prUrl,
+        baseUrl: run.baseUrl,
+        baseSha: run.baseSha,
+        secrets,
+        cachedPaths: [], // saved paths come with the navigator (P3)
+      });
       const { callId } = await callModal(deps.modal.spawnUrl, deps.modal.secret, job, Spawned);
       await deps.db
         .update(runs)
@@ -61,6 +83,15 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
       return callId;
     },
   };
+}
+
+/** The repo's secrets for its job; a repo with sealed secrets and no key to open them is an error. */
+function jobSecrets(key: Buffer | null, repo: typeof repos.$inferSelect): RepoSecrets {
+  if (!repo.hookSecretEnc && !repo.bypassEnc && !repo.usersEnc) return {};
+  if (!key) {
+    throw new Error(`${repo.fullName} has sealed secrets, but INTENZO_SECRETS_KEY isn't set`);
+  }
+  return repoSecrets(key, repo);
 }
 
 export function cancelExecutor(deps: JobEffectDeps): EffectExecutor {

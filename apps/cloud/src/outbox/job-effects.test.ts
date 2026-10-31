@@ -1,16 +1,20 @@
+import { randomBytes } from "node:crypto";
+
+import { IntenzoConfig, VerifyJob } from "@intenzo/core";
 import { asc, eq } from "drizzle-orm";
 import { http } from "msw/http";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { ensureRunGroup } from "../db/repos.ts";
-import { outbox, runs } from "../db/schema.ts";
+import { outbox, repos, runGroups, runs } from "../db/schema.ts";
 import { resetWithDemoShop, testDb } from "../db/test-db.ts";
 import type { ModalSettings } from "../env.ts";
 import { isCurrentJob } from "../jobs/worker-api.ts";
 import { verifyJobToken } from "../jobs/token.ts";
 import { advance } from "../runs/advance.ts";
 import type { Fact } from "../runs/transition.ts";
+import { setRepoSecrets } from "../secrets/repo-secrets.ts";
 import { drainOutbox } from "./drain.ts";
 import { jobExecutors, spawnExecutor } from "./job-effects.ts";
 
@@ -23,6 +27,10 @@ const MODAL: ModalSettings = {
 const JOB_SECRET = "a-job-secret-for-tests-only-0123456789";
 const T0 = new Date("2026-10-31T09:00:00.000Z");
 const RUN = "00000000-0000-4000-8000-000000000001";
+const SECRETS_KEY = randomBytes(32);
+const HOOK = "hook-secret-for-the-test-0123456789";
+const BYPASS = "bypass-for-the-test-abcdefghijklmnop";
+const BASE_SHA = "b6b60c7dde0123456789abcdef0123456789abcd";
 
 // Modal's two endpoints, faked: each request is recorded; one nothing answers fails the test.
 const modal = setupServer();
@@ -44,6 +52,7 @@ afterEach(() => {
 afterAll(() => modal.close());
 
 let t: Awaited<ReturnType<typeof testDb>>;
+let repoId: number;
 let groupId: number;
 let ids: number;
 let jobIds: number;
@@ -54,7 +63,8 @@ beforeAll(async () => {
 afterAll(() => t.close());
 beforeEach(async () => {
   const repo = await resetWithDemoShop(t.db);
-  groupId = (await ensureRunGroup(t.db, repo.id, 7)).id;
+  repoId = repo.id;
+  groupId = (await ensureRunGroup(t.db, repo.id, 7, false)).id;
   ids = 0;
   jobIds = 0;
   calls = [];
@@ -81,15 +91,21 @@ const happen = (fact: Fact) =>
     now: T0,
     newRunId: () => `00000000-0000-4000-8000-${String(++ids).padStart(12, "0")}`,
   });
-const deps = () => ({
+const deps = (secretsKey: Buffer | null = SECRETS_KEY) => ({
   db: t.db,
   modal: MODAL,
   jobSecret: JOB_SECRET,
+  secretsKey,
   newJobId: () => `0b0b0b0b-0000-4000-8000-${String(++jobIds).padStart(12, "0")}`,
   now: () => T0,
 });
-const drain = () =>
-  drainOutbox({ db: t.db, executors: jobExecutors(deps()), now: () => T0, log: () => {} });
+const drain = (secretsKey?: Buffer | null) =>
+  drainOutbox({
+    db: t.db,
+    executors: jobExecutors(deps(secretsKey)),
+    now: () => T0,
+    log: () => {},
+  });
 const run = async () => (await t.db.select().from(runs).where(eq(runs.id, RUN)))[0]!;
 
 describe("the spawn effect", () => {
@@ -101,12 +117,13 @@ describe("the spawn effect", () => {
       endpoint: "spawn",
       auth: `Bearer ${MODAL.secret}`,
       body: {
-        type: "stub",
+        type: "verify",
         jobId: job,
         runId: RUN,
         callback: { baseUrl: MODAL.cloudUrl },
       },
     });
+    expect(VerifyJob.safeParse(calls[0]!.body).success).toBe(true);
     const deadline = (await run()).deadlineAt!;
     expect(calls[0]!.body.deadlineAt).toBe(deadline.toISOString());
     const claims = verifyJobToken(JOB_SECRET, calls[0]!.body.callback.token, T0.getTime() / 1000);
@@ -130,6 +147,58 @@ describe("the spawn effect", () => {
     const current = await run();
     expect(current.currentJobId).not.toBe(first);
     expect(isCurrentJob(current, first)).toBe(false);
+  });
+
+  it("sends the run's preview, its baseline and the repo's config (§8)", async () => {
+    const config = IntenzoConfig.parse({ version: 1, start: { default: "/cart" } });
+    await t.db.update(repos).set({ configJson: config }).where(eq(repos.id, repoId));
+    await t.db
+      .update(runs)
+      .set({ baseUrl: "https://demo-shop-main.vercel.app", baseSha: BASE_SHA })
+      .where(eq(runs.id, RUN));
+    await drain();
+    expect(calls[0]!.body).toMatchObject({
+      prUrl: "https://demo-shop-x.vercel.app",
+      baseUrl: "https://demo-shop-main.vercel.app",
+      baseSha: BASE_SHA,
+      config: { start: { default: "/cart" } },
+      // Until P3 and P4: no saved paths, no context bundle, and the intent computed by the job.
+      cachedPaths: [],
+      bundleUrl: null,
+      intent: null,
+    });
+  });
+
+  it("opens the repo's secrets into the job of a PR from the repo itself", async () => {
+    await setRepoSecrets(t.db, SECRETS_KEY, "sumithprabhu/demo-shop", {
+      hookSecret: HOOK,
+      bypass: BYPASS,
+    });
+    await drain();
+    expect(calls[0]!.body.secrets).toEqual({ hookSecret: HOOK, bypass: BYPASS });
+  });
+
+  it("sends no secrets at all for a fork's PR (§29)", async () => {
+    await setRepoSecrets(t.db, SECRETS_KEY, "sumithprabhu/demo-shop", { hookSecret: HOOK });
+    await t.db.update(runGroups).set({ fromFork: true }).where(eq(runGroups.id, groupId));
+    await drain();
+    expect(calls[0]!.body.secrets).toBeNull();
+  });
+
+  it("sends empty secrets for a repo that has none", async () => {
+    await drain(null);
+    expect(calls[0]!.body.secrets).toEqual({});
+  });
+
+  it("starts no job while the repo's secrets can't be opened, and says why", async () => {
+    await setRepoSecrets(t.db, SECRETS_KEY, "sumithprabhu/demo-shop", { bypass: BYPASS });
+    expect(await drain(null)).toEqual({ done: 0, failed: 1 });
+    expect(calls).toEqual([]);
+    const [row] = await t.db.select().from(outbox).where(eq(outbox.effect, "spawn_job"));
+    expect(row!.lastError).toBe(
+      "sumithprabhu/demo-shop has sealed secrets, but INTENZO_SECRETS_KEY isn't set",
+    );
+    expect((await run()).currentJobId).toBeNull();
   });
 
   it("is tried again later when Modal refuses it", async () => {
