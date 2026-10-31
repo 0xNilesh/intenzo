@@ -5,6 +5,41 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Modal shim (T2.5b, #22)
+
+The Modal app `intenzo-worker` is deployed in workspace `sumithprabhu07` (`modal/app.py`), with the shim in `modal/shim.py`. The Cloud spawns and cancels its jobs from the outbox, and Modal's cron sweeps the Cloud every minute. The checks:
+
+- 6 shim tests (Python's standard library), on macOS and in CI on Linux.
+- 10 new Cloud tests.
+- Deliberately broken rules, to check the tests catch them.
+- Two throwaway PRs on demo-shop (#9 and #10), read back from the Cloud's and Modal's logs, Neon and GitHub.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| **What a cancelled input sees** (open in T2.5a, not in Modal's docs) | `modal.exception.InputCancellation: Input was cancelled by user`, raised inside the running function. The shim caught it, stopped the worker's group within the 5 s grace (no SIGKILL needed) and reported `failed (cancelled)`, which the Cloud accepted (202) |
+| demo-shop#10: cancel through Modal's endpoint while the run was current | `started#0`, then `failed#1000000 (cancelled)`. The run ended `cancelled` within 6 s of the cancel, and its check run completed as `cancelled` ("⏹ Verifying `46a885f` was cancelled.") |
+| demo-shop#9: a push superseded a running job | The job's next `/alive` got 410, and it stopped by itself (the shim logged `ended: stale`) before the Cloud's cancel reached Modal. The new commit's run got its own job: `started#0`, then `finished#1` after the 60 s placeholder, ending inconclusive (check run neutral) |
+| The first sweep after the Cloud had its secret | `200 {"groups":2,"changed":2,"drained":{"done":7,"failed":0}}`: the runs left over from demo-shop#7 and #8 ended as `error` (`deadline_passed`), and their check runs and comments were completed. The calls in the minutes before the Cloud had the secret got 503, as designed |
+| The worker image | Node 24.22.2 (NodeSource), pnpm 10.34.9 from `packageManager`, "Scope: 2 of 7 workspace projects" (core and the worker), 4 production packages. No repo root, `.env` or `.pem` files. The first deploy took 109 s |
+| The first `modal deploy` | Failed with `NameError: Header`. FastAPI exists only in the image, and `Header(default=None)` is a default value that Python evaluates while the file loads on the deploying machine. The endpoints now take FastAPI's `Request`, an annotation only FastAPI resolves, in the container |
+| `modal secret create --from-dotenv` | Needs `python-dotenv` in the CLI's environment. `--from-json` with a temporary owner-only file (deleted at once) needed nothing more |
+
+### Decisions
+
+1. **The shim treats any exception as a cancellation**, and logs its type. Modal uses `InputCancellation`; signals (SIGINT, SIGTERM) get the same handling.
+2. **The stale guard stops a superseded job first; Modal's cancel is the backstop.**
+   - A job asks `/alive` every 5 s, so it usually stops before the cancel effect is drained.
+   - The cancel still matters for a job stuck between checks, such as a browser hanging.
+3. **Each spawn attempt gets a fresh `current_job_id`**, so a job an earlier attempt may have started becomes stale and stops.
+4. **Until T2.7 the spawned job is a 60 s sleep**, which ends its run inconclusive ("Intenzo couldn't tell"). T2.7 replaces it with the VerifyJob and stub verdicts.
+5. **The endpoints check a bearer secret in code** (`MODAL_ENDPOINT_SECRET`, from the Modal Secret `intenzo-worker`), not Modal's proxy-auth tokens.
+   - *Why:* one secret, set from the same local file on both sides (`.env.intenzo-modal`).
+6. **Modal settings on Vercel:** `MODAL_SPAWN_URL`, `MODAL_CANCEL_URL`, `MODAL_ENDPOINT_SECRET` and `INTENZO_SWEEP_SECRET` (both secrets sensitive), and `INTENZO_CLOUD_URL`.
+
+---
+
 ## 2026-10-31 · Job protocol (T2.5a, #22)
 
 The Cloud now has §9's worker routes: `POST /api/worker/events` and `GET /api/worker/alive`, behind job tokens and the 410 stale guard. The worker has `intenzo job`, which runs a job and reports it. The checks:

@@ -165,7 +165,8 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 - **Built in T2.5b:**
   - The logic is in `modal/shim.py`, which `modal/app.py` calls.
   - "Already reported" means the worker's exit code (T2.5a): 0 finished, 1 failed, 3 stale. The shim reports nothing then.
-  - The shim waits in one-second steps, so it notices a cancellation within a second, whether it arrives as an exception or a signal.
+  - The shim waits in one-second steps, so it notices a cancellation within a second, whether it arrives as an exception or a signal. Modal's is an exception, `modal.exception.InputCancellation`, raised in the running function (seen live, T2.5b).
+  - A superseded job usually stops first, on its own: its next `/alive` (every 5 s) gets 410. Modal's cancel is the backstop.
   - Its `failed` event uses seq 1,000,000.
   - The endpoints take a bearer secret (`MODAL_ENDPOINT_SECRET`, from the Modal Secret `intenzo-worker`).
   - The worker image never contains the repo root (`.env` files, the App's key).
