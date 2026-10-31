@@ -34,6 +34,32 @@ pnpm intenzo record --path fixtures/paths/C2.json --pr http://localhost:3001 --b
   feature yet).
 - **Needs** Playwright's Chromium and `ffmpeg` (for the alignment). No model calls; it costs nothing.
 
+## `intenzo explore` (T3.4)
+
+Lets the navigator (ARCHITECTURE §20.3) find its own way to one criterion's trigger on the PR app,
+then writes the `SavedPath` it leaves behind, which `intenzo record` replays.
+
+```bash
+pnpm intenzo explore --criterion fixtures/criteria/C2.json --pr http://localhost:3001
+pnpm intenzo record --path out/paths/C2.json --pr http://localhost:3001 --base http://localhost:3000
+```
+
+| Option                               | Default                                               |
+| ------------------------------------ | ----------------------------------------------------- |
+| `--out`                              | `out/paths/<criterion>.json`                          |
+| `--steps`                            | 25 (the time budget is 120 s)                         |
+| `--model`                            | `muse-wonder-1.0`                                     |
+| `--config`                           | `packages/core/fixtures/config/demo-shop.intenzo.yml` |
+| `--hook-secret-env` / `--bypass-env` | as for `intenzo record`                               |
+
+- **The config supplies** the start path (`start.default`), the test data the model may use
+  (`data`), the deny list and the session hook.
+- **Cost:** one Wonder call per step. On demo-shop, C1–C4 each took 2 steps, about 3k tokens and
+  $0.012 at Wonder's list price ($4 / $0.20 / $20 per million input / cached / output tokens).
+  Needs `META_API_KEY` in `.env`.
+- **Exit code:** 0 when a path was found, 1 for `setup_failed` or `trigger_absent`, 2 for usage
+  errors.
+
 ## `intenzo job` (T2.5a, T2.7b)
 
 Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,

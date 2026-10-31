@@ -5,6 +5,30 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · The explore loop on Wonder (T3.4, #29)
+
+Wonder (`muse-wonder-1.0`) explored each of the demo ticket's criteria on demo-shop's almost-right branch (served locally on :3001), with no hand-written path (`packages/core/src/navigator/explore.live.test.ts`, and `pnpm intenzo explore` for C2).
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Strict `json_schema` and `reasoning_effort: "low"` on Wonder (2 probe calls) | Both accepted; a correct reply in 1.7–2.6 s |
+| First live C2 run | Failed 3 times in a row: Wonder fills every field the strict schema lists, so ordinary steps carried a `reason` and `watch`, which `NavAction` refuses |
+| After ignoring fields that don't fit the status | C1–C4 each found in **2 steps** (fill the code, click Apply), 5.0–6.9 s each, about 2.6k prompt tokens (much of it cached after the first) and about 500 output tokens |
+| The explored C2 path, replayed with `intenzo record` | Same as P1's hand-written path: PR $50.00 at +0/+1/+3 s, $45.00 after the reload; base `trigger_absent` |
+| Spend (Wonder $4 / $0.20 / $20 per million input / cached / output tokens) | About $0.012 a criterion; about $0.18 for all of T3.4's calls (the probe, the failed C2 run, the C2 verify, the live test twice) |
+
+### Decisions
+
+1. **The navigator runs on Wonder at `reasoning_effort: "low"` with a strict `json_schema`.**
+   - *Why:* 2 steps a criterion at about a cent; the replies parsed every time once inapplicable fields were ignored.
+   - *Alternatives:* Spark 1.3 (also takes strict schemas), kept for the vision fallback (§20.5).
+2. **The wire reply ignores fields that don't apply to its status; `NavAction` stays strict.**
+3. **Neither the criterion's `expected` nor its `text` reaches the navigator**, since the text states the outcome too.
+
+---
+
 ## 2026-10-31 · The navigator's outline (T3.1, #26)
 
 Measured with Playwright 1.64.1 (pinned) against a fixture page (`packages/core/src/browser/outline.browser.test.ts`) and local demo-shop `/products`.

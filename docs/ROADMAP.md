@@ -422,11 +422,11 @@
 - [x] **Verify:** `pnpm --filter @intenzo/core test:browser durable`.
 
 ### T3.4 Explore loop (Wonder)
-- [ ] **Build:** `explore()` (§20.3): start route choice, Wonder `navigate.v1`, history window, budget (25 steps / 120 s), `trigger_done` → `SavedPath` with auto region + live-region watch targets; `give_up` → `setup_failed` / `trigger_absent`.
-- [ ] **Tests:**
+- [x] **Build:** `explore()` (§20.3): start route choice, Wonder `navigate.v1`, history window, budget (25 steps / 120 s), `trigger_done` → `SavedPath` with auto region + live-region watch targets; `give_up` → `setup_failed` / `trigger_absent`.
+- [x] **Tests:**
   - with a **fixture model** (scripted NavActions): happy path, give_up classification, budget exhaustion
-  - `@live` against demo-shop for each of C1–C4
-- [ ] **Verify:** `pnpm intenzo explore --criterion fixtures/criteria/C2.json --pr http://localhost:3001`; inspect the saved path and the step count.
+  - `@live` against demo-shop for each of C1–C4 (`explore.live.test.ts`, by hand)
+- [x] **Verify:** `pnpm intenzo explore --criterion fixtures/criteria/C2.json --pr http://localhost:3001`; inspect the saved path and the step count.
 
 ### T3.5 Replay and path cache
 - [ ] **Build:** replay a `SavedPath` through the recorder (P1); a step failure on a cached path → discard, explore once, re-record; a path cache per run group + intent version.

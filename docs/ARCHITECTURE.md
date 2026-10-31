@@ -860,6 +860,14 @@ explore(criterion, lane):
 
 - **The guard (T3.2, `navigator/guard.ts`)** resolves each `goto` path against the lane origin (a path like `/\\evil.example` passes the schema but lands elsewhere), requires every ref, watch refs included, to be in the current outline and resolve to exactly one element, and matches `deny_text` against the element's text, `aria-label`, `title` and value as **whole words or phrases**, case-insensitively ("pay" stops "Pay now", not "Display"). Each refusal's message is written for the model, since it goes back as the step's result.
 
+- **As built (T3.4, `navigator/explore.ts`):**
+  - `trigger_done` marks the action in the same reply as the trigger's last step. Its `watch` refs come from the outline *before* that action, so they're turned into durable targets before it runs, and so is the action's own element.
+  - The trigger is the run of `trigger`-phase steps ending at `trigger_done`. A `setup` step after `trigger` steps moves them back into the setup.
+  - The setup always starts with `goto(startPath)`, so a replay starts where exploring did.
+  - `give_up` with `trigger_not_found` in the `trigger` phase is `trigger_absent`. Every other give-up, the budget, or three unusable replies in a row is `setup_failed`.
+  - The model runs at `reasoning_effort: "low"` with the reply's strict `json_schema`. Strict mode makes every field required, so a field that doesn't fit the status (Wonder sets `reason` and `watch` on ordinary steps) is ignored rather than refused (DECISIONS 2026-10-31).
+  - The criterion's `text` is withheld from the prompt as well as `expected`: it states the outcome too ("drops to $45.00").
+
 #### 20.3.1 `settle(page)`
 Wait until **both** conditions hold, capped at 2 s:
 - no DOM mutations for 300 ms (a `MutationObserver` injected through `addInitScript`)
