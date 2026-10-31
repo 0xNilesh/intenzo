@@ -249,16 +249,29 @@
 - [x] **Verify:** `pnpm --filter @intenzo/cloud test transition`; `pnpm db:migrate` against Neon. *(27 tests pass; Neon has all 11 tables after 2 migrations.)*
 
 ### T2.3 Deployments and baseline resolution
-- [ ] **Build:**
+- [x] **Build:**
   - `deployment_status` → `deployments` upsert → SHA→PR lookup → advance
   - environment prefix match
   - merge-base lookup via the compare API + a drift walk
   - the production environment filter
-- [ ] **Tests (msw-mocked GitHub):**
+  - *Also:*
+    - the `pull_request` handler that creates runs
+    - `.intenzo.yml` read from the default branch
+    - installation tokens for the App
+    - `runs.base_drift`
+    - the App's private key on Vercel (DECISIONS 2026-10-31)
+- [x] **Tests (msw-mocked GitHub):**
   - a production environment is never used
   - drift is reported
   - with no baseline the run continues with `baseUrl=null`
-- [ ] **Verify:** a demo-shop PR resolves the `main` preview as its baseline (shown in the logs).
+  - *also:*
+    - a preview of a commit its PR has moved past starts nothing
+    - a draft's preview is found by lookup once it's ready
+    - a config with problems runs nothing
+    - a failure never replaces a stored success
+    - first parents only
+    - 84 tests in `apps/cloud`, on PGlite and msw
+- [x] **Verify:** a demo-shop PR resolves the `main` preview as its baseline (shown in the logs). *(demo-shop#7: `baseline main@b6b60c7 (the merge base) at https://demo-shop-dly0m1skm-…`, `main`'s Preview, stored with drift 0.)*
 
 ### T2.4 Outbox and drainer
 - [ ] **Build:**

@@ -478,7 +478,7 @@ run_groups      id, repo_id, pr_number, ticket_ref, state(open|merged|closed), c
                 agent_attempts, billed_at, judged_runs, UNIQUE(repo_id, pr_number)
 intent_versions id, run_group_id, ticket_hash, intent_json, UNIQUE(run_group_id, ticket_hash)
 runs            id UUID, run_group_id, head_sha, attempt_no, trigger, state, outcome, outcome_reason,
-                pr_url, base_url, base_sha, intent_version_id, coverage_json,
+                pr_url, base_url, base_sha, base_drift, intent_version_id, coverage_json,
                 current_job_id, modal_call_id, check_run_id, created_at, deadline_at,
                 started_at, finished_at, cost_usd, timings_json,
                 UNIQUE(run_group_id, head_sha, attempt_no)
@@ -495,6 +495,8 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
 - Migrations live in `apps/cloud/drizzle/` (`pnpm db:generate`, `pnpm db:migrate`). Unit tests apply the same migrations to an in-process Postgres (PGlite).
 - `runs.created_at` orders a group's runs (§16.3) and times the wait for a preview (§16.1). `runs.outcome_reason` says why a run ended without verdicts: `preview_not_ready`, `preview_failed` or `deadline_passed` (T2.2).
 - CHECK constraints keep `runs.state`, `run_groups.state` and `outbox.status` to their values, and make the outcome non-null exactly when `runs.state = 'done'` (§16.1).
+- `runs.base_drift` counts the commits between the merge base and `base_sha` (§17.3): 0 is the merge base itself (T2.3).
+- `repos.config_json` is the validated `.intenzo.yml` from the default branch, refreshed on each PR event. `deployments` keeps one row per commit and environment, with its latest state; a failure never replaces a success (T2.3).
 
 ## 12. GitHub App manifest
 
@@ -601,6 +603,11 @@ outcome (set when state=done): pass | fail | inconclusive | error | cancelled | 
 2. **`deployment_status`** only upserts `deployments`. Then it calls `GET /repos/{o}/{r}/commits/{sha}/pulls` to find open PRs, and `advance()`s any run waiting on that sha. **No run is ever created from a deployment.** A SHA with no open PR (any branch push) is stored and ignored.
 3. A deployment arriving for a run that timed out within the last 2 h re-opens it, as attempt n+1.
 
+Built in T2.3 (`apps/cloud/src/github/handlers.ts`, `src/runs/advance.ts`):
+- `advance()` locks the group's row, decides and writes in one transaction.
+- `commits/{sha}/pulls` lists every open PR that *contains* the commit. Only those whose head it is are advanced, so a preview of a commit the PR has moved past starts nothing.
+- Each run that starts verifying gets its baseline (§17.3).
+
 ### 16.3 Run group and billing
 - A new head SHA creates a new run (`attempt_no` resets per sha; group-wide ordering is by `created_at`). The previous non-terminal run → done/superseded:
   - `cancel` sent to Modal
@@ -674,6 +681,9 @@ pending ─► identity ─► [explore (PR, unrecorded)] ─► record_pr ─�
 ### 17.1 Matching the preview deployment
 - **Environment:** case-insensitive prefix `preview.environment_prefix`, plus an optional `project` substring. Vercel names them exactly `Preview` and `Production` (T0.4).
 - **Production is recognized by name.** Vercel sends `production_environment: false` even on its `Production` deployments, so that flag is never trusted (T0.4).
+  - An environment that starts with "prod" or says "production" is never used, whatever the prefix. The rule errs toward production.
+  - It's checked before a deployment's status is read (T2.3, `apps/cloud/src/deployments/match.ts`).
+- **A failure never replaces a stored success** for the same commit and environment: the earlier deployment still serves the commit. A Vercel redeploy adds a new `success` status, with a new URL, to the same GitHub deployment (T2.3).
 - **URL:** `deployment_status.environment_url`, falling back to `target_url`. For Vercel both are the deployment's unique URL (`<project>-<hash>-<team>.vercel.app`), and `deployment.ref` is the commit SHA, not the branch.
 - **Vercel must send `deployment_status`.** It's a per-project toggle (Settings → Git → "deployment_status Events") that was **off** on a new project in T0.4, which left only a commit status pointing at the Vercel dashboard. Onboarding has to ask for it, and Vercel's GitHub App may need a permissions update. Vercel posts only the final status (`success`; no `pending`).
 - Raw payloads from T0.4 are fixtures in `packages/core/fixtures/github/` (R11 resolved).
@@ -689,6 +699,12 @@ pending ─► identity ─► [explore (PR, unrecorded)] ─► record_pr ─�
 3. If there's none, walk the base branch's first-parent history up to `max_drift_commits` and use the nearest ancestor with a preview. The report states the drift: "baseline = main@a1b2c3 (2 commits before the merge base)". **With drift > 0, unrequested-change detection (§24) is skipped**, because changes on main in the gap would appear as PR changes. Before/after clips are still shown, with the drift label.
 4. Otherwise `baseUrl = null`. The run continues without before/after, and the report says so.
 5. Any candidate URL on `repos.prod_domains` is rejected.
+
+Built in T2.3 (`apps/cloud/src/runs/baseline.ts`), when a run starts verifying:
+- The compare answer carries the merge base's parents. Each further step is one `GET /commits/{sha}`.
+- The result is stored in `runs.base_url`, `base_sha` and `base_drift`.
+- A failed lookup is logged, and the run goes on without a baseline.
+- demo-shop#7 resolved `main@b6b60c7 (the merge base)`.
 
 Customer note: this needs base-branch commits to have preview deployments. On Vercel, set the production branch to `release`/`prod`, or (v1) Intenzo triggers a preview of the merge base through the Vercel API.
 
@@ -1243,7 +1259,7 @@ Backup: a recorded take of the full run, in case anything is down during judging
 | R14 | Internal `_snapshotForAI` API changes | Exact version pin + contract test; `data-iz-ref` tagging fallback (§20.1) |
 | R6 | Exploration on deep flows | `repro.startPath` from the PM video, route candidates, `trigger_absent` handling, a path cache within the run group |
 | R7 | Customer test isolation | Isolation levels; `no_isolation` cap; hook reference implementation |
-| R8 | Merge-base preview missing for customers | Drift walk; `baseUrl=null` fallback; v1: trigger a Vercel preview through the API |
+| R8 | Merge-base preview missing for customers | Drift walk and the `baseUrl=null` fallback are built (T2.3). v1: trigger a Vercel preview through the API |
 | R9 | Private-repo media and GIFs | `body_html` signed URLs; `/g/` proxy (roadmap) |
 | R10 | Voice Transcribe is realtime-only | **Resolved (T0.2):** a file endpoint exists and is accurate; neither mode returns timings |
 | R11 | Vercel environment naming in `deployment_status` | **Resolved (T0.4):** exactly `Preview` / `Production`; `environment_url` = `target_url`; `ref` = SHA; `production_environment` always `false`. The catch: Vercel's per-project "deployment_status Events" toggle was off on a new project, so onboarding must turn it on (§17.1) |
