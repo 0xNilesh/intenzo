@@ -359,11 +359,27 @@
   - *Videos are private by design (§28)*, so they play through the report page's signed URLs (T2.7), not a public URL.
 
 ### T2.7 Report renderer and check run (stub verdicts)
-- [ ] **Build:** `core/report` (comment markdown, check-run payload) from DB state; the stub worker emits fixed verdicts plus the real P1 recordings.
+*Split in two (issue #24): the report from the database first, then real recordings on Modal. T2.7a's PR is "Part of #24"; T2.7b's closes it.*
+
+#### T2.7a Report renderer, check run and report page
+- [ ] **Build:**
+  - `core/report` (comment markdown, check-run payload) from DB state
+  - the worker's `intent_ready`, `criterion_verdict` and `criterion_evidence` events stored
+  - the check run's requested actions (§26.2)
+  - a report page `/r/[runId]` that plays the private videos through signed URLs
+  - the stub worker emits fixed verdicts
 - [ ] **Tests:**
   - snapshot tests of the comment for pass, fail, inconclusive and superseded
   - length cap: collapsed sections are dropped first above 65,536 characters
 - [ ] **Verify:** the rendered comment looks right on GitHub.
+
+#### T2.7b Real recordings from the stub worker
+- [ ] **Build:**
+  - the Modal image gets Chromium and ffmpeg
+  - the spawn effect sends a VerifyJob, with the repo's secrets (the session hook's, Vercel's bypass) stored encrypted
+  - the stub worker records the P1 paths on the PR (and base) preview, uploads the videos and cites them as evidence
+- [ ] **Tests:** the VerifyJob payload (no secrets for forks); the secrets' encryption round-trip.
+- [ ] **Verify:** a demo-shop PR's comment links a real video recorded on Modal.
 
 ### ✅ Phase 2 gate: `pnpm gate:p2` + manual e2e
 - `gate:p1` passes, plus all P2 unit tests.
