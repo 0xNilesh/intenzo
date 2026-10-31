@@ -139,7 +139,9 @@ export async function reportModel(
   const finished = run.finishedAt ?? null;
   return {
     groupId,
-    ticket: null,
+    ticket: ctx.group.ticketRef
+      ? { ref: ctx.group.ticketRef, title: ctx.group.ticketTitle ?? "" }
+      : null,
     run: {
       id: run.id,
       headSha: run.headSha,

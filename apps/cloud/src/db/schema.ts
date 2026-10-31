@@ -103,7 +103,9 @@ export const runGroups = pgTable(
       .notNull()
       .references(() => repos.id),
     prNumber: integer("pr_number").notNull(),
+    /** The PR's ticket (§17.2), from its context bundle: "#5" and its title, for the comment. */
     ticketRef: text("ticket_ref"),
+    ticketTitle: text("ticket_title"),
     state: text("state").$type<RunGroupState>().notNull().default("open"),
     commentId: githubId("comment_id"),
     agentAttempts: integer("agent_attempts").notNull().default(0),

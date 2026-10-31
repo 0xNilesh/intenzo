@@ -67,6 +67,12 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
           bundleUrl = built.bundleUrl;
           if (built.ticketHash)
             intent = await reusedIntent(deps.db, ctx.group.id, built.ticketHash);
+          // The comment says which ticket it verified against (§26.1).
+          const ticket = built.bundle.ticket;
+          await deps.db
+            .update(runGroups)
+            .set({ ticketRef: ticket?.ref ?? null, ticketTitle: ticket?.title ?? null })
+            .where(eq(runGroups.id, ctx.group.id));
         } catch (err) {
           const why = (err as Error).message.slice(0, 200);
           deps.log?.(`run ${runId.slice(0, 8)}: no context bundle: ${why}`);

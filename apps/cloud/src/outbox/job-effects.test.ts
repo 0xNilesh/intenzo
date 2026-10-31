@@ -162,6 +162,24 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
     });
   });
 
+  it("remembers the ticket, so the comment can name it", async () => {
+    await drainWith(async () => ({
+      bundleUrl: "https://private.blob.example/b.json",
+      ticketHash: HASH,
+      bundle: {
+        ticket: {
+          source: "github_issue",
+          ref: "#5",
+          title: "Discount codes",
+          body: "",
+          comments: [],
+        },
+      } as never,
+    }));
+    const [group] = await t.db.select().from(runGroups).where(eq(runGroups.id, groupId));
+    expect(group).toMatchObject({ ticketRef: "#5", ticketTitle: "Discount codes" });
+  });
+
   it("lets the job read a ticket no earlier run has read", async () => {
     await drainWith(async () => ({
       bundleUrl: "https://private.blob.example/b.json",
