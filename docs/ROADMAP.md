@@ -301,16 +301,26 @@
 - [x] **Verify:** `pnpm --filter @intenzo/cloud test outbox` (against a local Postgres in Docker). *(The outbox tests pass on PGlite. The two-drainer tests ran on CI's `postgres:18.6`, since this Mac has neither Docker nor Postgres. Also checked live on demo-shop#8: one `Intenzo` check run and one comment, each created once and then edited when the preview was ready. DECISIONS 2026-10-31.)*
 
 ### T2.5 Modal worker shim and job protocol
+*Split in two (issue #22), so the Cloud and Node side could land while the Modal account was being set up. T2.5a's PR is "Part of #22"; T2.5b's closes it.*
+
+#### T2.5a Job protocol (Cloud and Node worker)
 - [ ] **Build:**
-  - `modal/app.py`: `cpu=4, memory=8192, timeout=900`; Node in its own process group; `killpg` on cancel; a `finally` block that always sends `failed`
-  - `spawn`/`cancel` endpoints
   - job JWT (`exp = deadline + 5 min`)
   - `/api/worker/events` with a `(jobId, seq)` unique constraint and the **410 stale guard**
   - `/api/worker/alive`
+  - `finished` and `failed` end the run
+  - the worker's job runner and event client, with a sleep job for testing
 - [ ] **Tests:**
-  - a sleep job, cancelled → the process group is gone and a `failed(cancelled)` event is received
   - an event from a superseded job → 410, and the worker aborts
   - a duplicate `seq` is ignored
+- [ ] **Verify:** the worker CLI runs a sleep job against the Cloud's routes: its events are accepted, and once its run is superseded the worker aborts on 410.
+
+#### T2.5b Modal shim
+- [ ] **Build:**
+  - `modal/app.py`: `cpu=4, memory=8192, timeout=900`; Node in its own process group; `killpg` on cancel; a `finally` block that always sends `failed`
+  - `spawn`/`cancel` endpoints, and the outbox's spawn and cancel effects
+  - the sweeper: a Modal cron → `POST /api/internal/sweep`
+- [ ] **Tests:** a sleep job, cancelled → the process group is gone and a `failed(cancelled)` event is received.
 - [ ] **Verify:** `modal deploy`, spawn a test job, cancel it, and check the Cloud logs.
 
 ### T2.6 Artifact upload
