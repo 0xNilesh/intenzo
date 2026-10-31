@@ -58,11 +58,13 @@ export function parseConfig(text: string): ConfigResult {
  * config files are a problem, since it's unclear which one is meant.
  */
 export function readConfig(repoDir: string): { file: string | null; result: ConfigResult } {
+  // The ignore comments keep Next.js from tracing the whole project into the Cloud's functions:
+  // the Cloud bundles this module (for configFromFiles) but never reads a checkout.
+  const path = (name: string) => join(/*turbopackIgnore: true*/ repoDir, name);
   return configFromFiles(
-    CONFIG_FILENAMES.filter((name) => existsSync(join(repoDir, name))).map((name) => ({
-      name,
-      text: readFileSync(join(repoDir, name), "utf8"),
-    })),
+    CONFIG_FILENAMES.filter((name) => existsSync(/*turbopackIgnore: true*/ path(name))).map(
+      (name) => ({ name, text: readFileSync(/*turbopackIgnore: true*/ path(name), "utf8") }),
+    ),
   );
 }
 
