@@ -170,6 +170,7 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
   - Its `failed` event uses seq 1,000,000.
   - The endpoints take a bearer secret (`MODAL_ENDPOINT_SECRET`, from the Modal Secret `intenzo-worker`).
   - The worker image never contains the repo root (`.env` files, the App's key).
+- **Built in T2.7b:** the worker image has ffmpeg (Debian's) and Chromium with its system libraries, for the Playwright version the lockfile pins. Both are installed before the sources are copied in, so a code change doesn't download the browser again.
 
 ---
 
@@ -411,6 +412,7 @@ export const VerifyJob = JobBase.extend({
 - **Attachments:** the ticket is fetched with `Accept: application/vnd.github.full+json`. Image and video URLs are taken from `body_html` (signed `private-user-images…?jwt=` URLs for private repos) and **downloaded immediately** in the same function (verify on day 1).
   - **Seen in T0.7, private repo:** a video's URL in `body_html` was a plain `https://github.com/user-attachments/assets/<uuid>` link, not a signed `?jwt=` URL. An authenticated GET with a user token downloaded it (302 to storage, then 200 `video/mp4`). Whether an App installation token can fetch it is untested; T4.2 must check, unless the demo repo is public by then.
 - If that fails, the bundle records `media_unavailable` and the report says so. The demo repo is public, so this doesn't affect it.
+- **Built in T2.7b:** the Cloud's spawn effect sends this VerifyJob, with `bundleUrl: null` until the Cloud builds bundles (P4), `intent: null` (the job computes it) and no `cachedPaths` until the navigator saves some (P3). It's checked against core's schema before it goes.
 
 ## 9. Worker events
 
@@ -515,6 +517,8 @@ model_calls     id, run_id, stage, model, prompt_version, latency_ms, tokens_in,
 - `repos.config_json` is the validated `.intenzo.yml` from the default branch, refreshed on each PR event. `deployments` keeps one row per commit and environment, with its latest state; a failure never replaces a success (T2.3).
 - `outbox.lease_until` is the end of an in-flight row's lease, or, on a pending row that failed, the time it may be tried again (T2.4).
 - `job_events` holds every event a run's current job reported (§9), once per `(job_id, seq)`. A stale job's events are answered 410 and not stored (T2.5a).
+- `run_groups.from_fork` is set from each `pull_request` event: the PR's head repo is another repo, or null because the fork was deleted. It defaults to true, so a PR no event has described counts as a fork and gets no secrets (§29, T2.7b).
+- `repos.hook_secret_enc`, `users_enc` and `bypass_enc` hold `v1.<iv>.<ciphertext>.<tag>`: AES-256-GCM under `INTENZO_SECRETS_KEY`, bound to the repo's GitHub id and the column, so a value copied elsewhere doesn't open. The operator sets them with `pnpm repo:secrets` (T2.7b).
 
 ## 12. GitHub App manifest
 
@@ -790,6 +794,13 @@ VerifyJob (Modal: 4 CPU, 8 GB, timeout 900 s; Node limit 870 s)
     [stretch] testgen (§25) → tests_ready
  5. emit finished(outcome, cost, timings)
 ```
+
+- **Built in T2.7b, with stub verdicts** (`apps/worker/src/job/verify.ts`):
+  - The intent is the demo ticket's (`fixtures/criteria`), and each criterion's path is a saved one, else its hand-written fixture (`fixtures/paths`).
+  - Lanes are recorded one at a time, the PR side then the base side, each through the session hook and with the bypass, as the job's secrets allow.
+  - Each lane's `human.mp4` goes to the private store, in the first take number no earlier job of the run used (Blob refuses to overwrite, §28).
+  - The verdict is the stub's fixed one, with the window `[Tt − 1 s, Tt + 3 s]` of the PR lane, when that lane completed. Otherwise it's inconclusive with §22.1's reason (`trigger_absent` counts as `precondition_unmet` until the judges look at it).
+  - The job's secrets are replaced with `[redacted]` in every lane, log line and crash message before they leave the worker: Playwright's call logs can quote request headers.
 
 ## 20. Navigator: the exploration loop
 
@@ -1187,6 +1198,8 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
 | **Prompt injection** (ticket, PR body, page, console) | Untrusted blocks; the navigator never sees `expected`; two independent judges must agree; `citedValue` is checked against readings; `sourceQuote` is shown in the report so people can spot injected criteria; the agent payload is sanitized (§26.3) |
 | Intent tampering by the PR author | Criteria come from the linked ticket. The PR body is used only when there's no ticket, labelled "unverified" |
 | Quota abuse | Commands need write access; at most 3 concurrent verify jobs per installation; a daily run cap |
+
+- **Built in T2.7b:** a repo's test secrets are sealed at rest (§11) and opened only by the spawn effect, into the job of a PR that isn't from a fork. A repo with sealed secrets and no `INTENZO_SECRETS_KEY` gets no job, and the outbox says why without naming a value.
 
 ## 30. Observability
 - Every run has a `run_events`-style timeline, built from the outbox + `model_calls` + job events and shown on the report page (debug mode).

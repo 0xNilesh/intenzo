@@ -376,12 +376,14 @@
   - *Found and fixed:* the check run's Details link went to the App's homepage, which has a stray period. It now opens the run's report.
 
 #### T2.7b Real recordings from the stub worker
-- [ ] **Build:**
+- [x] **Build:**
   - the Modal image gets Chromium and ffmpeg
   - the spawn effect sends a VerifyJob, with the repo's secrets (the session hook's, Vercel's bypass) stored encrypted
   - the stub worker records the P1 paths on the PR (and base) preview, uploads the videos and cites them as evidence
-- [ ] **Tests:** the VerifyJob payload (no secrets for forks); the secrets' encryption round-trip.
-- [ ] **Verify:** a demo-shop PR's comment links a real video recorded on Modal.
+- [x] **Tests:** the VerifyJob payload (no secrets for forks); the secrets' encryption round-trip.
+- [x] **Verify:** a demo-shop PR's comment links a real video recorded on Modal.
+  - *Live, demo-shop#13:* 94 s from opening the PR (the almost-right code) to a completed check run; the run took 1 m 32 s on Modal for 8 lanes. Each criterion's row links a clip of the PR recording, the readings show C2's bug ($50.00 at +0, +1 and +3 s, $45.00 after a reload), and the report page plays all 8 videos through signed URLs.
+  - *Also the P2 gate's end-to-end check:* two pushes 7 s apart superseded the first run (its check run `neutral`), and the PR kept one comment, showing the latest run.
 
 ### ✅ Phase 2 gate: `pnpm gate:p2` + manual e2e
 - `gate:p1` passes, plus all P2 unit tests.

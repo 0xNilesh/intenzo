@@ -5,6 +5,40 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Real recordings on Modal (T2.7b, #24)
+
+The Cloud now spawns §8's VerifyJob, with the repo's test secrets sealed at rest and none for a fork's PR, and the worker records the demo ticket's criteria on Modal along the P1 paths, uploads each lane's video and cites it. The checks:
+
+- 44 more unit tests than `main` (the Cloud +38, the worker +5, core +1).
+- A local run of the worker's recorder against demo-shop's live previews.
+- A live run on demo-shop#13, which also serves as the P2 gate's end-to-end check (the owner chose one live check per phase).
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Live, demo-shop#13 (the almost-right code) | 94 s from opening the PR to a completed check run. The run took 1 m 32 s on Modal: 8 lanes recorded, rendered and uploaded one at a time. Each criterion's row links a clip of the PR recording, and the readings show C2's bug: the total read $50.00 at +0, +1 and +3 s, and $45.00 only after a reload. The report page held all 8 videos; a signed URL answered 206 `video/mp4` (C2's PR video, 50,957 bytes) |
+| Two pushes 7 s apart | The first push's run was superseded: its check run went `neutral` ("Superseded"). The second's completed 113 s after the push, its preview's build included. The PR kept one comment, showing the latest run and "Earlier runs (2)" |
+| The clips | The demo paths trigger 0.25–0.35 s into the human video, which starts after the sync marker, so `[Tt − 1 s, Tt + 3 s]` starts before 0. The comment and the page clamp it to 0:00 |
+| Locally, against the previews | C2's PR lane completed with 15 readings; its base lane was `trigger_absent` (`main` has no discount codes). Both videos rendered, in about 12 s per lane |
+| The Modal image | Debian 13 with ffmpeg 7.1.5, and Chrome for Testing 156 (Playwright 1.64.1's chromium-1248) with its libraries. The deploy with the new layers took 143 s |
+| Playwright's errors | Their call logs can list a request's headers, which would include the bypass if that request failed. The worker redacts the job's secrets before anything leaves it |
+
+### Decisions
+
+1. **A repo's test secrets are sealed at rest with AES-256-GCM under `INTENZO_SECRETS_KEY`**, each bound to the repo's GitHub id and its column (GCM's additional data), and opened only by the spawn effect.
+   - *Why:* the `*_enc` columns have existed since T2.2 with nothing to fill them. The binding stops a sealed value working in another repo or column.
+   - *Alternatives:* one Vercel env var per repo, which doesn't go past the demo repo.
+   - The operator stores them with `pnpm repo:secrets`, which reads the values by name from `.env`.
+2. **A PR counts as a fork until a `pull_request` event says otherwise** (`run_groups.from_fork` defaults to true), and a fork's job gets `secrets: null` (§29).
+3. **`bundleUrl` is nullable until P4.** No task builds the ContextBundle before intent and coverage need it, and the stub worker reads none.
+4. **The stub's verdict stands only when the PR lane completed**, citing `[Tt − 1 s, Tt + 3 s]`. Otherwise the criterion is inconclusive with §22.1's reason, `trigger_absent` counting as `precondition_unmet` until the judges can look at it.
+5. **A take an earlier job of the run already used is skipped**, since Blob refuses to overwrite and a respawned job records the same run.
+6. **Lanes are recorded one at a time for now.** Eight took about 90 s, well inside the gate's 3 minutes; §19's two recording slots can come when the judges add time.
+7. *Next:* the P2 gate (#25), `pnpm gate:p2`, with this run as its end-to-end check.
+
+---
+
 ## 2026-10-31 · The report: comment, check run and page (T2.7a, #24)
 
 The comment and the check run are now rendered by `core/report` from one report model, which the Cloud builds from the database on every change (`apps/cloud/src/report/model.ts`). Each run has a page at `/r/{runId}`. The worker's results (`intent_ready`, `criterion_verdict`, `criterion_evidence`) are stored, and the job the Cloud spawns is a stub that reports the demo's criteria with fixed verdicts. The checks:
