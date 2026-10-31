@@ -118,6 +118,23 @@ describe("renderComment (§26.1)", () => {
       ),
     ],
     [
+      // §26.1 stage 2: the criteria are listed as soon as the intent is ready, before any verdict.
+      "criteria-listed",
+      model(
+        {
+          criteria: C.map((c) => ({
+            ...c,
+            verdict: null,
+            reasonCode: null,
+            observed: null,
+            clip: null,
+            readings: null,
+          })),
+        },
+        { state: "verifying", outcome: null, durationMs: null, costUsd: null, judges: [] },
+      ),
+    ],
+    [
       "verifying",
       model(
         {

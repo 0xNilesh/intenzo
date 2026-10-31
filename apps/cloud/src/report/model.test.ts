@@ -168,8 +168,72 @@ describe("reportModel", () => {
   });
 });
 
-describe("readingsLine", () => {
+describe("readingsLine (§26.1)", () => {
   it("keeps what happened after the trigger, timed from it", () => {
     expect(readingsLine(prLane as never)).toBe("+0 s $50.00 · +1 s $50.00 · after reload $45.00");
+  });
+
+  const at = (
+    i: number,
+    label: string,
+    kind: string,
+    phase: string,
+    ms: number,
+    value: string,
+  ) => ({
+    i,
+    label,
+    kind,
+    phase,
+    tMs: T0 + 10_000 + ms,
+    value,
+    bbox: null,
+  });
+
+  it("shows the watched element alone, not the region snapshots beside it", () => {
+    const lane = {
+      ...prLane,
+      readings: [
+        at(0, "order total", "text", "pre", -1000, "$50.00"),
+        at(1, "order total", "text", "post", 0, "$50.00"),
+        at(
+          2,
+          "order summary",
+          "region_diff",
+          "post",
+          0,
+          "+ text: Subtotal $50.00 Discount (SAVE10) −$5.00\n- text: Subtotal $50.00",
+        ),
+        at(3, "live regions", "region_diff", "post", 0, "no change"),
+        at(4, "order total", "text", "post", 1000, "$50.00"),
+        at(5, "order total", "text", "post", 3000, "$50.00"),
+        at(6, "order total", "text", "after_reload", 5000, "$45.00"),
+      ],
+    };
+    expect(readingsLine(lane as never)).toBe(
+      "+0 s $50.00 · +1 s $50.00 · +3 s $50.00 · after reload $45.00",
+    );
+  });
+
+  it("shows what appeared in the live regions when no element was watched", () => {
+    const lane = {
+      ...prLane,
+      readings: [
+        at(0, "discount form", "region_diff", "post", 0, '+ textbox "Discount code": OLD5'),
+        at(1, "live regions", "region_diff", "post", 0, "+ alert: This code has expired"),
+        at(2, "live regions", "region_diff", "post", 1000, "+ alert: This code has expired"),
+      ],
+    };
+    expect(readingsLine(lane as never)).toBe(
+      "+0 s + alert: This code has expired · +1 s + alert: This code has expired",
+    );
+  });
+
+  it("is empty when nothing changed", () => {
+    const lane = {
+      ...prLane,
+      readings: [at(0, "live regions", "region_diff", "post", 0, "no change")],
+    };
+    expect(readingsLine(lane as never)).toBeNull();
   });
 });

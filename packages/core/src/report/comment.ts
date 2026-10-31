@@ -104,7 +104,9 @@ function criterionRows(c: ReportCriterion, reportUrl: string): string[] {
       : "";
   const rows = [`| ${icon} | **${c.id}** ${cell(c.text)} | ${evidence} |`];
   if (c.verdict === "fail" || c.verdict === "inconclusive") {
+    // §26.1: what was expected, what the page read, and what the judges saw.
     const parts = [`Expected: ${cell(c.expected)}`];
+    if (c.readings) parts.push(`Readings: ${cell(c.readings, 500)}`);
     if (c.observed) parts.push(`Observed: ${cell(c.observed, 500)}`);
     if (c.verdict === "inconclusive" && c.reasonCode)
       parts.push(`(${c.reasonCode.replaceAll("_", " ")})`);
