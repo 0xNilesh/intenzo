@@ -32,7 +32,8 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm test:browser`                                 | Browser tests in every package (needs Playwright Chromium, see below)                                                                     |
 | `pnpm test:live`                                    | Live model tests: real APIs, spends model credits, **run by hand only** (needs `META_API_KEY`, `BASETEN_API_KEY`)                         |
 | `pnpm test:pg`                                      | Postgres tests (`*.pg.test.ts`): a real Postgres server at `INTENZO_TEST_PG_URL` (default `localhost:5432`). CI runs them on its own one  |
-| `pnpm check`                                        | Typecheck + lint + format + unit + contract. **Run before every commit**                                                                  |
+| `pnpm test:modal`                                   | The Modal shim's tests (`modal/test_*.py`): Python's standard library, with Node 24 on PATH                                               |
+| `pnpm check`                                        | Typecheck + lint + format + unit + contract + the Modal shim's tests. **Run before every commit**                                         |
 | `pnpm check:all`                                    | `check` + browser tests: **what CI runs, apart from `pnpm test:pg`. Run before every push** (and `pnpm test:pg` too if you have Postgres) |
 | `pnpm --filter @intenzo/core test`                  | Tests for one package                                                                                                                     |
 | `pnpm --filter @intenzo/core test schema`           | One package's tests whose file path matches `schema`. Not `pnpm test -- schema`, which runs everything                                    |
@@ -167,6 +168,7 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 | Typecheck, lint, format | ✅                                                |                                                               |
 | Unit tests              | ✅                                                |                                                               |
 | Contract tests          | ✅                                                |                                                               |
+| Modal shim tests        | ✅                                                |                                                               |
 | Browser tests           | ✅ (as soon as any `*.browser.test.ts` exists)    |                                                               |
 | Postgres tests          | ✅ (a `postgres:18.6` service container)          | `pnpm test:pg` with a local Postgres server                   |
 | Live model tests        |                                                   | ✅ `pnpm test:live` (not in CI for now: spends model credits) |

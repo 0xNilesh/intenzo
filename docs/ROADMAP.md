@@ -322,11 +322,21 @@
 - [x] **Verify:** the worker CLI runs a sleep job against the Cloud's routes: its events are accepted, and once its run is superseded the worker aborts on 410. *(`protocol.test.ts` runs the real CLI in its own process against the routes on a local port: `started` stored, then exit 3 within one nap of the push. The deployed routes answer 401 without a token and 410 for a token whose run doesn't exist.)*
 
 #### T2.5b Modal shim
-- [ ] **Build:**
+- [x] **Build:**
   - `modal/app.py`: `cpu=4, memory=8192, timeout=900`; Node in its own process group; `killpg` on cancel; a `finally` block that always sends `failed`
   - `spawn`/`cancel` endpoints, and the outbox's spawn and cancel effects
   - the sweeper: a Modal cron → `POST /api/internal/sweep`
-- [ ] **Tests:** a sleep job, cancelled → the process group is gone and a `failed(cancelled)` event is received.
+  - *The shim's logic is `modal/shim.py`; until T2.7 the spawned job is a 60 s placeholder sleep.*
+- [x] **Tests:** a sleep job, cancelled → the process group is gone and a `failed(cancelled)` event is received.
+  - *That's `modal/test_shim.py`, which runs the real worker and cancels it with a signal.*
+  - *Also:*
+    - a worker ignoring SIGTERM gets SIGKILL
+    - leftovers in its group are stopped
+    - crash and wall-clock-limit reports
+    - spawn's fresh job id per attempt
+    - no spawn for a run that moved on
+    - cancel with nothing to cancel
+    - the sweep's secret and deadlines
 - [ ] **Verify:** `modal deploy`, spawn a test job, cancel it, and check the Cloud logs.
 
 ### T2.6 Artifact upload

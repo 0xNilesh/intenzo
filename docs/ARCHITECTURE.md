@@ -162,6 +162,13 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 - Starts Node with `start_new_session=True` (its own process group) and a wall-clock limit of `timeout − 30 s`.
 - When Modal cancels or the limit is reached: `os.killpg(SIGTERM)`, then after 5 s `SIGKILL`.
 - A `finally` block **always** POSTs a `failed` event (`infra_timeout` / `cancelled` / `crash`) unless Node already reported `finished`.
+- **Built in T2.5b:**
+  - The logic is in `modal/shim.py`, which `modal/app.py` calls.
+  - "Already reported" means the worker's exit code (T2.5a): 0 finished, 1 failed, 3 stale. The shim reports nothing then.
+  - The shim waits in one-second steps, so it notices a cancellation within a second, whether it arrives as an exception or a signal.
+  - Its `failed` event uses seq 1,000,000.
+  - The endpoints take a bearer secret (`MODAL_ENDPOINT_SECRET`, from the Modal Secret `intenzo-worker`).
+  - The worker image never contains the repo root (`.env` files, the App's key).
 
 ---
 
@@ -534,7 +541,7 @@ The App is **Intenzo Ai** (`intenzo-ai`, bot `intenzo-ai[bot]`), installed on de
 | `POST /api/worker/events` | job JWT | ingest event; **410 if stale** |
 | `POST /api/worker/upload-tokens` | job JWT | per-file Blob client tokens for the job's deterministic paths |
 | `GET /api/worker/alive` | job JWT | liveness for superseded/cancelled jobs |
-| `POST /api/internal/sweep` | internal secret | deadlines, outbox retries, stuck runs |
+| `POST /api/internal/sweep` | internal secret (`INTENZO_SWEEP_SECRET`) | deadlines (a `tick` for every run group with an unfinished run) and outbox retries, from Modal's cron every minute (T2.5b) |
 | `GET /r/[runId]` | public for public repos (v0) | report page with chaptered player |
 
 ## 13. Prompts
@@ -666,7 +673,12 @@ Effects and their idempotency:
 
 Built in T2.4 (`apps/cloud/src/outbox/`):
 - **Where it runs:** `advance()` writes the rows in its transaction (`rows.ts`). Each webhook drains after its event (`drain.ts`). The sweeper will drain too, once the Modal cron exists (T2.5).
-- **Leases and retries:** a claimed row is leased for 60 s. A failure is tried again after 10, 20, 40 and 80 s, then marked `failed`. Effects without an executor (spawn and cancel until T2.5) stay pending.
+- **Leases and retries:** a claimed row is leased for 60 s. A failure is tried again after 10, 20, 40 and 80 s, then marked `failed`. Effects without an executor stay pending.
+- **Spawn and cancel (T2.5b):**
+  - Spawn gives the run a fresh `current_job_id` on every attempt, then calls Modal. A job an earlier attempt may have started is stale from then on, and stops at its next `/alive`.
+  - Cancel calls Modal with the saved `modal_call_id`; with none, there's nothing to cancel.
+  - Both run only once the four Modal settings are on Vercel.
+  - Until T2.7 the job is a 60 s placeholder sleep.
 - **The check run is rendered from the run's row, like the comment**, under an advisory lock per run. So its key is `check:{runId}:{status}` (a run passes each status once), and no version is needed: whichever drainer runs last shows the latest state.
 - **The comment starts with a marker** (`<!-- intenzo:run-group:{id} -->`). One posted by a drainer that died is found by it, on a bot's comment only. A deleted comment is posted again.
 - **Two drainers at once** make one check-run POST and one comment POST, on a real Postgres (`drain.pg.test.ts`). Checked live on demo-shop#8.
