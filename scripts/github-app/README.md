@@ -31,6 +31,19 @@ pnpm github-app:fixtures [--list | --all]
 
 No command calls a paid API. Everything goes to `api.github.com` with the App's own credentials.
 
+## The real App (T2.1)
+
+The real Intenzo App is registered the same way, into its own credentials file, so the T0.4 App's
+files stay as they are. `GITHUB_APP_ENV` picks the file for every command (only gitignored
+`.env.<name>` files are accepted):
+
+```bash
+GITHUB_APP_ENV=.env.intenzo-app pnpm github-app:create --name=intenzo --hook=https://<cloud>/api/github/webhook
+GITHUB_APP_ENV=.env.intenzo-app pnpm github-app:sandbox whoami sumithprabhu/demo-shop
+```
+
+Its id and webhook secret then go into the Cloud's environment (see `apps/cloud/README.md`).
+
 ## The sandbox
 
 `sandbox/` holds the files T0.4 pushed to `sumithprabhu/intenzo-t04-sandbox`:
