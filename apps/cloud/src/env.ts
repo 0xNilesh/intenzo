@@ -21,6 +21,14 @@ const CloudEnv = z.object({
     ),
   /** Signs the worker's job tokens (§8, §29). 32 characters at least. */
   INTENZO_JOB_SECRET: z.string().min(32),
+  /**
+   * Seals the repos' test secrets at rest (§29, T2.7b): 32 bytes, base64. Without it a repo's
+   * sealed secrets can't be opened, so its jobs aren't spawned.
+   */
+  INTENZO_SECRETS_KEY: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]{43}=$/)
+    .optional(),
   /** What Modal's cron sends to POST /api/internal/sweep (T2.5b). */
   INTENZO_SWEEP_SECRET: z.string().min(32).optional(),
   /**

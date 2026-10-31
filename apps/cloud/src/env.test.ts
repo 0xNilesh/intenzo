@@ -45,6 +45,11 @@ describe("cloudEnv", () => {
     ["an empty App id", { ...VALID, GITHUB_APP_ID: "" }, "GITHUB_APP_ID"],
     ["a short job secret", { ...VALID, INTENZO_JOB_SECRET: "too-short" }, "INTENZO_JOB_SECRET"],
     [
+      "a secrets key that isn't 32 bytes of base64",
+      { ...VALID, INTENZO_SECRETS_KEY: "c2hvcnQ=" },
+      "INTENZO_SECRETS_KEY",
+    ],
+    [
       "a private key that isn't a PEM",
       { ...VALID, GITHUB_APP_PRIVATE_KEY: "hook-secret-value" },
       "GITHUB_APP_PRIVATE_KEY",
