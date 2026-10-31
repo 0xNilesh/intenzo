@@ -149,11 +149,13 @@ describe("POST /api/worker/events (§9)", () => {
       jobId: JOB,
       seq: 4,
       outcome: "pass",
-      costUsd: 0.31,
-      timings: {},
+      costUsd: 0.1044,
+      timings: { total_ms: 68_000 },
     };
     expect((await send(finished)).status).toBe(202);
     expect(await run()).toMatchObject({ state: "done", outcome: "pass", finishedAt: NOW });
+    // §26.1's final stage shows the cost and the time: they're kept on the run.
+    expect(await run()).toMatchObject({ costUsd: 0.1044, timingsJson: { total_ms: 68_000 } });
     expect(drains).toBe(1);
     const keys = (await t.db.select().from(outbox)).map((r) => r.idemKey);
     expect(keys).toContain(`check:${RUN}:completed`);
