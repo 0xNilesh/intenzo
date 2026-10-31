@@ -11,6 +11,8 @@ export const SleepJob = z.object({
   callback: z.object({ baseUrl: z.url(), token: z.string().min(1) }),
   /** How long it sleeps, asking the Cloud between naps whether to go on. */
   seconds: z.number().positive().max(900),
+  /** How often it asks /alive. */
+  aliveEverySeconds: z.number().positive().max(60).default(5),
 });
 export type SleepJob = z.infer<typeof SleepJob>;
 

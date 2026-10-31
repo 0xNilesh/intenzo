@@ -9,8 +9,6 @@ export const EXIT = { finished: 0, failed: 1, stale: 3 } as const;
 export interface RunOptions {
   /** A client for the job; by default one that POSTs to its callback URL. */
   client?: (job: JobPayload) => JobClient;
-  /** How often a sleep job asks /alive. */
-  aliveEveryMs?: number;
 }
 
 export async function runJob(payload: unknown, options: RunOptions = {}): Promise<number> {
@@ -22,7 +20,7 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
     await client.send({ kind: "started" });
     switch (job.type) {
       case "sleep":
-        await sleep(job, client, options.aliveEveryMs ?? 5_000);
+        await sleep(job, client);
         await client.send({
           kind: "finished",
           outcome: "inconclusive",
@@ -46,10 +44,12 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
 }
 
 /** Sleeps for the job's seconds, asking /alive between naps, so a superseded job stops soon. */
-async function sleep(job: SleepJob, client: JobClient, aliveEveryMs: number): Promise<void> {
+async function sleep(job: SleepJob, client: JobClient): Promise<void> {
   const until = Date.now() + job.seconds * 1000;
   for (let left = until - Date.now(); left > 0; left = until - Date.now()) {
-    await new Promise((resolve) => setTimeout(resolve, Math.min(aliveEveryMs, left)));
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(job.aliveEverySeconds * 1000, left)),
+    );
     await client.alive();
   }
 }

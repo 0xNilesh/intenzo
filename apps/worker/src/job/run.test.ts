@@ -53,9 +53,9 @@ const sleepJob = (baseUrl: string, seconds = 0.05) => ({
   deadlineAt: "2026-10-31T09:15:00.000Z",
   callback: { baseUrl, token: "job-token" },
   seconds,
+  aliveEverySeconds: 0.01,
 });
 const quick = {
-  aliveEveryMs: 10,
   client: (job: Parameters<typeof jobClient>[0]) => jobClient(job, { retryDelayMs: 1 }),
 };
 const events = (received: Received[]) =>
