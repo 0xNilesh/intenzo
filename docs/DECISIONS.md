@@ -5,6 +5,26 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-10-31 · Judge bundle (T4.4, #35)
+
+`core/judge` builds the bundle both judges get (§22.2) and `prompts/judge.v1.ts` holds their prompt, both moved from the go/no-go (T0.3, `scripts/gonogo/lib`). Checked with 5 new unit tests (a file snapshot of C2's bundle) and a bundle built from C2 recorded live on the almost-right preview and on main.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Live, C2 | The annotated still shows the discount line and the order total still at $50.00 at Tt+1000. The bundle: 15 PR readings, the trigger marked at step 3, and the base's "trigger control isn't there at step 2" with its 3 PRE readings |
+| The roadmap's "annotation with sharp" | Already done in T1.6 with Chromium (`browser/annotate.ts`), which also keeps fonts and labels consistent with the videos |
+
+### Decisions
+
+1. **The baseline is for comparison only**: its readings carry no index, so a judge can't cite them, and the prompt says it never decides the verdict on its own.
+2. **Only the last trigger step is marked `TRIGGER`**, since its time is Tt; a fill before it is still a trigger step in the log.
+3. **No frames mode yet**: both judges take native MP4 (T0.2b), so the bundle sends `video_url` parts. A model without video would need it.
+4. **The prompt adds three rules to the go/no-go's:** the PM's words go with the criterion, a visual criterion may cite no reading and use the video, and a lane whose trigger never ran can't pass (§22.1).
+
+---
+
 ## 2026-10-31 · Coverage (T4.3, #34)
 
 `core/coverage`: Spark 1.3 maps each criterion to the PR's changed files (`coverage.v1`), and `routeOf` gives the routes those files belong to. `pnpm intenzo coverage` runs it. Checked with 25 new unit tests and one live call on the almost-right PR.
