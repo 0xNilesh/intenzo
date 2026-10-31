@@ -9,7 +9,8 @@
     "./browser": "./src/browser/index.ts",
     "./navigator": "./src/navigator/index.ts",
     "./models": "./src/models/index.ts",
-    "./intent": "./src/intent/index.ts"
+    "./intent": "./src/intent/index.ts",
+    "./coverage": "./src/coverage/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
