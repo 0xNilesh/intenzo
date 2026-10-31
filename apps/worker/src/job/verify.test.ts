@@ -4,7 +4,8 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { IntenzoConfig, LaneResult, WorkerEvent } from "@intenzo/core";
+import { ContextBundle, IntenzoConfig, LaneResult, VerifyJob, WorkerEvent } from "@intenzo/core";
+import { ticketHash } from "@intenzo/core/intent";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Judge } from "@intenzo/core/judge";
@@ -12,7 +13,7 @@ import { scriptedPort } from "@intenzo/core/models";
 
 import { jobClient, StaleJobError } from "./client.ts";
 import { EXIT, runJob } from "./run.ts";
-import type { LaneInput, Recorder } from "./verify.ts";
+import { type LaneInput, type Recorder, verify } from "./verify.ts";
 
 const JOB = "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b";
 const RUN = "ea44d35d-4baa-4f81-ac92-08285fae4058";
@@ -37,7 +38,11 @@ afterEach(async () => {
  * The Cloud's worker routes and Blob's presigned PUTs on one local port. Blob refuses a path that
  * already holds a file, as it does for URLs presigned without allowOverwrite (T2.6).
  */
-async function fakeCloud({ existing = [] as string[], gone = false } = {}) {
+async function fakeCloud({
+  existing = [] as string[],
+  gone = false,
+  files = {} as Record<string, string>,
+} = {}) {
   const events: WorkerEvent[] = [];
   const stored = new Set(existing);
   const puts: { path: string; type: string | undefined; bytes: number }[] = [];
@@ -46,6 +51,10 @@ async function fakeCloud({ existing = [] as string[], gone = false } = {}) {
     for await (const chunk of req) chunks.push(chunk as Buffer);
     const body = Buffer.concat(chunks);
     const { pathname } = new URL(req.url!, "http://cloud");
+    // Signed GET URLs the Cloud hands out: the context bundle (§8).
+    if (req.method === "GET" && pathname in files) {
+      return void res.writeHead(200, { "content-type": "application/json" }).end(files[pathname]);
+    }
     const reply = (status: number, value: unknown) =>
       res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(value));
     if (pathname === "/api/worker/events") {
@@ -464,5 +473,161 @@ describe("the verify job with judges (T4.6b)", () => {
     });
     expect(result).toBe(EXIT.stale);
     expect(verdictsOf(cloud.events)).toEqual([]);
+  });
+});
+
+// T4.8: the job reads its ticket and recording from the bundle, and maps coverage from its diff.
+describe("the verify job with a context bundle (§8, §18)", () => {
+  const MEDIA_HASH = "f".repeat(64);
+  const TICKET = {
+    ref: "#5",
+    title: "Discount codes",
+    body: "The details are in the screen recording below.",
+    comments: [],
+  };
+  const bundleFor = (base: string) =>
+    ContextBundle.parse({
+      pr: {
+        number: 7,
+        title: "Discount codes",
+        body: "Closes #5",
+        headSha: "a".repeat(40),
+        baseRef: "main",
+        isFork: false,
+        isBot: false,
+      },
+      ticket: { source: "github_issue", ...TICKET },
+      images: [],
+      media: [{ store: "private", path: "runs/r/ticket/media-1.mp4", contentType: "video/mp4" }],
+      mediaUrls: [`${base}/media.mp4?sig=1`],
+      diff: {
+        files: [
+          {
+            path: "lib/cart.ts",
+            status: "modified",
+            additions: 15,
+            deletions: 2,
+            patch: "+ priceCart",
+          },
+        ],
+      },
+      hints: null,
+    });
+  const said = (text: string) => ({
+    text,
+    trigger: "apply SAVE10",
+    setup: [],
+    expected: `${text}, exactly`,
+    watch: ["order total"],
+    kind: "ui_behavior",
+    persistence: false,
+    timingMs: null,
+    inferred: false,
+    sourceQuote: text,
+    sourceMediaAt: 9400,
+  });
+  /** Spark for intent and coverage, scripted by stage. */
+  const models = () =>
+    scriptedPort((request) =>
+      request.stage === "intent"
+        ? {
+            criteria: [
+              said("The total drops to $45.00 right away"),
+              said("SAVE10 adds its own line"),
+            ],
+            repro: { startPath: "/cart", steps: [] },
+          }
+        : {
+            items: [
+              { criterionId: "C1", files: ["lib/cart.ts"], status: "covered" },
+              { criterionId: "C2", files: [], status: "uncovered" },
+            ],
+          },
+    );
+  const recording = async () => ({
+    transcript: {
+      text: "When I apply save 10, the total should drop 10% right away.",
+      audioDurationMs: 36_500,
+      ms: 1,
+    },
+    dataUrl: "data:video/mp4;base64,AAAA",
+    bytes: 4,
+    mediaHash: MEDIA_HASH,
+  });
+
+  async function runWithBundle(
+    over: Record<string, unknown> = {},
+    deps: Record<string, unknown> = {},
+  ) {
+    const files: Record<string, string> = {};
+    const cloud = await fakeCloud({ files });
+    files["/bundle.json"] = JSON.stringify(bundleFor(cloud.base));
+    const job = VerifyJob.parse({
+      ...verifyJob(cloud.base),
+      bundleUrl: `${cloud.base}/bundle.json?sig=1`,
+      ...over,
+    });
+    const port = models();
+    await verify(job, jobClient(job, { retryDelayMs: 1 }), {
+      recorder: fakeRecorder().recorder(),
+      log: () => {},
+      judges: null,
+      models: port,
+      readRecording: recording,
+      ...deps,
+    });
+    const ready = cloud.events.find((e) => e.kind === "intent_ready") as Extract<
+      WorkerEvent,
+      { kind: "intent_ready" }
+    >;
+    return { ready, port };
+  }
+
+  it("reads the ticket and the PM's recording into the criteria, and maps them to the diff", async () => {
+    const { ready, port } = await runWithBundle();
+    expect(ready.intent.criteria.map((c) => `${c.id} ${c.text}`)).toEqual([
+      "C1 The total drops to $45.00 right away",
+      "C2 SAVE10 adds its own line",
+    ]);
+    expect(ready.intent.intentSource).toBe("linked_issue_video");
+    // The hash the Cloud computes from the same ticket and recording, so a later run reuses it.
+    expect(ready.intent.ticketHash).toBe(ticketHash(TICKET, [MEDIA_HASH]));
+    expect(ready.coverage.items.map((i) => `${i.criterionId} ${i.status}`)).toEqual([
+      "C1 covered",
+      "C2 uncovered",
+    ]);
+    expect(port.requests.map((r) => r.stage)).toEqual(["intent", "coverage"]);
+    const ask = port.requests[0]!.messages[1]!.content as { type: string }[];
+    expect(ask.map((part) => part.type)).toEqual(["text", "video_url"]);
+  });
+
+  it("reuses the intent the Cloud passed, and still maps the diff", async () => {
+    const intent = {
+      criteria: [{ ...said("SAVE10 adds its own line"), id: "C1", timingMs: undefined }],
+      intentSource: "linked_issue_video",
+      ticketHash: "e".repeat(64),
+    };
+    const { ready, port } = await runWithBundle({ intent });
+    expect(port.requests.map((r) => r.stage)).toEqual(["coverage"]);
+    expect(ready.intent.ticketHash).toBe("e".repeat(64));
+  });
+
+  it("reads the ticket's text alone when its recording can't be read", async () => {
+    const { ready, port } = await runWithBundle(
+      {},
+      {
+        readRecording: async () => {
+          throw new Error("HTTP 403");
+        },
+      },
+    );
+    expect(ready.intent.intentSource).toBe("linked_issue");
+    expect(typeof port.requests[0]!.messages[1]!.content).toBe("string");
+  });
+
+  it("falls back to the demo's fixtures without a model to read the ticket", async () => {
+    const { ready } = await runWithBundle({}, { models: undefined, readRecording: undefined });
+    expect(ready.intent.criteria.map((c) => c.id)).toEqual(["C1", "C2", "C3", "C4"]);
+    expect(ready.coverage).toEqual({ items: [], routes: [] });
   });
 });

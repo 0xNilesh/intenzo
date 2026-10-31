@@ -1,12 +1,13 @@
 // The outbox's job effects (§16.3, §16.4): spawn a run's VerifyJob on Modal when the run starts
 // verifying (§8), and cancel it when the run ends any other way (superseded, past its deadline).
-import { SavedPath, VerifyJob } from "@intenzo/core";
+import { CriterionSet, SavedPath, VerifyJob } from "@intenzo/core";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import type { BuiltBundle, BundleTarget } from "../bundle/build.ts";
 import type { Db } from "../db/db.ts";
 import { repoConfig } from "../db/repos.ts";
-import { intentVersions, repos, runGroups, runs, savedPaths } from "../db/schema.ts";
+import { installations, intentVersions, repos, runGroups, runs, savedPaths } from "../db/schema.ts";
 import type { ModalSettings } from "../env.ts";
 import { signJobToken, tokenExpiry } from "../jobs/token.ts";
 import { type RepoSecrets, repoSecrets } from "../secrets/repo-secrets.ts";
@@ -24,6 +25,9 @@ export interface JobEffectDeps {
   secretsKey: Buffer | null;
   newJobId: () => string;
   now: () => Date;
+  /** Builds the run's context bundle (§8); without it the job reads the demo's fixtures. */
+  bundle?: (target: BundleTarget & { installationId: number }) => Promise<BuiltBundle>;
+  log?: (line: string) => void;
 }
 
 export function jobExecutors(deps: JobEffectDeps): Record<string, EffectExecutor> {
@@ -37,15 +41,37 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
     run: async (row) => {
       const runId = row.runId!;
       const [ctx] = await deps.db
-        .select({ group: runGroups, repo: repos })
+        .select({ group: runGroups, repo: repos, installation: installations })
         .from(runs)
         .innerJoin(runGroups, eq(runs.runGroupId, runGroups.id))
         .innerJoin(repos, eq(runGroups.repoId, repos.id))
+        .innerJoin(installations, eq(repos.installationId, installations.id))
         .where(eq(runs.id, runId));
       if (!ctx) return null;
       // §29: nothing secret reaches a fork's code. Opened before the job becomes current, so a
       // job that can't be built leaves the run as it was.
       const secrets = ctx.group.fromFork ? null : jobSecrets(deps.secretsKey, ctx.repo);
+      // §8: the PR, its ticket and recording, and the diff, for the worker's intent and coverage.
+      // A bundle that can't be built leaves the job to the fixtures rather than stopping the run.
+      let bundleUrl: string | null = null;
+      let intent: CriterionSet | null = null;
+      if (deps.bundle) {
+        try {
+          const built = await deps.bundle({
+            installationId: ctx.installation.ghInstallationId,
+            repo: ctx.repo.fullName,
+            prNumber: ctx.group.prNumber,
+            runId,
+            isFork: ctx.group.fromFork,
+          });
+          bundleUrl = built.bundleUrl;
+          if (built.ticketHash)
+            intent = await reusedIntent(deps.db, ctx.group.id, built.ticketHash);
+        } catch (err) {
+          const why = (err as Error).message.slice(0, 200);
+          deps.log?.(`run ${runId.slice(0, 8)}: no context bundle: ${why}`);
+        }
+      }
       // A fresh job id on every attempt: a job an earlier attempt may have started is stale from
       // here on (410) and stops itself, so a run never has two live jobs.
       const jobId = deps.newJobId();
@@ -66,9 +92,9 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
           token: signJobToken(deps.jobSecret, { jobId, runId, exp: tokenExpiry(deadlineAt) }),
         },
         config: repoConfig(ctx.repo),
-        // Until P4 there's no context bundle, and the job computes the intent itself (§19 step 0).
-        bundleUrl: null,
-        intent: null,
+        // §18: an intent version read from the same ticket is reused; else the job reads it.
+        bundleUrl,
+        intent,
         prUrl: run.prUrl,
         baseUrl: run.baseUrl,
         baseSha: run.baseSha,
@@ -106,6 +132,15 @@ export async function cachedPaths(db: Db, groupId: number): Promise<SavedPath[]>
     const parsed = SavedPath.safeParse(row.path);
     return parsed.success ? [parsed.data] : [];
   });
+}
+
+/** The intent an earlier run of the group read from the same ticket (§18), if any. */
+async function reusedIntent(db: Db, groupId: number, hash: string): Promise<CriterionSet | null> {
+  const [row] = await db
+    .select({ intent: intentVersions.intentJson })
+    .from(intentVersions)
+    .where(and(eq(intentVersions.runGroupId, groupId), eq(intentVersions.ticketHash, hash)));
+  return row ? (CriterionSet.safeParse(row.intent).data ?? null) : null;
 }
 
 /** The repo's secrets for its job; a repo with sealed secrets and no key to open them is an error. */

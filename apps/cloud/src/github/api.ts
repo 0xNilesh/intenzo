@@ -33,9 +33,21 @@ export async function errorText(response: Response): Promise<string> {
   return `${response.status} ${message.slice(0, 200)}`.trim();
 }
 
+/** An issue with its rendered body_html too, where attachments' URLs are (§8). */
+export const FULL_JSON = "application/vnd.github.full+json";
+/** Attachments Intenzo downloads at most (§8): a PM's recording is a few MB. */
+export const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
+/** Hosts that may see the installation token: GitHub's own. */
+const GITHUB_HOST = /^(?:github\.com|[\w-]+\.githubusercontent\.com)$/;
+
 export interface GitHub {
   /** GETs a JSON resource and checks the fields Intenzo reads. Null when GitHub answers 404. */
-  get<T>(path: string, schema: z.ZodType<T>): Promise<T | null>;
+  get<T>(path: string, schema: z.ZodType<T>, accept?: string): Promise<T | null>;
+  /**
+   * Downloads an attachment (§8): without credentials first, as for a public repo, then with the
+   * installation token, which only GitHub's own hosts ever see. Null when neither works.
+   */
+  download(url: string): Promise<Uint8Array<ArrayBuffer> | null>;
   /** POSTs or PATCHes JSON and checks the answer. Null when GitHub answers 404. */
   send<T>(
     method: "POST" | "PATCH",
@@ -74,9 +86,24 @@ export function githubClient(token: () => Promise<string>): GitHub {
     return response;
   }
   return {
-    async get(path, schema) {
-      const response = await call("GET", path, GITHUB_HEADERS.Accept);
+    async get(path, schema, accept = GITHUB_HEADERS.Accept) {
+      const response = await call("GET", path, accept);
       return response && schema.parse(await response.json());
+    },
+    async download(url) {
+      const ours = GITHUB_HOST.test(new URL(url).hostname);
+      for (const authorized of ours ? [false, true] : [false]) {
+        const headers: Record<string, string> = { "User-Agent": GITHUB_HEADERS["User-Agent"] };
+        if (authorized) headers.Authorization = `Bearer ${await token()}`;
+        // Redirects go to storage on another host, where fetch drops the Authorization header.
+        const response = await fetch(url, { headers, signal: AbortSignal.timeout(60_000) });
+        if (!response.ok) continue;
+        const size = Number(response.headers.get("content-length") ?? 0);
+        if (size > MAX_DOWNLOAD_BYTES) return null;
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        return bytes.byteLength > MAX_DOWNLOAD_BYTES ? null : bytes;
+      }
+      return null;
     },
     async send(method, path, body, schema) {
       const response = await call(method, path, GITHUB_HEADERS.Accept, body);

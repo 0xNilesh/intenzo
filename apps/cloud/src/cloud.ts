@@ -3,7 +3,10 @@
 import { randomUUID } from "node:crypto";
 
 import { database } from "./db/client.ts";
-import { cloudEnv, modalSettings } from "./env.ts";
+import { privatePut } from "./artifacts/put.ts";
+import { artifactUrls } from "./artifacts/read-urls.ts";
+import { buildBundle } from "./bundle/build.ts";
+import { blobStores, cloudEnv, modalSettings } from "./env.ts";
 import { githubClient } from "./github/api.ts";
 import { installationTokens } from "./github/app-auth.ts";
 import { drainOutbox } from "./outbox/drain.ts";
@@ -41,6 +44,17 @@ export function cloud() {
         secretsKey: sealKey,
         newJobId: randomUUID,
         now,
+        log,
+        bundle: ({ installationId, ...target }) =>
+          buildBundle(
+            {
+              github: github(installationId),
+              put: privatePut(blobStores(env).private),
+              sign: artifactUrls(blobStores(env)),
+              log,
+            },
+            target,
+          ),
       })),
   };
   return {
