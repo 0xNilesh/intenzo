@@ -1,13 +1,14 @@
 // advance() (§16.4): load a run group, let decide() work out what a fact changes, and write the
 // result, all in one transaction holding the group's row lock, so two events for one pull request
-// can't interleave. The effects go back to the caller; T2.4 writes them to the outbox in this same
-// transaction.
+// can't interleave. The decision's effects are written to the outbox in the same transaction, so
+// a crash can't separate a run's change from what it has to tell GitHub (T2.4).
 import { eq } from "drizzle-orm";
 
 import type { Db } from "../db/db.ts";
 import { previewRules, repoConfig } from "../db/repos.ts";
 import { repos, runGroups, runs } from "../db/schema.ts";
 import { storedPreviews } from "../deployments/store.ts";
+import { enqueueEffects } from "../outbox/rows.ts";
 import { type Clock, decide, type Decision, type Fact, type Run } from "./transition.ts";
 
 export async function advance(
@@ -54,6 +55,7 @@ export async function advance(
         .set({ state, outcome, outcomeReason, prUrl, startedAt, deadlineAt, finishedAt })
         .where(eq(runs.id, run.id));
     }
+    await enqueueEffects(tx, groupId, decision.effects);
     return decision;
   });
 }
