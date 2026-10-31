@@ -15,6 +15,7 @@ const VALID = {
   GITHUB_APP_ID: "123456",
   GITHUB_APP_WEBHOOK_SECRET: "hook-secret-value",
   GITHUB_APP_PRIVATE_KEY: `${PEM}\n`,
+  INTENZO_JOB_SECRET: "job-secret-value-for-the-env-tests-0123",
 };
 
 describe("cloudEnv", () => {
@@ -37,11 +38,12 @@ describe("cloudEnv", () => {
     [
       "nothing set",
       {},
-      "DATABASE_URL, GITHUB_APP_ID, GITHUB_APP_WEBHOOK_SECRET, GITHUB_APP_PRIVATE_KEY",
+      "DATABASE_URL, GITHUB_APP_ID, GITHUB_APP_WEBHOOK_SECRET, GITHUB_APP_PRIVATE_KEY, INTENZO_JOB_SECRET",
     ],
     ["an empty secret", { ...VALID, GITHUB_APP_WEBHOOK_SECRET: "" }, "GITHUB_APP_WEBHOOK_SECRET"],
     ["an App id that isn't a number", { ...VALID, GITHUB_APP_ID: "intenzo" }, "GITHUB_APP_ID"],
     ["an empty App id", { ...VALID, GITHUB_APP_ID: "" }, "GITHUB_APP_ID"],
+    ["a short job secret", { ...VALID, INTENZO_JOB_SECRET: "too-short" }, "INTENZO_JOB_SECRET"],
     [
       "a private key that isn't a PEM",
       { ...VALID, GITHUB_APP_PRIVATE_KEY: "hook-secret-value" },
