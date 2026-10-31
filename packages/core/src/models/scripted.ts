@@ -31,13 +31,13 @@ export function scriptedPort(
           requests: 1,
         };
       }
-      const value =
-        typeof next === "function"
-          ? (next as (r: ModelRequest<unknown>, n: number) => unknown)(
-              request as ModelRequest<unknown>,
-              n,
-            )
-          : next;
+      // A scripted reply may be async, so tests can make a judge slow.
+      const value = await (typeof next === "function"
+        ? (next as (r: ModelRequest<unknown>, n: number) => unknown)(
+            request as ModelRequest<unknown>,
+            n,
+          )
+        : next);
       const parsed = request.schema.safeParse(value);
       const raw = JSON.stringify(value);
       return parsed.success

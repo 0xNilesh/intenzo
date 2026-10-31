@@ -71,6 +71,11 @@ export function browserRecorder(options: RecorderOptions = {}): Recorder {
           humanFile: videos.human.path,
           offsets: { human: videos.human.offsetMs, judge: videos.judge.offsetMs },
         },
+        // For the judges (§22.2): kept until the job ends, in the recorder's folder.
+        judge: {
+          video: videos.judge.path,
+          ...(recording.annotatedShotPath && { annotatedShot: recording.annotatedShotPath }),
+        },
       };
     },
     async close() {

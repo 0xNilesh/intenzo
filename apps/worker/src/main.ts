@@ -4,6 +4,7 @@ import { JOB_USAGE, runJobCommand } from "./job/command.ts";
 import { EXPLORE_USAGE, runExplore } from "./explore.ts";
 import { COVERAGE_USAGE, runCoverage } from "./coverage.ts";
 import { INTENT_USAGE, runIntent } from "./intent.ts";
+import { RUN_USAGE, runLocal } from "./local-run.ts";
 import { RECORD_USAGE, runRecord, UsageError } from "./record.ts";
 
 const USAGE = `Usage: pnpm intenzo <command>
@@ -13,6 +14,7 @@ Commands:
   explore  Let the navigator find a criterion's trigger on the PR app and save the path
   intent   Read a ticket's criteria with Spark 1.3 (intent.v1)
   coverage Map each criterion to the PR's changed files with Spark 1.3 (coverage.v1)
+  run      Verify a PR app against a base app on this machine: record, then judge (--local)
 ${JOB_USAGE}
 
 ${RECORD_USAGE}
@@ -21,7 +23,9 @@ ${EXPLORE_USAGE}
 
 ${INTENT_USAGE}
 
-${COVERAGE_USAGE}`;
+${COVERAGE_USAGE}
+
+${RUN_USAGE}`;
 
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
@@ -34,6 +38,8 @@ async function main(argv: string[]): Promise<number> {
       return runIntent(rest);
     case "coverage":
       return runCoverage(rest);
+    case "run":
+      return runLocal(rest);
     case "job":
       return runJobCommand(rest);
     case undefined:

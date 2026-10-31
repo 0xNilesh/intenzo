@@ -87,6 +87,19 @@ pnpm intenzo coverage --criteria fixtures/criteria --diff out/almost-right.diff.
 
 One call, about $0.02. Needs `META_API_KEY` in `.env`.
 
+## `intenzo run --local` (T4.6b)
+
+The verify job end to end on this machine, without the Cloud: the criteria (a ticket read by
+Spark, or criterion files), each recorded on the PR app and the base app, judged by Spark Open and
+Spark 1.3 (re-recorded once to confirm a fail or break a tie), with every verdict printed.
+
+```bash
+pnpm intenzo run --local --pr <url> --base <url> --ticket fixtures/tickets/42.md [--explore] [--out <dir>]
+```
+
+`--explore` lets the navigator find the paths (Wonder); without it the hand-written
+`fixtures/paths` are used. About $0.10 for C1–C4. Needs `META_API_KEY` and `BASETEN_API_KEY`.
+
 ## `intenzo job` (T2.5a, T2.7b)
 
 Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,

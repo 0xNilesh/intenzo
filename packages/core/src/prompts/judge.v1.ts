@@ -21,7 +21,7 @@ You get:
 
 Rules:
 1. Judge only this criterion. Ignore anything else that looks wrong on the page.
-2. targetCorrect is false only if a red box marks a different element than the one the criterion is about. A watched element with no box (because it was absent) does not make the target wrong.
+2. targetCorrect is false only if a red box marks a different element than the one the criterion is about. A box may mark the container the element appears in (its form, summary or region): that is not a wrong target. A watched element with no box (because it was absent) does not make the target wrong, and neither does a message read from the live regions (alerts, status messages, toasts), which never get a box.
 3. Timing: if timingMs is given, the expected state must be visible by Tt + timingMs. Otherwise judge the state at Tt+3000.
 4. Persistence: if persistence is true, the expected state must also hold after the reload.
 5. Trust the readings for exact text and numbers. Use the video for timing and for anything the readings don't capture, such as a chart or an image.

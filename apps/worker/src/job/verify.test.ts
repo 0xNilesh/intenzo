@@ -7,7 +7,10 @@ import { join } from "node:path";
 import { IntenzoConfig, LaneResult, WorkerEvent } from "@intenzo/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { jobClient } from "./client.ts";
+import type { Judge } from "@intenzo/core/judge";
+import { scriptedPort } from "@intenzo/core/models";
+
+import { jobClient, StaleJobError } from "./client.ts";
 import { EXIT, runJob } from "./run.ts";
 import type { LaneInput, Recorder } from "./verify.ts";
 
@@ -150,11 +153,15 @@ const run = (job: unknown, recorder: () => Recorder) =>
     client: (j) => jobClient(j, { retryDelayMs: 1 }),
     recorder,
     log: () => {},
+    judges: null, // stub verdicts: no model is ever called from a unit test
   });
 
 type Verdicts = Extract<WorkerEvent, { kind: "criterion_verdict" }>[];
+/** The verdict events by criterion: criteria run two at a time, so they arrive in any order. */
 const verdictsOf = (events: WorkerEvent[]) =>
-  events.filter((e) => e.kind === "criterion_verdict") as Verdicts;
+  (events.filter((e) => e.kind === "criterion_verdict") as Verdicts).sort((a, b) =>
+    a.verdict.criterionId.localeCompare(b.verdict.criterionId),
+  );
 
 describe("the verify job (stub verdicts on real recordings, T2.7b)", () => {
   it("records each criterion on both previews, uploads the videos and cites them", async () => {
@@ -169,8 +176,8 @@ describe("the verify job (stub verdicts on real recordings, T2.7b)", () => {
       "finished",
     ]);
     // Every lane goes through the session hook and gets the bypass (§21.1, §21.2).
-    expect(fake.asked.map((a) => `${a.criterion.id} ${a.side} ${a.origin}`)).toEqual(
-      ["C1", "C2", "C3", "C4"].flatMap((id) => [`${id} pr ${PR}`, `${id} base ${BASE}`]),
+    expect(fake.asked.map((a) => `${a.criterion.id} ${a.side} ${a.origin}`).sort()).toEqual(
+      ["C1", "C2", "C3", "C4"].flatMap((id) => [`${id} pr ${PR}`, `${id} base ${BASE}`]).sort(),
     );
     for (const input of fake.asked) {
       expect(input).toMatchObject({
@@ -276,5 +283,186 @@ describe("the verify job (stub verdicts on real recordings, T2.7b)", () => {
     expect(cloud.events.map((e) => e.kind)).toEqual(["started", "intent_ready"]);
     expect(fake.asked).toEqual([]);
     expect(fake.closed()).toBe(1);
+  });
+});
+
+// T4.6b: the judges in the job. Each fake PR take reads "VALUE n" (n = the take), so a judge can
+// cite it; the judges' answers come from `answer`, by criterion and take.
+describe("the verify job with judges (T4.6b)", () => {
+  function judgingRecorder(delayMs = 0) {
+    const takes = new Map<string, number>();
+    let inFlight = 0;
+    let most = 0;
+    const recorded: string[] = [];
+    const recorder = (): Recorder => ({
+      async record(input) {
+        inFlight++;
+        most = Math.max(most, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        inFlight--;
+        const key = `${input.criterion.id} ${input.side}`;
+        const take = (takes.get(key) ?? 0) + 1;
+        takes.set(key, take);
+        recorded.push(`${key} take ${take}`);
+        const lane = laneFor(
+          input.criterion.id,
+          input.side,
+          input.side === "pr" ? "completed" : "trigger_absent",
+        );
+        if (input.side === "pr") {
+          lane.readings = [
+            {
+              i: 0,
+              label: input.criterion.watch[0] ?? "x",
+              kind: "text",
+              phase: "post",
+              tMs: T0 + 6000,
+              value: `VALUE ${take}`,
+              bbox: null,
+            },
+          ];
+        }
+        const humanFile = join(dir, `${input.criterion.id}-${input.side}-${take}.mp4`);
+        writeFileSync(humanFile, `video of ${key} ${take}`);
+        return {
+          lane,
+          video: { humanFile, offsets: { human: 500 - T0, judge: -T0 } },
+          judge: { video: humanFile },
+        };
+      },
+      async close() {},
+    });
+    return { recorder, recorded, most: () => most };
+  }
+
+  type Answer = "pass" | "fail" | "inconclusive";
+  /** Two scripted judges; `answer(criterionId, take)` gives both judges' verdicts. */
+  function scriptedJudges(answer: (id: string, take: number) => [Answer, Answer], delayMs = 0) {
+    let inFlight = 0;
+    let most = 0;
+    const judge = (n: 0 | 1): Judge => ({
+      name: n === 0 ? "Spark Open" : "Spark 1.3",
+      model: n === 0 ? "meta-models/muse-spark-open" : "muse-spark-1.3",
+      effort: "low",
+      port: scriptedPort(async (request) => {
+        inFlight++;
+        most = Math.max(most, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        inFlight--;
+        const text = (request.messages[1]!.content as { type: string; text?: string }[])[0]!.text!;
+        const id = /^CRITERION (C\d+)/.exec(text)![1]!;
+        const take = Number(/VALUE (\d+)/.exec(text)![1]);
+        const verdict = answer(id, take)[n];
+        return {
+          verdict,
+          targetCorrect: true,
+          citedReadings: verdict === "inconclusive" ? [] : [0],
+          citedValue: verdict === "inconclusive" ? null : `VALUE ${take}`,
+          atMs: null,
+          observed: `${id} take ${take}: ${verdict}`,
+        };
+      }),
+    });
+    return { pair: [judge(0), judge(1)] as [Judge, Judge], most: () => most };
+  }
+
+  const runJudged = (job: unknown, recorder: () => Recorder, judges: [Judge, Judge]) =>
+    runJob(job, {
+      client: (j) => jobClient(j, { retryDelayMs: 1 }),
+      recorder,
+      log: () => {},
+      judges,
+    });
+
+  it("reports the judges' verdicts, by name, in place of the stub's", async () => {
+    const cloud = await fakeCloud();
+    const judges = scriptedJudges((id) => (id === "C2" ? ["fail", "fail"] : ["pass", "pass"]));
+    expect(await runJudged(verifyJob(cloud.base), judgingRecorder().recorder, judges.pair)).toBe(
+      EXIT.finished,
+    );
+    const verdicts = verdictsOf(cloud.events).map((v) => v.verdict);
+    expect(verdicts.map((v) => `${v.criterionId}:${v.verdict}:${v.reasonCode}`)).toEqual([
+      "C1:pass:agreed",
+      "C2:fail:agreed",
+      "C3:pass:agreed",
+      "C4:pass:agreed",
+    ]);
+    expect(verdicts[0]!.judges.map((j) => j.model)).toEqual(["Spark Open", "Spark 1.3"]);
+    expect(verdicts[0]!.observed).toBe("C1 take 1: pass");
+    expect(cloud.events.at(-1)).toMatchObject({ kind: "finished", outcome: "fail" });
+  });
+
+  it("records a fail once more to confirm it, and cites the new take", async () => {
+    const cloud = await fakeCloud();
+    const fake = judgingRecorder();
+    const judges = scriptedJudges((id) => (id === "C2" ? ["fail", "fail"] : ["pass", "pass"]));
+    await runJudged(verifyJob(cloud.base), fake.recorder, judges.pair);
+    expect(fake.recorded.filter((r) => r.startsWith("C2 pr"))).toEqual([
+      "C2 pr take 1",
+      "C2 pr take 2",
+    ]);
+    expect(fake.recorded.filter((r) => r.startsWith("C1 pr"))).toEqual(["C1 pr take 1"]);
+    const c2 = verdictsOf(cloud.events)[1]!;
+    expect(c2.verdict).toMatchObject({ verdict: "fail", observed: "C2 take 2: fail" });
+    expect(c2.lanes[0]!.humanVideo?.path).toBe(`runs/${RUN}/C2/pr/take-2/human.mp4`);
+  });
+
+  it("calls a fail that doesn't repeat flaky", async () => {
+    const cloud = await fakeCloud();
+    const judges = scriptedJudges((id, take) =>
+      id === "C2" && take === 1 ? ["fail", "fail"] : ["pass", "pass"],
+    );
+    await runJudged(verifyJob(cloud.base), judgingRecorder().recorder, judges.pair);
+    expect(verdictsOf(cloud.events)[1]!.verdict).toMatchObject({
+      verdict: "inconclusive",
+      reasonCode: "flaky",
+    });
+    expect(cloud.events.at(-1)).toMatchObject({ kind: "finished", outcome: "inconclusive" });
+  });
+
+  it("settles a tie with a re-record only on a verdict a first judge gave", async () => {
+    const cloud = await fakeCloud();
+    const judges = scriptedJudges((id, take) =>
+      id !== "C3" ? ["pass", "pass"] : take === 1 ? ["pass", "inconclusive"] : ["fail", "fail"],
+    );
+    await runJudged(verifyJob(cloud.base), judgingRecorder().recorder, judges.pair);
+    expect(verdictsOf(cloud.events)[2]!.verdict).toMatchObject({
+      verdict: "inconclusive",
+      reasonCode: "judges_disagree",
+    });
+  });
+
+  it("records two criteria at a time, and judges at most four calls at a time", async () => {
+    const cloud = await fakeCloud();
+    const fake = judgingRecorder(20);
+    const judges = scriptedJudges(() => ["pass", "pass"], 20);
+    await runJudged(verifyJob(cloud.base), fake.recorder, judges.pair);
+    expect(fake.most()).toBe(2);
+    expect(judges.most()).toBeLessThanOrEqual(4);
+    expect(judges.most()).toBeGreaterThanOrEqual(2);
+  });
+
+  it("stops before judging once the run has moved on", async () => {
+    let alive = 0;
+    const cloud = await fakeCloud();
+    const judges = scriptedJudges(() => ["pass", "pass"]);
+    const client = (j: Parameters<typeof jobClient>[0]) => {
+      const real = jobClient(j, { retryDelayMs: 1 });
+      return {
+        ...real,
+        async alive() {
+          // The first check per criterion passes; the one before judging finds the run over.
+          if (++alive > 4) throw new StaleJobError();
+        },
+      };
+    };
+    const result = await runJob(verifyJob(cloud.base), {
+      client,
+      recorder: judgingRecorder().recorder,
+      log: () => {},
+      judges: judges.pair,
+    });
+    expect(result).toBe(EXIT.stale);
+    expect(verdictsOf(cloud.events)).toEqual([]);
   });
 });
