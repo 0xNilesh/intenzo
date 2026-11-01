@@ -533,9 +533,9 @@
 - [x] **Verify:** the C2 GIF shows the total highlighted and still at $50.00 after Apply.
 
 ### T5.2 SAM 3.1 for the canvas criterion
-- [ ] **Build:** frames at 10 fps padded to ≥ 50; a text-concept prompt + the region box; mask outline rendering; 20 s timeout → annotated-still fallback.
-- [ ] **Tests:** the fallback path on a simulated timeout; frame padding.
-- [ ] **Verify:** `@live`: the C4 GIF highlights the discount slice of the canvas chart.
+- [x] **Build:** frames at 10 fps padded to ≥ 50; a text-concept prompt + the region box; mask outline rendering; 20 s timeout → annotated-still fallback. *(A phrase and a box can't be combined: Spark 1.3 points and SAM tracks the point; the fallback is the element's box outline. DECISIONS 2026-11-01.)*
+- [x] **Tests:** the fallback path on a simulated timeout; frame padding.
+- [x] **Verify:** `@live`: the C4 GIF highlights the discount slice of the canvas chart.
 
 ### T5.3 muse-fixer reference agent (`agents/muse-fixer`)
 - [ ] **Build:**

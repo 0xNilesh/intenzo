@@ -413,6 +413,7 @@ The repo is private on GitHub Free, so branch protection **can't** be enforced. 
 - Voice Transcribe returns **no timestamps**.
 - **Muse Code has no model id.** It's the `muse` CLI (+ `@muse-code/sdk`), run headless as `muse exec --json` with `META_API_KEY`.
 - Realtime transcription authenticates in the **first WebSocket frame**, not a header.
+- **SAM 3.1's phrases name what things look like, not what they mean:** "green slice" finds the demo's discount slice, "discount slice" finds nothing. A phrase can't be combined with a box or point prompt (400), and box and point prompts always return one_bit masks, whose raster covers the record's box (T5.2).
 
 **Spark Open**
 

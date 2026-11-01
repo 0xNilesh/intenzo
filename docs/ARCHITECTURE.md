@@ -187,7 +187,8 @@ Reference coding agent: agents/muse-fixer (GitHub Action in the target repo, use
 | Vision fallback | **Spark 1.3 computer use** (Wonder rejects the tool, T0.2) | screenshot + goal | point action | canvas/unlabeled widgets only |
 | Judge A | **Spark Open** (Baseten; native MP4 video confirmed, T0.2b; `reasoning_effort: low`, T0.3) | §22.2 bundle | `JudgeOutput` (by prompt: no structured outputs on Baseten) | 1 per criterion |
 | Judge B | **Spark 1.3** (`reasoning_effort: low`, T0.3) | same bundle | `JudgeOutput` (strict `json_schema`) | 1 per criterion (always) |
-| Visual evidence | **SAM 3.1** | ≥ 50 frames + text concept or box | masks | 1 per `ui_visual` criterion or vision-fallback target |
+| Pointing for SAM (T5.2) | **Spark 1.3** (`reasoning_effort: low`) | the frame at Tt+1000 + the criterion | `{found, x, y}` (strict `json_schema`, `point.v1`) | 1 per judged `ui_visual` criterion |
+| Visual evidence | **SAM 3.1** | ≥ 50 frames + a point prompt (a phrase can't be combined with a box or point, T5.2) | one_bit masks | 1 per `ui_visual` criterion or vision-fallback target |
 | Change classification | **Spark 1.3** | aria-diff hunks + crops + criteria | `ChangeClassification[]` | 0–1 |
 | Test generation (stretch) | **Muse Code**, inside muse-fixer (CLI-only, T0.2) | saved path + passing readings + criterion | Playwright spec | 1 per passing criterion |
 | Fixer (reference agent) | **Muse Code** | sanitized structured failure + repo checkout | commit | per "Send to agent", ≤ 3 attempts |
@@ -1074,16 +1075,16 @@ final = A'.verdict == B'.verdict ∈ {pass, fail}  → that verdict (reason agre
 | Criterion / target | Highlight source | Model |
 |---|---|---|
 | DOM element target | **rAF box track** (exact, every frame) → drawn box | none needed |
-| `ui_visual`, canvas, image or chart content | **SAM 3.1** text-concept prompt (e.g. "the 10% slice of the savings chart") over the window, with the region's DOM box as an extra box prompt when available | SAM 3.1 |
+| `ui_visual`, canvas, image or chart content | **SAM 3.1** point prompt over the window, at the point Spark 1.3 picks on the frame at Tt+1000 (T5.2; it replaced a text concept plus the region's box, which SAM refuses to combine) | Spark 1.3, SAM 3.1 |
 | Vision-fallback (point) target | **SAM 3.1** point prompt at the clicked coordinates | SAM 3.1 |
 
 ```
 window = evidenceWindow (canonical) → humanVideo time
 frames = 10 fps over the window, padded to ≥ 50 frames (SAM minimum)
-render = outline (2 px #FF3B30) + caption "C2 ❌ total stayed $50.00 after Apply"
+render = outline (2 px #FF3B30 box; 3 px around a SAM mask, never filled) + caption "C2 ❌ total stayed $50.00 after Apply"
 gif    = ffmpeg palettegen/paletteuse, 640 px, 8 fps, ≤ 2 MB (lower fps, then width, until it fits)
 still  = PNG of the frame at Tt+1000 with the highlight
-SAM timeout 20 s → fall back to the annotated screenshot
+SAM timeout 20 s, or no masks → fall back to the element's box outline (T5.1)
 ```
 For SAM to do real work on camera, the demo ticket includes **a canvas chart criterion** (§32).
 
@@ -1095,7 +1096,13 @@ For SAM to do real work on camera, the demo ticket includes **a canvas chart cri
   - **Which takes:** every judged pass and fail, not an inconclusive; rendered under the recording slots; stored beside the video of the take the verdict rests on (`runs/{run}/C2/pr/take-2/evidence.gif`). A render that fails costs the GIF, never the verdict.
   - **Which store:** the job's `evidenceStore`, which the Cloud sets to public only when GitHub's PR reply says the repo isn't private (§28). Otherwise the GIF stays private and the comment links the report.
   - **The comment** shows a failed criterion's GIF inline; a pass keeps its clip link (§26.1).
-  - SAM, for canvas and point targets, comes with T5.2.
+- **Built in T5.2** (`packages/core/src/browser/segment.ts`, `models/sam.ts`, `prompts/point.v1.ts`):
+  - **A point, not a phrase.** SAM's concept prompts find what things look like, not what they mean: on C4's window "green slice" found the discount slice in 49 of 50 frames, but "discount slice" and "chart slice" found nothing. A phrase can't be combined with a box or a point (the API answers 400), so the region's box can't narrow a phrase either. **Spark 1.3 points** at the criterion's subject on the frame at Tt+1000 (`point.v1`, the criterion as untrusted content), and **SAM tracks that point** both ways from that frame.
+  - **The clip:** the same 10 fps frames the GIF is drawn from, as H.264, the last frame held until there are 50 (SAM bills 50 anyway). Frame *i* of SAM's answer is frame *i* of the GIF.
+  - **Drawing:** each frame's one_bit mask becomes an SVG outline with Meta's `@meta-sam/parser` (`decodeMaskToSVGPath`), scaled into the record's box (the raster covers x1…x2+1, as `@meta-sam/graphics` draws it). An outline only: a fill changed the green slice's color, and color is what a visual criterion is about. A frame without the object has no highlight; with masks, the element's box isn't drawn.
+  - **Fallback:** SAM gets 20 s; a timeout, an error, a point that finds nothing or an answer without masks draws the element's box (T5.1) instead, and the log says why. Only `ui_visual` criteria, and only when the job has the Meta key.
+  - **Measured on the almost-right C4 (T5.2):** the point in about 5 s for about $0.004, SAM in about 7 s for $0.01 (its 50-frame minimum); 49 masks; the judged run with evidence took 29 s and $0.029. The spend goes into the run's cost.
+  - **The comment** also shows a visual criterion's GIF when it passes (§26.1): for a chart, the highlight is the evidence.
 
 ## 24. Unrequested-change detection (aria diff)
 ```
@@ -1136,7 +1143,7 @@ The sequence diff handles inserted content without shifting everything after it,
 | ❌ | C2 Total updates instantly (no refresh) | ![C2](gif) |
 | | Expected $50.00 → $45.00 within 1 s. Readings: +0 s $50.00 · +1 s $50.00 · +3 s $50.00 · after reload $45.00 | |
 | ✅ | C3 Expired code shows "This code has expired" | ▶ […] |
-| ✅ | C4 Savings chart shows the 10% slice | ▶ […] |
+| ✅ | C4 Savings chart shows the 10% slice | ![C4](gif) |
 ⚠️ Unrequested change on /checkout: button "Pay now" → "Continue"
 Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement required)
 <details>🧪 Suggested Playwright tests (3)</details>
