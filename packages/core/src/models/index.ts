@@ -20,6 +20,20 @@ export {
   textOf,
 } from "./port.ts";
 export { costUsd, USD_PER_M_TOKENS } from "./pricing.ts";
+export {
+  parseSamText,
+  pointPrompt,
+  SAM_MIN_FRAMES,
+  SAM_MODEL,
+  SAM_USD_PER_FRAME,
+  samCostUsd,
+  SamTimeoutError,
+  samVideo,
+  type SamFrame,
+  type SamMask,
+  type SamObject,
+  type SamVideoRequest,
+} from "./sam.ts";
 export { scriptedPort, type ScriptedPort, type ScriptedReply } from "./scripted.ts";
 export {
   TRANSCRIBE_MODEL,
