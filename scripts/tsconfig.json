@@ -3,7 +3,7 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["probe", "gonogo", "github-app", "demo", "gates"],
+  "include": ["probe", "gonogo", "github-app", "demo", "gates", "docs"],
   // Needs the DOM types: typechecked by gates/tsconfig.json.
   "exclude": ["gates/p1.ts", "gates/p2.ts", "gates/p3.ts"]
 }
