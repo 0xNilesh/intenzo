@@ -952,7 +952,7 @@ isSameElement(a, b) = a.evaluate((x, y) => x === y, await b.elementHandle())
 - Request headers `X-Intenzo-Timestamp: <unix seconds>` and `X-Intenzo-Signature: sha256=<hex HMAC-SHA256(hookSecret, timestamp + body)>`, where `timestamp + body` is the timestamp string followed by the raw body. The timestamp must be within 5 min of the server's clock.
 - Answers: 200 (`{"shopper":"…"}` plus `Set-Cookie` for a session), 401 (bad signature, or a missing or stale timestamp), 503 (no secret configured). demo-shop's `lib/hooks.ts` is the reference implementation (T0.5).
 - The hook **must** refuse when `VERCEL_ENV === "production"` (or the equivalent), with 403, before it even checks the signature.
-- A reference implementation of about 15 lines ships in `docs/hooks.md` and demo-shop.
+- A reference implementation of about 15 lines ships in [`docs/hooks.md`](hooks.md) and demo-shop. **Built in T7.3:** the doc's hook was run against all five answers above, and its curl check against demo-shop's live preview.
 
 The base side uses the same hook on the merge-base preview.
 

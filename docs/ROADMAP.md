@@ -643,9 +643,9 @@
 - [x] **Verify:** prewarm → the first run's time is within the §27 warm target.
 
 ### T7.3 Docs and landing page
-- [ ] **Build:** README (problem, how it works, architecture diagram, Meta models table, benchmark results, honest limits, what was built during the hackathon); `docs/hooks.md` reference hook; a one-page landing site.
-- [ ] **Tests:** links checked (`pnpm docs:links`).
-- [ ] **Verify:** a fresh reader can follow the README to run `intenzo run --local`.
+- [x] **Build:** README (problem, how it works, architecture diagram, Meta models table, benchmark results, honest limits, what was built during the hackathon); `docs/hooks.md` reference hook; a one-page landing site.
+- [x] **Tests:** links checked (`pnpm docs:links`).
+- [x] **Verify:** a fresh reader can follow the README to run `intenzo run --local`.
 
 ### T7.4 Demo rehearsal
 - [ ] **Build:** run the §32 storyboard end to end and record every take; record a full **backup take**.
