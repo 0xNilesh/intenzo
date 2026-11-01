@@ -5,6 +5,33 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · Docs and landing page (T7.3, #55)
+
+The README, `docs/hooks.md`, a landing page at the Cloud's root, and `pnpm docs:links`. Each piece was run as written.
+
+### What we found
+
+| Check | Result |
+| --- | --- |
+| The README's quick start, in a fresh clone, as written (ports 3400 and 3401, since 3000 was taken on this machine) | demo-shop cloned from GitHub, both branches built, and `intenzo run --local` recorded C1–C4 on both: the PR lanes completed, the base lanes `trigger_absent` (main has no discount codes), 8 videos in `out/runs/`, stub verdicts, $0, 31 s |
+| The hooks doc's reference hook, with a stub user | 200; 401 (bad signature); 401 (stale timestamp); 403 (production); 503 (no secret) |
+| The hooks doc's curl check, on demo-shop's live `main` preview | 200 `{"shopper":…}` with two cookies; 401 with a bad signature |
+| `pnpm docs:links` | every link in 32 Markdown files resolves; the golden comment's 4 template slots (`{report}#C1`) are skipped |
+| The README's Mermaid diagram | renders with mermaid 11.4.1: no syntax error, 9 nodes |
+
+### Decisions
+
+1. **The quick start serves demo-shop locally and needs no keys.**
+   - _Why:_ the previews are protected by a bypass a reader doesn't have, and a quick start that needs accounts or money isn't quick. Without keys the verdicts are the stub's, and the run still records everything for real; the keys add the judges.
+2. **The landing site is the Cloud's root page.**
+   - _Why:_ it's already deployed at intenzo-cloud.vercel.app, so it needs no new host, and Next prerenders it. It stays static: no data, no new dependencies.
+3. **`pnpm docs:links` checks relative links and anchors only, offline, in `pnpm check` and CI.**
+   - _Why:_ in-repo links rot with renames; external links need the network and fail for reasons outside the PR.
+4. **The README's limits come from the code.** Each "not built yet" item was checked: the Re-run action has no handler, `agent_trigger: auto` only hides the button, and approvers are logins.
+5. **The stub verdict said "fixed until the judges arrive (P4)",** which a quick-start reader saw on every criterion. It now says it isn't a judgement, and which keys the judges need.
+
+---
+
 ## 2026-11-01 · Failure injection (T7.1, #53)
 
 `pnpm test:faults` injects each of the roadmap's six faults where it would happen: a preview or a model API answering badly on a local port, against the real job (`runJob`, the real preflight and model ports), or a webhook, a deployment or a Modal cancel through the Cloud's real intake, handlers and outbox, into a fake GitHub that keeps state. No model calls; 13 tests in about 3 s.
