@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { denyText } from "@intenzo/core";
-import { nextTakeDir, recordCriterion, renderVideos } from "@intenzo/core/browser";
+import { nextTakeDir, recordCriterion, renderEvidence, renderVideos } from "@intenzo/core/browser";
 import { metaModelPort } from "@intenzo/core/models";
 import { explore } from "@intenzo/core/navigator";
 import { chromium, type Browser } from "playwright";
@@ -71,12 +71,19 @@ export function browserRecorder(options: RecorderOptions = {}): Recorder {
           humanFile: videos.human.path,
           offsets: { human: videos.human.offsetMs, judge: videos.judge.offsetMs },
         },
+        // For the evidence GIF (§23): where the watched elements were, frame by frame.
+        boxTrack: recording.boxTrack,
         // For the judges (§22.2): kept until the job ends, in the recorder's folder.
         judge: {
           video: videos.judge.path,
           ...(recording.annotatedShotPath && { annotatedShot: recording.annotatedShotPath }),
         },
       };
+    },
+    async evidence(input) {
+      const chrome = await (browser ??= chromium.launch());
+      // Its own folder per render; the take folders are named by criterion (§28).
+      return renderEvidence(chrome, { ...input, outDir: mkdtempSync(join(root, "evidence-")) });
     },
     async close() {
       try {

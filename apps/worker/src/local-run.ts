@@ -10,7 +10,7 @@ import { metaModelPort } from "@intenzo/core/models";
 
 import type { JobClient, OutgoingEvent } from "./job/client.ts";
 import { browserRecorder } from "./job/recorder.ts";
-import { verify } from "./job/verify.ts";
+import { type StoredFile, verify } from "./job/verify.ts";
 import { readCriteria } from "./coverage.ts";
 import { readTicketFile } from "./intent.ts";
 import {
@@ -186,16 +186,17 @@ export async function runLocal(argv: readonly string[]): Promise<number> {
   const takes = new Map<string, number>();
   const store = async (
     lane: { criterionId: string; side: string },
-    file: { name: string; contentType: string; body: Uint8Array<ArrayBuffer> },
+    file: StoredFile,
   ): Promise<ArtifactRef> => {
-    const key = `${lane.criterionId}/${lane.side}`;
-    const take = (takes.get(key) ?? 0) + 1;
+    const key = `${lane.criterionId}/${lane.side}/${file.name}`;
+    // The evidence names its take: the one whose video it was cut from.
+    const take = file.take ?? (takes.get(key) ?? 0) + 1;
     takes.set(key, take);
     const path = join(out, lane.criterionId, lane.side, `take-${take}`, file.name);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, file.body);
     return {
-      store: "private",
+      store: file.store ?? "private",
       path: relative(out, path),
       contentType: file.contentType,
       bytes: file.body.byteLength,
