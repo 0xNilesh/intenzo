@@ -610,11 +610,12 @@
 - [x] **Verify:** `pnpm bench:judge --split=heldout` completes; cost and time logged (336 rows, $1.749, 16.3 min).
 
 ### T6.4 Analysis and charts (Python)
-- [ ] **Build:** `bench/analysis/metrics.py` + `charts.py` (pandas + matplotlib):
+- [x] **Build:** `bench/analysis/metrics.py` + `charts.py` (pandas + matplotlib):
   - accuracy, catch rate on almost-right, false-fail rate, inconclusive rate, side-effect detection, cost/PR, time/PR
-  - mean ± spread
-- [ ] **Tests:** `pytest bench/analysis` on a tiny hand-computed results file (metric functions are exact). Add a pytest step to `.github/workflows/ci.yml` so these run on every PR.
-- [ ] **Verify:** the charts render and the numbers match a manual check on 2 cases.
+  - mean ± spread (low–high across repeats)
+  - also the false-pass rate and judgeable accuracy (DECISIONS 2026-11-01 · IntentBench judged); side-effect detection isn't measured, the packs hold no route snapshots
+- [x] **Tests:** `pytest bench/analysis` on a tiny hand-computed results file (metric functions are exact). Add a pytest step to `.github/workflows/ci.yml` so these run on every PR.
+- [x] **Verify:** the charts render and the numbers match a manual check on 2 cases (discount-almost-right, limit-broken).
 
 ### ✅ Phase 6 gate: `pnpm gate:p6`
 - All tests green.
