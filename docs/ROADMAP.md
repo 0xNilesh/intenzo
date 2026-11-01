@@ -575,6 +575,7 @@
 - [x] **Verify:** `pnpm --filter @intenzo/cloud test billing`.
 
 ### ✅ Phase 5 gate: `pnpm gate:p5` + full manual demo run
+- **Passed 2026-11-01** (#47): `pnpm gate:p5 --loops=23,24`. `gate:p4` and `check:all` passed, then two live loops on demo-shop copies of the almost-right code. Each loop: "❌ 3/4 passed" with the total's GIF, the chart's SAM GIF and `⚠️ Unrequested change on /cart: link "Checkout" → "Continue"`; one Send to agent; muse-fixer's one-line fix through CI; "✅ 4/4 passed" on it; "Approved by sumithprabhu" with main requiring it and the merge allowed. Press to green in about 3.5 minutes; $0.28 and $0.30 of runs per loop. Main now requires `Intenzo / product approval` (DECISIONS 2026-11-01 · P5 gate).
 - `gate:p4` passes, plus all P5 tests.
 - **Full live loop, 2 times in a row:**
   1. almost-right PR → C2 ❌ with GIF, C4 ✅ with SAM highlight, ⚠️ label change

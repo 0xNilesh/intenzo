@@ -5,6 +5,28 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · P5 gate (#47)
+
+`pnpm gate:p5 --loops=23,24` (`scripts/gates/p5.ts`) passed. It ran `gate:p4` with `check:all`, then scored two live loops on demo-shop #23 and #24: copies of the almost-right code that close #5, opened together. The owner pressed Send to agent on both, then Approve (PM) on both. Before the loops, demo-shop's main was set to require the `Intenzo / product approval` status (owner's choice; admins can still bypass).
+
+### What we found
+
+| Step | Loop 1 (#23) | Loop 2 (#24) |
+|---|---|---|
+| 1. The almost-right run | First run 💥: Meta's 404 `model_not_found` on all six intent tries, 3.5 min. After the repo-wide intent reuse (#120), attempt 2: **❌ 3/4**, both GIFs, the ⚠️ line, "🧾 1 unit", 2 m 17 s, $0.18 | **❌ 3/4**, both GIFs, the ⚠️ line, 2 m 46 s, $0.21 (its intent call recovered from the 404 after 20 s) |
+| 2. Send to agent | One request; the comment said "🤖 Sent to `@intenzo-fixer` for a fix (request 1 of 3)"; muse-fixer pushed `dc35539`; CI passed | Same: `e55a977`; CI passed |
+| 3. The run on the fix | **✅ 4/4**, about 3.5 min after the press | **✅ 4/4**, about 3.5 min after the press |
+| 4. Approve (PM) | `Approved by sumithprabhu`. **Blocked → clean.** The first press never reached the Cloud (GitHub delivered no event); a second one did | `Approved by sumithprabhu`; **blocked → clean** |
+| Runs' cost | $0.275 | $0.304 |
+
+### Decisions
+
+1. **Phase 5 is done.** Its gate passed; the next phase starts after the owner's review.
+2. **The demo's PRs reuse ticket #5's intent** (#120), so a demo run doesn't depend on Meta answering the intent call.
+3. **When a press seems to do nothing, check the webhook deliveries first:** GitHub sometimes doesn't deliver a requested action. Pressing again works, and `/intenzo approve` is the fallback.
+
+---
+
 ## 2026-11-01 · A ticket's intent is reused across the repo's PRs (P5 gate)
 
 The P5 gate's two loops (demo-shop #23 and #24, both closing #5) started within two minutes of each other on Modal. Both intent calls got Meta's 404 `model_not_found` first (#115).

@@ -1261,6 +1261,11 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 
 Across the gate's six runs: median 75 s verifying, 88 s from the push, 0 of 24 verdicts inconclusive. The preview build is the rest: 13–16 s after the run is created on an empty commit.
 
+**Measured at the P5 gate (2026-11-01), the whole loop, hosted:**
+- **The almost-right PR's first run:** 2 m 17 s – 2 m 46 s for $0.18–0.21, with evidence GIFs, SAM on the chart and the aria diff, which together add about 30–60 s to P4's runs.
+- **Send to agent to green:** about 3.5 min. muse-fixer took about 1 m 45 s (Muse Code about 80 s, at about $0.0014), then the preview and Intenzo's run on the fix, which passed 4/4 in about 1.5 min.
+- **Approve:** the status lands about 2 s after the press.
+
 Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are explored once beforehand, and the video says so. The fix loop is shown with an honest on-screen time-lapse marker.
 
 ## 28. Artifact storage and privacy
