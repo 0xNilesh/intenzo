@@ -3,6 +3,7 @@
 import {
   CriterionSet,
   type LaneResult,
+  UnrequestedChange,
   type ReasonCode,
   type ReportCriterion,
   type ReportModel,
@@ -67,6 +68,8 @@ export function readingParts(lane: LaneResult): { label: string; value: string }
 }
 
 const PublicRef = z.object({ store: z.literal("public"), path: z.string().min(1) });
+/** runs.changes_json, as the worker sent it (changes_done, §24). */
+const UnrequestedChanges = z.array(UnrequestedChange);
 
 /** The evidence GIF's URL, when the worker sent one and the public store is known. */
 function gifOf(stored: unknown, publicFile?: PublicFile): string | null {
@@ -223,5 +226,9 @@ export async function reportModel(
     },
     agentRequest: await agentRequestOf(db, run.id, config.policy.max_agent_attempts),
     approvedBy: await approversOf(db, run.id),
+    unrequestedChanges: (UnrequestedChanges.safeParse(run.changesJson).data ?? []).map((c) => ({
+      route: c.route,
+      description: c.description,
+    })),
   };
 }

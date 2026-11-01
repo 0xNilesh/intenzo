@@ -166,6 +166,11 @@ export const runs = pgTable(
       () => intentVersions.id,
     ),
     coverageJson: jsonb("coverage_json"),
+    /**
+     * §24: the visible changes on the criteria's routes that no criterion explains (T5.6): [] when
+     * there were none, null when detection didn't run (no baseline, drift, no model).
+     */
+    changesJson: jsonb("changes_json"),
     currentJobId: uuid("current_job_id"),
     modalCallId: text("modal_call_id"),
     checkRunId: githubId("check_run_id"),

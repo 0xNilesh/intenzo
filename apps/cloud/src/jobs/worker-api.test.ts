@@ -13,6 +13,7 @@ import {
   savedPaths,
 } from "../db/schema.ts";
 import { resetWithDemoShop, testDb } from "../db/test-db.ts";
+import { reportModel } from "../report/model.ts";
 import { advance } from "../runs/advance.ts";
 import type { Fact } from "../runs/transition.ts";
 import { signJobToken } from "./token.ts";
@@ -260,6 +261,21 @@ describe("the events that add to the report (§9, §26.1)", () => {
     // One comment re-render per event, and a drain to post it.
     expect((await comments()).length).toBe(before + 3);
     expect(drains).toBe(3);
+  });
+
+  it("keeps the unrequested changes on the run, and the comment shows them (§24)", async () => {
+    await send({ kind: "intent_ready", jobId: JOB, seq: 1, intent, coverage });
+    const before = (await comments()).length;
+    const changes = [
+      { route: "/cart", description: 'link "Checkout" → "Continue"', confidence: 0.92 },
+    ];
+    expect((await send({ kind: "changes_done", jobId: JOB, seq: 2, changes })).status).toBe(202);
+    expect((await run()).changesJson).toEqual(changes);
+    expect((await comments()).length).toBe(before + 1);
+    const model = await reportModel(t.db, groupId, "https://intenzo-cloud.vercel.app", RUN);
+    expect(model!.unrequestedChanges).toEqual([
+      { route: "/cart", description: 'link "Checkout" → "Continue"' },
+    ]);
   });
 
   it("replaces a criterion's verdict when it's judged again, keeping its evidence", async () => {

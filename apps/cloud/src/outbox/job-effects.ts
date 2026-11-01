@@ -106,6 +106,7 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
         prUrl: run.prUrl,
         baseUrl: run.baseUrl,
         baseSha: run.baseSha,
+        baseDrift: run.baseDrift,
         secrets,
         cachedPaths: await cachedPaths(deps.db, ctx.group.id),
         // §28: a public repo's GIFs show inline; anything else stays private.
