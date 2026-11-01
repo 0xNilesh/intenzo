@@ -128,6 +128,14 @@ const press = (run: string, identifier = "fix") =>
       check_run: { external_id: run },
       requested_action: { identifier },
       sender: { login: "sumithprabhu" },
+      // As GitHub sends it: the installation and repo resetWithDemoShop seeds.
+      installation: { id: 177107116 },
+      repository: {
+        id: 1_087_000_001,
+        full_name: "sumithprabhu/demo-shop",
+        default_branch: "main",
+        owner: { login: "sumithprabhu" },
+      },
     },
   });
 

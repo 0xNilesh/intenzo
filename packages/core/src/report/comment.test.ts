@@ -189,6 +189,12 @@ describe("renderComment (§26.1)", () => {
     expect(text).toContain("| ✅ | **C1** SAVE10 takes 10% off the cart | [▶ 0:04–0:08]");
   });
 
+  it("names who gave product approval, without notifying them again (§26.2)", () => {
+    expect(renderComment(model())).not.toContain("Product approval");
+    const text = renderComment({ ...model(), approvedBy: ["PM-Person", "sumithprabhu"] });
+    expect(text).toContain("👍 Product approval: `PM-Person`, `sumithprabhu`");
+  });
+
   it("says when the run was sent to the fixer agent, without notifying anyone (§26.3)", () => {
     expect(renderComment(failing)).not.toContain("🤖");
     const text = renderComment({ ...failing, agentRequest: { attempt: 1, max: 3 } });

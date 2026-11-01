@@ -24,6 +24,7 @@ import {
 } from "../deployments/match.ts";
 import { findPreview, recordDeployment } from "../deployments/store.ts";
 import { requestFix } from "../agent/fix-request.ts";
+import { approve } from "../approval/approve.ts";
 import { advance } from "../runs/advance.ts";
 import { describeBaseline, resolveBaseline } from "../runs/baseline.ts";
 import type { Decision, Effect, Fact, Run } from "../runs/transition.ts";
@@ -47,36 +48,94 @@ export function eventHandlers(ctx: HandlerContext): Record<string, EventHandler>
     pull_request: onPullRequest(ctx),
     deployment_status: onDeploymentStatus(ctx),
     check_run: onCheckRun(ctx),
+    issue_comment: onIssueComment(ctx),
   };
 }
 
 // Intake keeps only the App's own check runs, whose external_id is the run's id (§26.2).
 const CheckRunEvent = z.looseObject({
+  ...RepoPayload.shape,
   action: z.string(),
   check_run: z.looseObject({ external_id: z.string().nullish() }),
   requested_action: z.looseObject({ identifier: z.string() }).nullish(),
   sender: z.looseObject({ login: z.string() }),
 });
 
-/** §26.2's buttons. Send to agent asks the fixer (§26.3); Approve and Re-run come later. */
+/** §26.2's buttons: Send to agent asks the fixer (§26.3), Approve (PM) records approval (T5.5). */
 function onCheckRun(ctx: HandlerContext): EventHandler {
-  return async ({ payload }) => {
+  return async ({ payload, deliveryId }) => {
     const event = CheckRunEvent.parse(payload);
     if (event.action !== "requested_action" || !event.requested_action) return;
     const runId = z.uuid().safeParse(event.check_run.external_id);
     if (!runId.success) return;
     const who = `${event.sender.login} pressed`;
     const prefix = `run ${runId.data.slice(0, 8)}`;
-    if (event.requested_action.identifier !== "fix") {
-      ctx.log(`${prefix}: ${who} ${event.requested_action.identifier}, which isn't handled yet`);
+    switch (event.requested_action.identifier) {
+      case "fix": {
+        const result = await requestFix(ctx.db, runId.data);
+        if ("skipped" in result) {
+          ctx.log(`${prefix}: ${who} Send to agent: not sent, ${result.skipped}`);
+          return;
+        }
+        ctx.log(`${prefix}: ${who} Send to agent: fix request ${result.sent} queued`);
+        break;
+      }
+      case "approve": {
+        const repo = await ensureRepo(ctx.db, event);
+        const result = await approve(ctx.db, ctx.github(event.installation.id), {
+          repo,
+          target: { runId: runId.data },
+          login: event.sender.login,
+          via: "button",
+          deliveryId,
+        });
+        ctx.log(
+          "approved" in result
+            ? `${prefix}: ${who} Approve (PM): approved`
+            : `${prefix}: ${who} Approve (PM): refused, ${result.refused}`,
+        );
+        break;
+      }
+      default:
+        ctx.log(`${prefix}: ${who} ${event.requested_action.identifier}, which isn't handled yet`);
+        return;
+    }
+    await ctx.drain();
+  };
+}
+
+const IssueCommentEvent = z.looseObject({
+  ...RepoPayload.shape,
+  action: z.string(),
+  issue: z.looseObject({ number: z.number(), pull_request: z.unknown().optional() }),
+  comment: z.looseObject({
+    body: z.string().nullable(),
+    user: z.looseObject({ login: z.string(), type: z.string() }),
+  }),
+});
+
+/** A command for Intenzo at the start of a line of a pull request comment: `/intenzo approve`. */
+const APPROVE_COMMAND = /^\s*\/intenzo\s+approve\b/m;
+
+/** §26.2's fallback for people who can't see the buttons: `/intenzo approve` in a PR comment. */
+function onIssueComment(ctx: HandlerContext): EventHandler {
+  return async ({ payload, deliveryId }) => {
+    const event = IssueCommentEvent.parse(payload);
+    // Bots never approve, Intenzo's own comments included (an App receives its own events).
+    if (event.action !== "created" || !event.issue.pull_request) return;
+    if (event.comment.user.type === "Bot" || !APPROVE_COMMAND.test(event.comment.body ?? "")) {
       return;
     }
-    const result = await requestFix(ctx.db, runId.data);
-    if ("skipped" in result) {
-      ctx.log(`${prefix}: ${who} Send to agent: not sent, ${result.skipped}`);
-      return;
-    }
-    ctx.log(`${prefix}: ${who} Send to agent: fix request ${result.sent} queued`);
+    const repo = await ensureRepo(ctx.db, event);
+    const result = await approve(ctx.db, ctx.github(event.installation.id), {
+      repo,
+      target: { prNumber: event.issue.number },
+      login: event.comment.user.login,
+      via: "comment",
+      deliveryId,
+    });
+    const who = `PR #${event.issue.number}: ${event.comment.user.login} wrote /intenzo approve`;
+    ctx.log("approved" in result ? `${who}: approved` : `${who}: refused, ${result.refused}`);
     await ctx.drain();
   };
 }
