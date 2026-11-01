@@ -1,0 +1,50 @@
+[
+  {
+    "id": "C1",
+    "text": "Below $75.00, shipping is $5.00 and the total includes it",
+    "trigger": "open the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The order summary shows \"Shipping\" $5.00, and the total is $55.00",
+    "watch": ["shipping line", "order total"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "The order summary has a \"Shipping\" line: $5.00 below $75.00"
+  },
+  {
+    "id": "C2",
+    "text": "Below $75.00, a note says how much more is needed",
+    "trigger": "open the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "A note says \"Add $25.00 more for free shipping\"",
+    "watch": ["free shipping note"],
+    "kind": "copy",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "\"Add $25.00 more for free shipping\" for the $50.00 cart"
+  },
+  {
+    "id": "C3",
+    "text": "At $75.00, the note says the order ships free",
+    "trigger": "add the Linen apron ($25.00) from the Products page, then open the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "With the subtotal at $75.00, the note says \"You've got free shipping!\" and \"Shipping\" says \"Free\"",
+    "watch": ["free shipping note", "shipping line"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "At $75.00 or more, the note says \"You've got free shipping!\"."
+  },
+  {
+    "id": "C4",
+    "text": "When shipping is free, the total is just the subtotal",
+    "trigger": "add the Linen apron ($25.00) from the Products page, then open the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "With the subtotal at $75.00, the total is $75.00",
+    "watch": ["order total"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "just the subtotal when shipping is free"
+  }
+]

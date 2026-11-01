@@ -1,0 +1,16 @@
+{
+  "id": "discount-almost-right-2",
+  "ticket": "discount",
+  "branch": "bench/discount-almost-right-2",
+  "kind": "almost_right",
+  "seeded": true,
+  "split": "heldout",
+  "labels": {
+    "C1": "pass",
+    "C2": "pass",
+    "C3": "fail",
+    "C4": "pass"
+  },
+  "sideEffect": null,
+  "note": "discount-correct with the expired code's message changed to \"This code is not valid\"."
+}

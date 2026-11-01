@@ -1,0 +1,16 @@
+{
+  "id": "shipping-almost-right",
+  "ticket": "shipping",
+  "branch": "bench/shipping-almost-right",
+  "kind": "almost_right",
+  "seeded": true,
+  "split": "tuning",
+  "labels": {
+    "C1": "pass",
+    "C2": "pass",
+    "C3": "fail",
+    "C4": "fail"
+  },
+  "sideEffect": null,
+  "note": "shipping-correct with free shipping starting above $75.00, not at it: a $75.00 cart pays $5.00 and is told to add $0.00 more."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "limit-almost-right",
+  "ticket": "limit",
+  "branch": "bench/limit-almost-right",
+  "kind": "almost_right",
+  "seeded": true,
+  "split": "heldout",
+  "labels": {
+    "C1": "fail",
+    "C2": "pass",
+    "C3": "pass"
+  },
+  "sideEffect": null,
+  "note": "limit-correct with the \"+\" button disabled only above the limit, so it stays enabled at 5."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "limit-correct",
+  "ticket": "limit",
+  "branch": "bench/limit-correct",
+  "kind": "correct",
+  "seeded": false,
+  "split": "tuning",
+  "labels": {
+    "C1": "pass",
+    "C2": "pass",
+    "C3": "pass"
+  },
+  "sideEffect": null,
+  "note": "Written by Muse Code (muse-spark-1.3-contributor) from the ticket, unedited."
+}

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "C1",
+    "text": "SAVE10 adds its own discount line",
+    "trigger": "apply the code SAVE10 on the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "A line \"Discount (SAVE10)\" with −$5.00 appears in the order summary",
+    "watch": ["discount line", "order summary"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "SAVE10 takes 10% off the subtotal and shows as its own line in the order summary"
+  },
+  {
+    "id": "C2",
+    "text": "The total drops 10% to $45.00 right away, with no refresh",
+    "trigger": "apply the code SAVE10 on the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The order total changes from $50.00 to $45.00 within 1 s, without reloading the page",
+    "watch": ["order total"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "timingMs": 1000,
+    "sourceQuote": "The total updates right away, without a page refresh: $50.00 becomes $45.00."
+  },
+  {
+    "id": "C3",
+    "text": "The expired code OLD5 shows \"This code has expired\"",
+    "trigger": "apply the code OLD5 on the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The message \"This code has expired\" appears, and the total stays $50.00",
+    "watch": ["live regions", "order total"],
+    "kind": "copy",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "The expired code OLD5 shows the message \"This code has expired\""
+  },
+  {
+    "id": "C4",
+    "text": "The savings chart shows the discount slice",
+    "trigger": "apply the code SAVE10 on the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The savings chart in the order summary shows a slice for the discount",
+    "watch": ["savings chart"],
+    "kind": "ui_visual",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "The savings chart in the summary shows the discount as its own slice."
+  }
+]

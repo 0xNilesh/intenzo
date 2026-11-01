@@ -1,0 +1,16 @@
+{
+  "id": "discount-almost-right",
+  "ticket": "discount",
+  "branch": "bench/discount-almost-right",
+  "kind": "almost_right",
+  "seeded": true,
+  "split": "heldout",
+  "labels": {
+    "C1": "pass",
+    "C2": "fail",
+    "C3": "pass",
+    "C4": "pass"
+  },
+  "sideEffect": null,
+  "note": "discount-correct with the total memoised on the cart lines only: applying a code leaves it at $50.00."
+}
