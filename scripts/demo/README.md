@@ -33,3 +33,17 @@ pnpm demo:pm-video          # → probes/demo/pm-ticket.mp4 (gitignored), about 
 ```
 
 It records demo-shop's cart on `main` with a visible cursor and a browser address bar, while a voice (macOS `say`, Samantha, or `espeak-ng`) narrates ticket #5. The cursor points at each part of the page as the narration mentions it. Every line starts when its gesture does, so the narration matches the screen. `demo/README.md` lists what's said when, which is the ground truth for each criterion's `sourceMediaAt`. Then upload the MP4 to the ticket by hand: GitHub has no API for issue attachments.
+
+## Demo takes (T7.2)
+
+```bash
+scripts/demo/reset.sh            # a fresh demo PR: demo/almost-right-<time> → main, closing #5
+scripts/demo/prewarm.sh <pr>     # a warm worker, then the PR's first run: its paths explored and cached
+gh pr close <pr> -R sumithprabhu/demo-shop && gh pr reopen <pr> -R sumithprabhu/demo-shop   # the take
+scripts/demo/prewarm.sh off      # stop paying for the warm worker
+```
+
+- **`reset.sh [almost-right|correct]`** copies the head of `pr/discount-almost-right` (or `-correct`) to a new `demo/*` branch and opens a PR that closes #5. Open demo PRs from earlier takes are closed first, never merged, so no take starts from another take's fix. `--keep` leaves them open; `--dry-run` only shows what it would do.
+- **Why the take is the PR's second run:** the Cloud caches each criterion's path per PR (§19 3a), so a new PR's first run explores and its later runs replay. `prewarm.sh <pr>` waits for the first. Reopening the PR starts the second at once on the same preview; a push would wait for a new build.
+- **The warm worker:** `prewarm.sh <pr>` sets `min_containers=1` on `intenzo-worker/run_job` through Modal's `Function.autoscaler`. It lasts until `prewarm.sh off` or the next `modal deploy`, and it's billed while it's up, busy or idle: about $0.76 an hour (4 cores and 8 GiB at Modal's non-preemptible rate). `prewarm.sh status` shows it. Baseten needs no warming (T0.2b).
+- **Cost:** the scripts make no model calls, but each run they start does: about $0.2 for a first run, less for a replay (§27). They need `gh` signed in to demo-shop and the Modal CLI signed in to the workspace that runs the worker.

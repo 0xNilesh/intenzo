@@ -638,8 +638,8 @@
 - [ ] **Verify:** `pnpm test:faults`.
 
 ### T7.2 Pre-warm and demo scripts
-- [ ] **Build:** `scripts/demo/prewarm.sh` (Modal `min_containers=1`, the path cache seeded; Baseten Model APIs need no pre-warming, T0.2b); `scripts/demo/reset.sh` (new demo PR from the almost-right branch).
-- [ ] **Tests:** none.
+- [x] **Build:** `scripts/demo/prewarm.sh` (Modal `min_containers=1`, the path cache seeded; Baseten Model APIs need no pre-warming, T0.2b); `scripts/demo/reset.sh` (new demo PR from the almost-right branch).
+- [x] **Tests:** none.
 - [ ] **Verify:** prewarm → the first run's time is within the §27 warm target.
 
 ### T7.3 Docs and landing page
