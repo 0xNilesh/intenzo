@@ -73,7 +73,7 @@ function gifOf(stored: unknown, publicFile?: PublicFile): string | null {
 export type PublicFile = (path: string) => string | null;
 
 function reportCriterion(
-  c: { id: string; text: string; expected: string },
+  c: { id: string; text: string; expected: string; kind: string },
   result: ResultRow | undefined,
   publicFile?: PublicFile,
 ): ReportCriterion {
@@ -97,6 +97,7 @@ function reportCriterion(
     clip,
     readings: pr ? readingsLine(pr) : null,
     gif: gifOf(evidence.gif, publicFile),
+    ...(c.kind === "ui_visual" && { visual: true }),
   };
 }
 

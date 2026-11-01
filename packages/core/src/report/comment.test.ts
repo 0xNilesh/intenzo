@@ -176,6 +176,19 @@ describe("renderComment (§26.1)", () => {
     expect(text).toContain("| ✅ | **C1** SAVE10 takes 10% off the cart | [▶ 0:04–0:08]");
   });
 
+  it("shows a visual criterion's GIF inline when it passes too: SAM's highlight is its evidence (T5.2)", () => {
+    const gif = "https://store.public.blob.example/runs/r/C4/pr/take-1/evidence.gif";
+    const text = renderComment({
+      ...failing,
+      criteria: failing.criteria.map((c) =>
+        c.id === "C4" ? { ...c, gif, visual: true } : { ...c, gif: `${gif}?${c.id}` },
+      ),
+    });
+    expect(text).toContain(`| ✅ | **C4** The savings chart shows the 10% slice | ![C4](${gif}) |`);
+    // A passing criterion that isn't visual keeps its clip link.
+    expect(text).toContain("| ✅ | **C1** SAVE10 takes 10% off the cart | [▶ 0:04–0:08]");
+  });
+
   it("starts with the group's marker, so a lost comment id can be found again", () => {
     expect(renderComment(model()).startsWith("<!-- intenzo:run-group:2 -->\n")).toBe(true);
   });
