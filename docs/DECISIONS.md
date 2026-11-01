@@ -5,6 +5,36 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · IntentBench judged (T6.3, #50)
+
+`pnpm bench:judge --split=heldout --repeats=2 --d-repeats=2` on the packs re-recorded on 2026-11-01 (`manifest.json`). Results: `bench/results/judge-heldout.json`, 336 rows. Held out: 8 cases, 28 criteria, 23 of them judgeable (5 packs are `setup_failed`).
+
+### What we found
+
+| Arm (judge) | Right, all 28 × 2 | Right, judgeable 23 × 2 | Wrong passes | False fails | Cost / PR |
+|---|---|---|---|---|---|
+| A diff only (Spark 1.3) | 93% | 100% | **4**, all on limit-broken | 0 | $0.017 |
+| B readings (Spark 1.3) | 64% | 78% | 0 | 0 | $0.017 |
+| C 8 stills (Spark 1.3) | 71% | 87% | 0 | 0 | $0.035 |
+| D video, both judges | 75% | 91% | 0 | 0 | $0.041 |
+| D, Spark 1.3 alone | 73% | 89% | 1 | 0 | in D's |
+| D, Spark Open alone | 77% | 93% | 0 | 0 | in D's |
+
+- **The diff can't see a broken build.** limit-broken's cart throws on every load; arm A passed 4 of its 6 judgements of it. Every browser arm reported it `setup_failed` (inconclusive), never a pass.
+- **No arm failed a passing criterion.**
+- **With the browser, more evidence was better:** readings 78% → stills 87% → video 91–93% on judgeable criteria. Arm B's misses were mostly "unsure" and readings it contradicted.
+- **The two judges cover each other:** Spark 1.3 alone passed limit-almost-right C1 once (its "+" is disabled only above 5). The dual rule didn't pass it.
+- **Arms A–C gave the same verdicts in both repeats.** Arm D varied slightly (dual 71–79%).
+- **Measured before the run** (8 criteria, one call each): per criterion A $0.0065, B $0.0071, C $0.0178 with 16 stills, D $0.0195. The approved scope would have cost about $2.8 of Meta credit, so the owner chose 2 repeats and 8 stills: $1.749 in all, $0.37 of it the measurement run.
+
+### Decisions
+
+1. **The headline is the browser arms' safety, not diff-only accuracy.** On these seeded defects the diff shows the bug, so arm A scores well. But it passes a build that doesn't run, which is the error that matters for merging. T6.4 reports wrong passes and judgeable accuracy beside §31's metrics.
+2. **Arm C uses 8 stills,** covering Tt to Tt+4 s, the window §22.3 judges.
+3. **2 repeats, not 3** (the owner, for budget). Small n: 8 held-out cases.
+
+---
+
 ## 2026-11-01 · IntentBench's evidence packs (T6.2, #49)
 
 `pnpm bench:record` explored and recorded all 42 criteria of the 12 cases on their Vercel previews, with demo-shop's config, at concurrency 2. It recorded 39 packs in 13.9 min. After #123, 11 were recorded again in 5.6 min. The numbers below come from `bench/intentbench/manifest.json` and the packs, which are local.

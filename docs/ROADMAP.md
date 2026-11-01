@@ -605,9 +605,9 @@
 - [x] **Verify:** every case has a pack; spot-check 3 videos.
 
 ### T6.3 Judge many (offline)
-- [ ] **Build:** `bench/judge.ts`: arms A (diff-only), B (readings only), C (frames), D (video, dual, plus each model alone); 3 repeats; the real §19 e rule using the 2 takes. Tune on the tuning split only.
-- [ ] **Tests:** arm input builders (B has no images; A has no browser data); the results JSON schema.
-- [ ] **Verify:** `pnpm bench:judge --split heldout` completes; cost and time logged.
+- [x] **Build:** `bench/judge.ts`: arms A (diff-only), B (readings only), C (frames), D (video, dual, plus each model alone); 3 repeats (run with 2, the owner's budget: DECISIONS 2026-11-01 · IntentBench judged); the real §19 e rule using the 2 takes. Tune on the tuning split only.
+- [x] **Tests:** arm input builders (B has no images; A has no browser data); the results JSON schema.
+- [x] **Verify:** `pnpm bench:judge --split=heldout` completes; cost and time logged (336 rows, $1.749, 16.3 min).
 
 ### T6.4 Analysis and charts (Python)
 - [ ] **Build:** `bench/analysis/metrics.py` + `charts.py` (pandas + matplotlib):
