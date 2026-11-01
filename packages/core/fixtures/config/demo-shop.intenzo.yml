@@ -15,6 +15,7 @@ data:
   - "expired discount code: OLD5"
 guardrails:
   deny_text: ["delete account", "cancel subscription", "pay now", "place order"]
+  allow_text: ["remove"] # a cart line's "Remove"; every lane is a new shopper (§29)
   extra_navigation_origins: []
 judge:
   require_agreement: true
