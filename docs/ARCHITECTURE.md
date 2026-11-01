@@ -1184,6 +1184,10 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
   - Never both.
 - Outbox key `agent:{group}:{agent_attempts+1}`. After `max_agent_attempts`: label `needs-human`, and the button is no longer offered.
 - The JSON includes `sig = HMAC(fixerSecret, runId + criterionIds + headSha)`, so muse-fixer can tell a real Intenzo request from a human copying the format.
+- **Built in T5.3** (`packages/core/src/fixer/payload.ts`, `@intenzo/core/fixer`): `buildFixerPayload`, `renderFixerComment`, `parseFixerComment`, `verifyFixerSig`.
+  - **The signature covers the whole request**: HMAC-SHA256 over its fields in a fixed order, so a real request edited by hand fails too, not only a forged one.
+  - The mention is in backticks (`` `@intenzo-fixer` ``): the workflow's `contains()` still finds it, and no GitHub user of that name is ever notified.
+  - The module needs only `node:crypto`: muse-fixer copies it into the target repo.
 - **Optional anti-gaming check (stretch):** at verify time, one extra lane uses a **held-back variant** from `data` (e.g. `SAVE15` seeded by the hook) that is never shown to the agent. It catches fixes that hard-code `SAVE10`.
 
 ### 26.4 Reference fixer agent (`agents/muse-fixer`)
@@ -1207,6 +1211,12 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 - **Verified (T0.4, B-7):** a comment made with the App's installation token does start the `issue_comment` workflow, and the guard above matches it. A human comment in the same format starts it too, and the guard skips it.
 - The push triggers Vercel → `deployment_status` → a new Intenzo run.
 - Any other coding agent (Claude Code, Copilot) can consume the same payload.
+- **Built in T5.3** (`agents/muse-fixer`, installed into demo-shop with `install-into`):
+  - **The App token is minted after the typecheck**, the last step that runs the PR's code, and reaches git through its environment only. Steps 2–3 above become: check out with `GITHUB_TOKEN` (read), mint the token just before the push. The fixer's own script comes from the default branch, never the PR's.
+  - **check also refuses a PR that moved on** from the request's `headSha`, or is closed.
+  - **A fix that touches `.github/`, `package.json` or a lockfile is refused**, and so is one that changes nothing. Muse Code gets at most 20 model steps, and its usage events are logged.
+  - **The intenzo-fixer App** has contents write and metadata read, no webhook (`pnpm github-app:create --fixer`), installed on demo-shop only.
+  - **Measured (T5.3):** a request on a scratch copy of the almost-right PR got a one-line fix in about 2 minutes (Muse Code 99 s): the total's `useMemo` now depends on the discount code. The push by `intenzo-fixer[bot]` started demo-shop's CI, which passed, e2e included.
 
 ---
 

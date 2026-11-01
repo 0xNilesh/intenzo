@@ -5,6 +5,33 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · muse-fixer, the reference fixer agent (T5.3, #42)
+
+`agents/muse-fixer` was installed into demo-shop's main (`c17d893`, then `81f68cd` and `83d338a`) with the owner's go-ahead, along with a new GitHub App, intenzo-fixer, and demo-shop's variables and secrets. Then a signed request for C2 was posted, as `intenzo-ai[bot]`, on a draft scratch PR (demo-shop #19) holding a copy of the almost-right code. Drafts start no Intenzo run.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| The Intenzo App's own PR comment | Its workflow run was **skipped** by the job's `if` (no `@intenzo-fixer`) |
+| First request | Stopped at "Install Muse Code": `sh: set: Illegal option -o pipefail`. The installer is a bash script, and the documented `curl … \| sh` only works where `sh` is bash (macOS, where T0.2 ran it). Fixed by piping it to `bash` |
+| Second request | **Success in 2 min 7 s**: check 1 s, install 4 s, Muse Code install 12 s, **fix 99 s**, typecheck 3 s, push 1 s |
+| The fix | One line in `components/CartView.tsx`: the total's `useMemo` depended on `[lines]` and now on `[lines, code]`. That's the planted bug (the total stayed $50.00 until a reload) |
+| The push | Commit `f227f3d` by `intenzo-fixer[bot]` started demo-shop's CI on the PR, which **passed**: typecheck, lint, format, unit and e2e |
+| Spend | Not captured: the fixer discarded Muse Code's output. It now logs Muse Code's `run.usage` events, so T5.4's run will show it. Muse Code ran 99 s, capped at 20 model steps |
+| Clean-up | The scratch PR is closed and its branch deleted |
+
+### Decisions
+
+1. **The App token is minted only for the push**, after the typecheck, the last step that runs the PR's code, and reaches git through its environment. §26.4 minted it before the checkout, so the PR's code ran while a token that can push existed.
+2. **The request's signature covers all of it**, not only runId, criterion ids and head SHA. A real request edited by hand fails too.
+3. **check refuses a PR that moved on** from the failing commit, or that's closed. The fixer checks out that exact commit.
+4. **A fix that touches `.github/`, `package.json` or a lockfile is refused**, and so is an empty one. Muse Code gets at most 20 model steps.
+5. **The payload module lives in core with no dependencies**, and `install-into` copies it into the target repo next to the fixer's script. One format for the Cloud (T5.4) and the agent.
+   - _Next:_ T5.4 posts these requests from the Send to agent button.
+
+---
+
 ## 2026-11-01 · SAM for the canvas criterion (T5.2, #41)
 
 C4 recorded on the almost-right preview (#17's code); its evidence window (Tt−1 s to Tt+3 s) cut at 10 fps into 40 frames, the last one held to 50, H.264. Then each way of naming the discount slice was tried on that clip, once. The SAM output is kept as a fixture (`fixtures/sam/c4-point.txt`).
