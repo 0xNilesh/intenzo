@@ -67,8 +67,14 @@ function fakeLab(options: { notFound?: string[]; crashOn?: string[] } = {}) {
       const key = `${new URL(origin).hostname.split(".")[0]}/${criterion.id}`;
       calls.explore.push(key);
       const base = { steps: [], ms: 1200, usage, modelCalls: 4 };
+      const refused = { n: 1, action: null, result: `Refused: header ${SECRET}`, ok: false };
       return options.notFound?.includes(key)
-        ? { status: "setup_failed", reason: `the page asked for ${SECRET}`, ...base }
+        ? {
+            status: "setup_failed",
+            reason: `the page asked for ${SECRET}`,
+            ...base,
+            steps: [refused],
+          }
         : { status: "found", path: pathFor(criterion.id), ...base };
     },
     async record({ origin, side, criterion, outDir }) {
@@ -167,6 +173,7 @@ describe("recordAll", () => {
       modelCalls: 4,
       ms: 1200,
       costUsd: 0.006,
+      trail: [],
     });
     expect(pack.takes?.base.lane.side).toBe("base");
     const folder = packDir(dir, "limit-correct", "C1");
@@ -200,6 +207,8 @@ describe("recordAll", () => {
     const pack = readPack(dir, "limit-broken", "C1")!;
     expect(pack.explore.status).toBe("setup_failed");
     expect(pack.explore.reason).toBe("the page asked for [redacted]");
+    // The trail says why, one line a step, redacted like the rest.
+    expect(pack.explore.trail).toEqual(["1. (no reply) → Refused: header [redacted]"]);
     expect(pack.takes).toBeNull();
     expect(calls.record.filter((r) => r.startsWith("limit-broken/C1/"))).toEqual([]);
     expect(lines.join("\n")).not.toContain(SECRET);

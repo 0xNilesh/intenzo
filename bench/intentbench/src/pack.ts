@@ -43,6 +43,11 @@ export const Pack = z
       modelCalls: z.number().int().nonnegative(),
       ms: z.number().nonnegative(),
       costUsd: z.number().nonnegative(),
+      /**
+       * The navigator's steps, one line each: what it meant to do, then what happened. It says why
+       * an exploration failed. Packs recorded before it was kept have none.
+       */
+      trail: z.array(z.string()).optional(),
     }),
     path: SavedPath.nullable(),
     /** Null when exploring found no way to the trigger: the case's row says setup_failed. */
