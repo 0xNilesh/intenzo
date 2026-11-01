@@ -66,6 +66,13 @@ jobs:
       - name: Modal shim tests
         run: pnpm test:modal
 
+      - name: Analysis tests
+        # IntentBench's metrics and charts (bench/analysis, T6.4), in a venv with the pinned libraries.
+        run: |
+          python3 -m venv /tmp/analysis-venv
+          /tmp/analysis-venv/bin/pip install --quiet -r bench/analysis/requirements.txt
+          /tmp/analysis-venv/bin/python -m pytest -q -p no:cacheprovider bench/analysis
+
       - name: Postgres tests
         run: pnpm test:pg
         env:

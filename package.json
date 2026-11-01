@@ -19,6 +19,8 @@
     "test:browser": "pnpm -r --if-present test:browser",
     "test:pg": "pnpm -r --if-present test:pg",
     "test:modal": "python3 -m unittest discover -s modal -p 'test_*.py'",
+    "test:analysis": "bench/analysis/.venv/bin/python -m pytest -q -p no:cacheprovider bench/analysis",
+    "bench:analyze": "bench/analysis/.venv/bin/python bench/analysis/metrics.py && bench/analysis/.venv/bin/python bench/analysis/charts.py",
     "test:live": "pnpm -r --if-present test:live",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:contract && pnpm test:modal",
     "check:all": "pnpm check && pnpm test:browser",
