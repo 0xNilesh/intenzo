@@ -9,6 +9,7 @@
 probes/
 out/
 bench/results/raw/
+bench/intentbench/packs/
 coverage/
 playwright-report/
 test-results/
