@@ -175,6 +175,13 @@ export function reportBody(model: ReportModel): string {
   const totals: string[] = [];
   if (run.durationMs !== null) totals.push(`⏱ ${formatDuration(run.durationMs)}`);
   if (run.costUsd !== null) totals.push(`💲 $${run.costUsd.toFixed(2)}`);
+  // §16.3: metered and shown, not charged, for the hackathon.
+  if (model.billing && model.billing.units > 0) {
+    const { units, judgedRuns } = model.billing;
+    totals.push(
+      `🧾 ${units} unit${units === 1 ? "" : "s"} (${judgedRuns} judged run${judgedRuns === 1 ? "" : "s"})`,
+    );
+  }
   if (started) totals.push(`[Full report](${model.reportUrl})`);
   if (totals.length > 0) lines.push(totals.join(" · "));
   return lines.join("\n").trim();

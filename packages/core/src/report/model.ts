@@ -62,6 +62,8 @@ export interface ReportModel {
   agentRequest?: { attempt: number; max: number } | null;
   /** §26.2: who gave this run product approval (Approve (PM) or `/intenzo approve`), in order. */
   approvedBy?: readonly string[];
+  /** §16.3: the group's judged runs and the units they make; shown in the footer once billed. */
+  billing?: { judgedRuns: number; units: number };
   /** §24: visible changes on the criteria's routes that no criterion explains, at most 3. */
   unrequestedChanges?: readonly { route: string; description: string }[];
 }
