@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { ContextBundle, IntenzoConfig, LaneResult, VerifyJob, WorkerEvent } from "@intenzo/core";
 import { ticketHash } from "@intenzo/core/intent";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Judge } from "@intenzo/core/judge";
 import { scriptedPort } from "@intenzo/core/models";
@@ -352,7 +352,19 @@ describe("the verify job with judges (T4.6b)", () => {
         const still = join(dir, `evidence-${evidence.length}.png`);
         writeFileSync(gif, "GIF89a");
         writeFileSync(still, "png");
-        return { gif, still, fps: 8, width: 640, bytes: 6, outlined: 30, frames: 40 };
+        // A segmenter isn't called here (it would reach SAM): its render says what SAM cost.
+        return {
+          gif,
+          still,
+          fps: 8,
+          width: 640,
+          bytes: 6,
+          outlined: 30,
+          frames: 40,
+          ...(input.segment && {
+            segmentation: { outcome: "ok", costUsd: 0.01, detail: "(944, 348)", masked: 39 },
+          }),
+        };
       },
       async close() {},
     });
@@ -443,6 +455,35 @@ describe("the verify job with judges (T4.6b)", () => {
       label: "order total",
       caption: "C2 ❌ C2 take 2: fail",
     });
+  });
+
+  it("has SAM highlight a visual criterion when the job can call Meta, and counts its cost (T5.2)", async () => {
+    // The worker reads the Meta key from its environment. With no bundle nothing else asks a
+    // model, and the fake recorder never calls the segmenter, so nothing reaches the network.
+    vi.stubEnv("META_API_KEY", "test-key");
+    try {
+      const cloud = await fakeCloud();
+      const fake = judgingRecorder();
+      const judges = scriptedJudges(() => ["pass", "pass"]);
+      await runJudged(verifyJob(cloud.base), fake.recorder, judges.pair);
+      const segmented = fake.evidence.filter((e) => e.segment).map((e) => e.caption.slice(0, 2));
+      expect(segmented).toEqual(["C4"]); // the ui_visual one
+      expect(cloud.events.at(-1)).toMatchObject({ kind: "finished" });
+      expect((cloud.events.at(-1) as { costUsd: number }).costUsd).toBeCloseTo(0.01, 10);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    // Without the key, no segmenter: the element's box, as in T5.1.
+    vi.stubEnv("META_API_KEY", "");
+    vi.stubEnv("MODEL_API_KEY", "");
+    try {
+      const plain = judgingRecorder();
+      const judges = scriptedJudges(() => ["pass", "pass"]);
+      await runJudged(verifyJob((await fakeCloud()).base), plain.recorder, judges.pair);
+      expect(plain.evidence.some((e) => e.segment)).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("keeps a private repo's evidence in the private store (§28)", async () => {

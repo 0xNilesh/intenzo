@@ -209,11 +209,13 @@ export async function runLocal(argv: readonly string[]): Promise<number> {
     const result = await verify(job, client, {
       recorder,
       judges,
+      // As in a hosted job: with the judges, the key also lets SAM highlight visual criteria.
+      ...(judges && apiKey && { metaKey: apiKey }),
       log: (line) => console.log(`  · ${line}`),
       store,
     });
     console.log(
-      `\noutcome: ${result.outcome} · judges and navigator $${result.costUsd.toFixed(4)} · ${Math.round((Date.now() - started) / 1000)} s · takes in ${relative(cwd, out) || "."}`,
+      `\noutcome: ${result.outcome} · models $${result.costUsd.toFixed(4)} · ${Math.round((Date.now() - started) / 1000)} s · takes in ${relative(cwd, out) || "."}`,
     );
     return 0;
   } finally {

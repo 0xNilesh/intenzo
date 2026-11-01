@@ -59,6 +59,7 @@ import {
   type EvidenceInput,
   type EvidenceOutput,
   outlinedLabel,
+  samSegmenter,
 } from "@intenzo/core/browser";
 
 import { type JobClient, StaleJobError } from "./client.ts";
@@ -556,6 +557,12 @@ export async function verify(
     const evidenceStore = job.evidenceStore ?? "private";
     // The element the readings watched, as the box track names it (§20.4: element watch targets).
     const label = outlinedLabel(source.boxTrack, window);
+    // §23, T5.2: a visual criterion's highlight is SAM's mask of what it's about, when the job
+    // can call Meta's models; otherwise, or when SAM has nothing, the element's box.
+    const segment =
+      criterion.kind === "ui_visual" && models && deps.metaKey
+        ? samSegmenter({ port: models, apiKey: deps.metaKey, criterion })
+        : undefined;
     try {
       const rendered = await slots.run(() =>
         recorder.evidence!({
@@ -566,8 +573,17 @@ export async function verify(
           boxTrack: source.boxTrack,
           label,
           caption: redact(captionOf(criterion.id, verdict.verdict, verdict.observed)),
+          ...(segment && { segment }),
         }),
       );
+      if (rendered.segmentation) {
+        spent += rendered.segmentation.costUsd;
+        log(
+          redact(
+            `${criterion.id}: SAM ${rendered.segmentation.outcome}, ${rendered.segmentation.detail}`,
+          ).slice(0, 300),
+        );
+      }
       // Beside the take's video: the take its verdict rests on (after a re-record, the second).
       const take = Number(/\/take-(\d+)\//.exec(pr.lane.humanVideo?.path ?? "")?.[1]) || undefined;
       const gif = await store(pr.lane, {
