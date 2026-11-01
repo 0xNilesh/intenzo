@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
     "test:contract": "vitest run --project contract --passWithNoTests",
+    "test:faults": "vitest run --project faults",
     "test:browser": "vitest run --project browser --passWithNoTests",
     "test:pg": "vitest run --project postgres",
     "db:generate": "drizzle-kit generate",

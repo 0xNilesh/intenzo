@@ -51,6 +51,8 @@ export function fakeGitHub() {
 
   return {
     calls,
+    /** Answers another host on the same server, e.g. Modal's endpoints: msw wants one per test. */
+    use: (...handlers: Parameters<typeof server.use>) => server.use(...handlers),
     get: (path: string, answer: unknown) => route("get", path, reply(answer)),
     post: (path: string, answer: unknown) => route("post", path, reply(answer)),
     patch: (path: string, answer: unknown) => route("patch", path, reply(answer)),
