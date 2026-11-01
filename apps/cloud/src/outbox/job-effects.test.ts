@@ -145,6 +145,7 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
         bundleUrl: "https://private.blob.example/bundle.json?sig=1",
         ticketHash: HASH,
         bundle: {} as never,
+        repoPublic: true,
       };
     });
     expect(asked).toEqual([
@@ -159,6 +160,8 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
     expect(calls[0]!.body).toMatchObject({
       bundleUrl: "https://private.blob.example/bundle.json?sig=1",
       intent: { criteria: [{ id: "C1" }], ticketHash: HASH },
+      // §28: a public repo's GIFs go to the public store, to show inline.
+      evidenceStore: "public",
     });
   });
 
@@ -172,6 +175,7 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
       bundleUrl: "https://private.blob.example/b.json",
       ticketHash: HASH,
       bundle: {} as never,
+      repoPublic: false,
     }));
     expect(calls[0]!.body).toMatchObject({ intent: null });
   });
@@ -189,6 +193,7 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
           comments: [],
         },
       } as never,
+      repoPublic: false,
     }));
     const [group] = await t.db.select().from(runGroups).where(eq(runGroups.id, groupId));
     expect(group).toMatchObject({ ticketRef: "#5", ticketTitle: "Discount codes" });
@@ -199,10 +204,12 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
       bundleUrl: "https://private.blob.example/b.json",
       ticketHash: "d".repeat(64),
       bundle: {} as never,
+      repoPublic: false,
     }));
     expect(calls[0]!.body).toMatchObject({
       bundleUrl: "https://private.blob.example/b.json",
       intent: null,
+      evidenceStore: "private",
     });
   });
 
@@ -211,7 +218,11 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
     await drainWith(async () => {
       throw new Error("GET /repos/sumithprabhu/demo-shop/pulls/7: 502 Bad Gateway");
     }, lines);
-    expect(calls[0]!.body).toMatchObject({ bundleUrl: null, intent: null });
+    expect(calls[0]!.body).toMatchObject({
+      bundleUrl: null,
+      intent: null,
+      evidenceStore: "private",
+    });
     expect(lines).toEqual([
       "run 00000000: no context bundle: GET /repos/sumithprabhu/demo-shop/pulls/7: 502 Bad Gateway",
     ]);

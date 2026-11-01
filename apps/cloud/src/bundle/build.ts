@@ -36,6 +36,8 @@ export interface BuiltBundle {
   bundleUrl: string;
   /** The ticket's hash (§18), to reuse its intent version; null without a ticket. */
   ticketHash: string | null;
+  /** GitHub says the PR's repo is public: its evidence may go to the public store (§28). */
+  repoPublic: boolean;
 }
 
 // docs.github.com/en/rest/pulls/pulls#get-a-pull-request and #list-pull-requests-files;
@@ -44,7 +46,10 @@ const Pull = z.looseObject({
   title: z.string(),
   body: z.string().nullable(),
   head: z.looseObject({ sha: z.string() }),
-  base: z.looseObject({ ref: z.string() }),
+  base: z.looseObject({
+    ref: z.string(),
+    repo: z.looseObject({ private: z.boolean() }).nullish(),
+  }),
   user: z.looseObject({ type: z.string() }).nullable(),
 });
 const Issue = z.looseObject({
@@ -158,5 +163,7 @@ export async function buildBundle(deps: BundleDeps, target: BundleTarget): Promi
           mediaHashes,
         )
       : null,
+    // Only an explicit "not private": a reply without the field keeps the evidence private.
+    repoPublic: pr.base.repo?.private === false,
   };
 }
