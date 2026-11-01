@@ -6,6 +6,8 @@
 // names (gitignored, mode 600), and are never printed. T0.4's default webhook URL answers nothing
 // useful, which is fine: GitHub keeps every delivery's payload, and deliveries.ts reads them back.
 // The real App (T2.1) gets the Cloud's URL: --hook=https://<cloud>/api/github/webhook.
+// --fixer registers muse-fixer's App instead (§26.4, T5.3): contents write only, no webhook:
+//   GITHUB_APP_ENV=.env.intenzo-fixer pnpm github-app:create --fixer [--name=intenzo-fixer]
 import { randomBytes } from "node:crypto";
 import { chmodSync, existsSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -14,11 +16,13 @@ import type { AddressInfo } from "node:net";
 import { request } from "../probe/lib/http.ts";
 import { asString, dig } from "../probe/lib/json.ts";
 import { APP_ENV_FILE, APP_ENV_NAME, APP_KEY_FILE, GITHUB_API, GITHUB_HEADERS } from "./lib/app.ts";
-import { buildManifest } from "./manifest.ts";
+import { buildFixerManifest, buildManifest } from "./manifest.ts";
 
 const option = (name: string): string | undefined =>
   process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-const name = option("name") ?? `intenzo-t04-${randomBytes(3).toString("hex")}`;
+const fixer = process.argv.includes("--fixer");
+const name =
+  option("name") ?? (fixer ? "intenzo-fixer" : `intenzo-t04-${randomBytes(3).toString("hex")}`);
 const hookUrl = option("hook") ?? "https://example.com/intenzo-webhook";
 if (existsSync(APP_ENV_FILE) && !process.argv.includes("--force")) {
   console.error(`${APP_ENV_NAME} already exists. Use --force to register another App over it.`);
@@ -36,16 +40,22 @@ const server = createServer((req, res) => {
     );
   };
   if (url.pathname === "/") {
-    const manifest = buildManifest({
-      name,
-      hookUrl,
-      redirectUrl: `${origin}/callback`,
-      description: "Intenzo: proof that a PR does what its ticket asked, on video.",
-    });
+    const manifest = fixer
+      ? buildFixerManifest({
+          name,
+          redirectUrl: `${origin}/callback`,
+          description: "muse-fixer: pushes Muse Code's fixes for what Intenzo found failing.",
+        })
+      : buildManifest({
+          name,
+          hookUrl,
+          redirectUrl: `${origin}/callback`,
+          description: "Intenzo: proof that a PR does what its ticket asked, on video.",
+        });
     return page(
       200,
       `<h1>Register ${escapeHtml(name)}</h1>
-<p>Creates a private GitHub App with the Intenzo §12 permissions under the account you're signed in as.</p>
+<p>Creates a private GitHub App with ${fixer ? "contents write only (muse-fixer, §26.4)" : "the Intenzo §12 permissions"} under the account you're signed in as.</p>
 <form action="https://github.com/settings/apps/new?state=${state}" method="post">
 <input type="hidden" name="manifest" value="${escapeHtml(JSON.stringify(manifest))}">
 <button style="font-size:18px; padding:.5em 1em">Create the GitHub App on github.com</button></form>`,
