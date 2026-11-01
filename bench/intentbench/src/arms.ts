@@ -17,9 +17,9 @@ import type { BenchDiff } from "./github.ts";
 export const ARMS = ["A", "B", "C", "D"] as const;
 export type Arm = (typeof ARMS)[number];
 
-/** Arm C's stills: 2 a second, at most this many, evenly from the start of the clip. */
+/** Arm C's stills: 2 a second from the trigger, so 8 cover Tt to Tt+4 s, the judges' window. */
 export const FRAME_FPS = 2;
-export const MAX_FRAMES = 16;
+export const MAX_FRAMES = 8;
 /** Arm A's diff budget: every file's patch, cut so the prompt stays bounded. */
 const MAX_DIFF_CHARS = 24_000;
 

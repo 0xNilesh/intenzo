@@ -104,7 +104,7 @@ four arms, each seeing more of the evidence:
 | --- | ------------------------------------------------------------------------- | ----------------------- |
 | A   | the ticket and the branch's diff (`diff.json`); nothing from the browser  | Spark 1.3               |
 | B   | the judge bundle's text: step log, readings, baseline (`renderJudgeText`) | Spark 1.3               |
-| C   | B plus up to 16 stills cut from the judge video at 2 fps                  | Spark 1.3               |
+| C   | B plus up to 8 stills cut from the judge video at 2 fps (Tt to Tt+4 s)    | Spark 1.3               |
 | D   | the product's bundle: the annotated still and the judge video             | both (`judgeCriterion`) |
 
 - **§19 e on the two PR takes.** A lone judge's fail is confirmed on take 2, else it's `flaky`. Arm D uses core's `rerecordFor` and `afterRerecord`, and each model's own verdict uses take 2 only when the dual rule re-recorded.
