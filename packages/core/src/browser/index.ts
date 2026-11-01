@@ -100,3 +100,4 @@ export {
   type Outline,
   type OutlineOptions,
 } from "./outline.ts";
+export { routeSnapshot, type RouteSnapshot } from "./snapshot.ts";

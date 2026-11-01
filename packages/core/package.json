@@ -12,7 +12,8 @@
     "./intent": "./src/intent/index.ts",
     "./coverage": "./src/coverage/index.ts",
     "./judge": "./src/judge/index.ts",
-    "./fixer": "./src/fixer/payload.ts"
+    "./fixer": "./src/fixer/payload.ts",
+    "./changes": "./src/changes/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

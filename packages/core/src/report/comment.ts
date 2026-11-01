@@ -131,6 +131,13 @@ export function reportBody(model: ReportModel): string {
     for (const c of criteria) lines.push(...criterionRows(c, model.reportUrl));
     lines.push("");
   }
+  // §24: what the PR changed that its ticket didn't ask for.
+  for (const change of model.unrequestedChanges ?? []) {
+    lines.push(
+      `⚠️ Unrequested change on ${cell(change.route, 80)}: ${cell(change.description, 160)}`,
+      "",
+    );
+  }
 
   // Baseline, judges and the report only mean something once the run is verifying or has verdicts.
   const started = criteria.length > 0 || run.state === "verifying" || run.state === "reporting";
