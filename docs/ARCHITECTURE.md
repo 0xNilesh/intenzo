@@ -1279,6 +1279,7 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
   - `reset.sh` opens a fresh demo PR from the almost-right (or correct) branch's head and closes the earlier ones, so no take starts from another's fix.
   - `prewarm.sh <pr>` keeps one worker container up: `min_containers=1` through Modal's `Function.autoscaler`, until `prewarm.sh off` or the next deploy, at about $0.76 an hour. It then waits for the PR's first run.
   - Paths are cached per PR (§19 3a), so that first run explores, and the take is the PR's second run, started by reopening it on the same preview.
+  - **Measured** on demo-shop #25 (the correct code): the take took **63 s** from start to the last verdict (83 s to finished, $0.09), on cached paths and a warm worker. The PR's first run, which explored, took 78 s ($0.17).
 
 ## 28. Artifact storage and privacy
 - **Paths:** `runs/{runId}/{criterion}/{side}/take-{n}/{file}`. Every recording is a new take, so re-records never overwrite the take a verdict cites. Verdicts reference takes explicitly.

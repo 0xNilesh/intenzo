@@ -640,7 +640,7 @@
 ### T7.2 Pre-warm and demo scripts
 - [x] **Build:** `scripts/demo/prewarm.sh` (Modal `min_containers=1`, the path cache seeded; Baseten Model APIs need no pre-warming, T0.2b); `scripts/demo/reset.sh` (new demo PR from the almost-right branch).
 - [x] **Tests:** none.
-- [ ] **Verify:** prewarm → the first run's time is within the §27 warm target.
+- [x] **Verify:** prewarm → the first run's time is within the §27 warm target.
 
 ### T7.3 Docs and landing page
 - [ ] **Build:** README (problem, how it works, architecture diagram, Meta models table, benchmark results, honest limits, what was built during the hackathon); `docs/hooks.md` reference hook; a one-page landing site.
