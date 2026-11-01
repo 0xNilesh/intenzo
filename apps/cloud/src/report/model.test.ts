@@ -169,9 +169,15 @@ describe("reportModel", () => {
       { kind: "preview_ready", sha: "af1065e", url: "https://demo-shop-x.vercel.app" },
       1,
     );
+    // With C4, the ui_visual one.
+    const c4 = JSON.parse(readFileSync(new URL("C4.json", FIXTURES), "utf8"));
     const [intent] = await t.db
       .insert(intentVersions)
-      .values({ runGroupId: groupId, ticketHash: INTENT.ticketHash, intentJson: INTENT })
+      .values({
+        runGroupId: groupId,
+        ticketHash: INTENT.ticketHash,
+        intentJson: { ...INTENT, criteria: [...criteria, c4] },
+      })
       .returning();
     await t.db.update(runs).set({ intentVersionId: intent!.id }).where(eq(runs.id, RUN_1));
     const gif = {
@@ -194,6 +200,12 @@ describe("reportModel", () => {
       `https://store.public.blob.example/runs/${RUN_1}/C2/pr/take-1/evidence.gif`,
     );
     expect(withStore.criteria.find((c) => c.id === "C1")!.gif).toBeNull();
+    // C4 is ui_visual: its GIF is its evidence, shown inline pass or fail (T5.2).
+    expect(withStore.criteria.map((c) => `${c.id}:${c.visual ?? false}`)).toEqual([
+      "C1:false",
+      "C2:false",
+      "C4:true",
+    ]);
     expect(
       (await reportModel(t.db, groupId, BASE, RUN_1))!.criteria.find((c) => c.id === "C2")!.gif,
     ).toBeNull();

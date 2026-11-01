@@ -13,8 +13,10 @@ export interface ReportCriterion {
   observed: string | null;
   /** The evidence window in the PR side's human video, ms from its start. */
   clip: { startMs: number; endMs: number } | null;
-  /** The evidence GIF's public URL (§23), shown inline for a failed criterion (§26.1). */
+  /** The evidence GIF's public URL (§23), shown inline for a failed or visual criterion (§26.1). */
   gif?: string | null;
+  /** A ui_visual criterion: its evidence is the picture (SAM's highlight, T5.2), pass or fail. */
+  visual?: boolean;
   /** The readings behind the verdict, one line: "+0 s $50.00 · +1 s $50.00 · after reload $45.00". */
   readings: string | null;
 }

@@ -97,9 +97,10 @@ function stateSentence(model: ReportModel): string | null {
 
 function criterionRows(c: ReportCriterion, reportUrl: string): string[] {
   const icon = c.verdict ? ICON[c.verdict] : "⏳";
-  // §26.1: a failed criterion shows its GIF inline; the others link their clip.
+  // §26.1: a failed criterion shows its GIF inline, and so does a visual one, whose evidence is
+  // the picture itself (SAM's highlight, T5.2); the others link their clip.
   const evidence =
-    c.verdict === "fail" && c.gif
+    c.gif && (c.verdict === "fail" || (c.visual && c.verdict === "pass"))
       ? `![${c.id}](${c.gif})`
       : c.clip
         ? `[▶ ${clock(c.clip.startMs)}–${clock(c.clip.endMs)}](${reportUrl}#${c.id})`
