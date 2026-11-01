@@ -34,10 +34,16 @@ export function configNotes(config: IntenzoConfig): string[] {
   return notes;
 }
 
-/** The action denylist the navigator enforces: the built-in list plus the repo's additions (§29). */
+/**
+ * The action denylist the navigator enforces (§29): the built-in list without the terms the repo
+ * allows, plus the repo's additions. An addition wins over an allowance.
+ */
 export function denyText(config: IntenzoConfig): string[] {
-  const all = [...DEFAULT_DENY_TEXT, ...config.guardrails.deny_text].map((t) =>
-    t.trim().toLowerCase(),
-  );
+  const norm = (t: string) => t.trim().toLowerCase();
+  const allowed = new Set(config.guardrails.allow_text.map(norm));
+  const all = [
+    ...DEFAULT_DENY_TEXT.filter((t) => !allowed.has(t)),
+    ...config.guardrails.deny_text.map(norm),
+  ];
   return [...new Set(all)];
 }
