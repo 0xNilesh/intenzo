@@ -11,7 +11,12 @@ export type RunTrigger =
 
 /** Why a run ended without verdicts. */
 export type OutcomeReason =
-  "preview_not_ready" | "preview_failed" | "deadline_passed" | "worker_failed";
+  | "preview_not_ready"
+  | "preview_failed"
+  | "deadline_passed"
+  | "worker_failed"
+  /** The worker's preflight found the PR preview not answering (§19 step 1, T7.1). */
+  | "preview_unreachable";
 
 /** §16.1: how long a run waits for its preview. */
 export const PREVIEW_WAIT_MS = 20 * 60_000;
@@ -287,7 +292,7 @@ export function decide(group: Group, fact: Fact, clock: Clock): Decision {
           : {
               kind: "finish",
               outcome: fact.code === "cancelled" ? "cancelled" : "error",
-              reason: "worker_failed",
+              reason: fact.code === "preview_unreachable" ? "preview_unreachable" : "worker_failed",
               jobEnded: true,
             },
       );
