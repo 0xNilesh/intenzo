@@ -5,6 +5,34 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · Demo takes: a fresh PR, then a warm second run (T7.2, #54)
+
+`scripts/demo/reset.sh correct` opened demo-shop #25: the correct discount code, closing #5. `scripts/demo/prewarm.sh 25` set the worker's `min_containers=1` and waited for the PR's first run. Reopening the PR started the take. The timings come from the Cloud's `runs` and `job_events`.
+
+### What we found
+
+| Run of #25 | Paths | Start → last verdict | Start → finished | Cost |
+| --- | --- | --- | --- | --- |
+| 1st, the seed | all 4 explored; the intent reused from the repo (#120) | 78 s | 96 s | $0.170 |
+| 2nd, the take (reopened) | all 4 replayed from the cache | **63 s** | 83 s | $0.090 |
+
+- **Both passed 4/4.** §27's warm target is 90–120 s to verdicts, so the take is well inside it.
+- **Spawn to the worker's first event:** 6.5 s for the take on the warm container, against a median of 8.9 s (3.9–11.8 s) for the 12 earlier demo runs today, which had no warm pool.
+
+### Decisions
+
+1. **The take is a demo PR's second run, started by reopening the PR.**
+   - _Why:_ paths are cached per PR (§19 3a), so a fresh PR's first run explores: 78 s here against the take's 63 s, at nearly twice the cost. Reopening starts a run at once on the same preview; a push would wait for a Vercel build.
+   - _Alternatives:_ sharing paths across a repo's PRs, as the intent already is (#120), would make every first run warm, but it changes §19's design, and the demo doesn't need it.
+2. **The warm pool goes through Modal's `Function.autoscaler`, and is on only around a take.**
+   - _Why:_ it changes the deployed function at once, with no redeploy (the last one took 615 s), and a deploy resets it. It costs about $0.76 an hour, busy or idle. Today it saved about 2.4 s a spawn, since containers were seldom fully cold during the session; its point is the first take after a long idle, which can't be measured on demand.
+   - _Alternatives:_ `update_autoscaler()`, deprecated in modal 1.6 (2026-10-16); a longer scaledown window, which still leaves a session's first take cold.
+3. **`reset.sh` closes earlier demo PRs, never merging them,** so a take never starts from a fixer's commit: muse-fixer pushes onto the demo PR's branch (P5 gate).
+
+Spend: $0.26 of model calls for the two runs, and about $0.05 of warm worker (4 min).
+
+---
+
 ## 2026-11-01 · P6 gate (#52)
 
 `pnpm gate:p6` (`scripts/gates/p6.ts`) passed: `pnpm check:all` (10 test runs) and `pnpm test:analysis` (8); `bench/results/judge-heldout.json` with every held-out criterion for arms A–D (D with both judges and each alone), 2 repeats each, not capped; `rates.png`, `accuracy.png` and `cost.png`; and the README's IntentBench section with a row per arm and the small-n caveat.
