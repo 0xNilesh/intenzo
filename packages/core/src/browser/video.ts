@@ -4,7 +4,8 @@ import { join } from "node:path";
 
 import { chromium, type Browser, type Page } from "playwright";
 
-import { CriterionId, type LoggedStep, type StepLogEntry, type Target } from "../schema/index.ts";
+import { CriterionId, type StepLogEntry } from "../schema/index.ts";
+import { describeStep } from "../report/steps.ts";
 import { MARKER_MS } from "./clock.ts";
 import { ffmpegAsync, frameTimesMs, isMarkerGreen, pixelShare, tinyFrames } from "./ffmpeg.ts";
 
@@ -213,62 +214,12 @@ export function captionSpans(stepLog: readonly StepLogEntry[], offsetMs: number)
   return spans;
 }
 
+export { describeStep, describeTarget } from "../report/steps.ts";
+
 /** "click: Apply", "fill: Discount code = "SAVE10"", "press: Enter (failed)". */
 export function captionText(entry: Pick<StepLogEntry, "step" | "ok">): string {
   const text = describeStep(entry.step);
   return entry.ok ? text : `${text} (failed)`;
-}
-
-export function describeStep(step: LoggedStep): string {
-  switch (step.op) {
-    case "goto":
-      return `goto: ${step.path}`;
-    case "click":
-      return `click: ${describeTarget(step.target)}`;
-    case "fill":
-      return `fill: ${describeTarget(step.target)} = ${typed(step.target, step.value)}`;
-    case "select":
-      return `select: ${describeTarget(step.target)} = ${typed(step.target, step.option)}`;
-    case "press":
-      return `press: ${step.key}`;
-    case "scroll":
-      return step.target
-        ? `scroll ${step.direction}: ${describeTarget(step.target)}`
-        : `scroll ${step.direction}`;
-    case "wait":
-      return `wait: ${step.ms} ms`;
-    case "back":
-      return "back";
-    case "reload":
-      return "reload";
-  }
-}
-
-export function describeTarget(target: Target): string {
-  switch (target.by) {
-    case "role":
-      return clip(target.name || target.role);
-    case "testId":
-      return clip(`testid ${target.id}`);
-    case "label":
-    case "placeholder":
-      return clip(target.text);
-    case "css":
-      return clip(target.selector);
-    case "point":
-      return `(${Math.round(target.x)}, ${Math.round(target.y)})`;
-  }
-}
-
-const SECRET_FIELD = /pass(word|code)?|secret|token|otp|\bpin\b|cvv|cvc/i;
-
-/** What a fill or select typed, hidden when the field looks like a secret: videos get shared. */
-function typed(target: Target, value: string): string {
-  return SECRET_FIELD.test(describeTarget(target)) ? '"••••••"' : `"${clip(value)}"`;
-}
-
-function clip(text: string, max = 48): string {
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
 // ── Drawing (Chromium) and encoding (ffmpeg) ────────────────────────────────────────────────────

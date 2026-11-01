@@ -52,7 +52,7 @@ const model = (
   criteria: C,
   reportUrl: "https://intenzo-cloud.vercel.app/r/4f4cf15f-0000-4000-8000-000000000001",
   history: [],
-  policy: { inconclusive: "neutral", agentHandle: "@intenzo-fixer" },
+  policy: { inconclusive: "neutral", agentHandle: "@intenzo-fixer", agentAttemptsLeft: 3 },
   ...overrides,
 });
 
@@ -266,11 +266,20 @@ describe("checkRunPayload (§26.2)", () => {
   it.each([
     ["pass", {}, ["approve", "rerun"]],
     ["fail", { agentHandle: null }, ["rerun"]],
+    // §26.3: at max_agent_attempts the button is gone.
+    ["fail", { agentAttemptsLeft: 0 }, ["rerun"]],
     ["inconclusive", {}, ["rerun"]],
     ["error", {}, []],
   ] as const)("offers %s %j: %j", (outcome, policy, identifiers) => {
     const m = model(
-      { policy: { inconclusive: "neutral", agentHandle: "@intenzo-fixer", ...policy } },
+      {
+        policy: {
+          inconclusive: "neutral",
+          agentHandle: "@intenzo-fixer",
+          agentAttemptsLeft: 3,
+          ...policy,
+        },
+      },
       { outcome },
     );
     expect(actionsFor(m).map((a) => a.identifier)).toEqual(identifiers);
@@ -292,7 +301,7 @@ describe("checkRunPayload (§26.2)", () => {
 
   it("closes an inconclusive run as the repo's policy says", () => {
     const m = model(
-      { policy: { inconclusive: "failure", agentHandle: null } },
+      { policy: { inconclusive: "failure", agentHandle: null, agentAttemptsLeft: 0 } },
       { outcome: "inconclusive" },
     );
     expect(checkRunPayload(m).conclusion).toBe("failure");
