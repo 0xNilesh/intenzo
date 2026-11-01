@@ -399,6 +399,7 @@ export const VerifyJob = JobBase.extend({
     users: z.array(z.object({ username: z.string(), password: z.string() })).optional(),
   }).nullable(),
   cachedPaths: z.array(SavedPath),          // from earlier runs in the same run group
+  evidenceStore: z.enum(["public","private"]).optional(), // §28: public only for a public repo
   only: z.array(z.string()).optional(),
 });
 ```
@@ -1086,6 +1087,16 @@ SAM timeout 20 s → fall back to the annotated screenshot
 ```
 For SAM to do real work on camera, the demo ticket includes **a canvas chart criterion** (§32).
 
+- **Built in T5.1** (`packages/core/src/browser/evidence.ts`, the worker's `sendEvidence`):
+  - **The box at a frame is the last one the track recorded at or before it.** The poller samples every animation frame but records only changes (boxes.ts), so a still element has one sample for the whole lane; up to 50 ms after the frame still counts, for frame timing. A null sample means the element was gone.
+  - **The outlined element** is the first element watch target whose box shows at any moment of the window, a box held from before it included. The box track has no regions, so a whole card is never boxed.
+  - **Drawing:** ffmpeg cuts the window at 10 fps; Chromium draws each frame under a 48 px caption band, with the outline 4 px outside the element's box; ffmpeg encodes with its own palette. No drawtext (§13 of AGENTS.md: Homebrew's ffmpeg has none).
+  - **Measured on the almost-right C2 (T5.1):** 40 frames over the 4 s window, outlined on all 40; 85 KB at 640 px and 8 fps, far under 2 MB, so the size ladder is a safeguard.
+  - **Which takes:** every judged pass and fail, not an inconclusive; rendered under the recording slots; stored beside the video of the take the verdict rests on (`runs/{run}/C2/pr/take-2/evidence.gif`). A render that fails costs the GIF, never the verdict.
+  - **Which store:** the job's `evidenceStore`, which the Cloud sets to public only when GitHub's PR reply says the repo isn't private (§28). Otherwise the GIF stays private and the comment links the report.
+  - **The comment** shows a failed criterion's GIF inline; a pass keeps its clip link (§26.1).
+  - SAM, for canvas and point targets, comes with T5.2.
+
 ## 24. Unrequested-change detection (aria diff)
 ```
 skip entirely if: no baseline, base side not isolated, or baseline drift > 0 (§17.3)
@@ -1224,7 +1235,7 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
   - **Each store's credential:** `intenzo-public` is reached through Vercel's OIDC with `PUBLIC_BLOB_STORE_ID`, and `intenzo-private` with `PRIVATE_BLOB_READ_WRITE_TOKEN`.
   - **Reading back:** a private blob is read through the Cloud, or through a signed GET URL (at most 7 days). The report page (T2.7a) signs a GET URL for each private video, valid for an hour, every time it renders, and links public files directly.
 - **Stores:**
-  - `intenzo-public`: GIFs and stills for public repos (inline through GitHub's image proxy)
+  - `intenzo-public`: GIFs and stills for public repos (inline through GitHub's image proxy). Since T5.1 the Cloud reads the repo's visibility from GitHub at each spawn and sends it as the job's `evidenceStore`; a private repo's evidence goes to `intenzo-private`
   - `intenzo-private`: videos, traces and bundles, served via the report page. For **private repos (roadmap)**, inline GIFs are served from a Cloud route `/g/{random}.gif` that checks expiry and revocation and streams from the private store. The full report needs GitHub OAuth plus a repo-access check.
 - **Retention:** videos 30 days, bundles 7 days, verdicts and ledger kept. Repo code is never stored beyond the diff in a bundle.
 

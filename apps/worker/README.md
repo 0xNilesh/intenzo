@@ -100,6 +100,10 @@ pnpm intenzo run --local --pr <url> --base <url> --ticket fixtures/tickets/42.md
 `--explore` lets the navigator find the paths (Wonder); without it the hand-written
 `fixtures/paths` are used. About $0.10 for C1–C4. Needs `META_API_KEY` and `BASETEN_API_KEY`.
 
+Each judged pass or fail also gets its evidence (ARCHITECTURE §23, T5.1): `evidence.gif` and
+`evidence.png` beside the take's video in `--out` (`C2/pr/take-2/`), the watched element outlined
+in red over the window from 1 s before the trigger to 3 s after it.
+
 ## `intenzo job` (T2.5a, T2.7b)
 
 Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,
@@ -117,7 +121,8 @@ node apps/worker/src/main.ts job job.json
   itself only on another code.
 - **Files** go straight to Blob with `uploadArtifacts()`: the Cloud presigns one URL per file under
   `runs/{runId}/`, by `takePath()` from core, and the worker PUTs it. Videos go to the private
-  store; GIFs and stills to the public one (ARCHITECTURE §28).
+  store; GIFs and stills to the store the job names (`evidenceStore`): the public one only for a
+  public repo (ARCHITECTURE §28).
 - **Jobs:**
   - A `verify` job (§8, §19) is what the Cloud spawns. Until the navigator (P3) and the judges
     (P4), it records the demo ticket's criteria (`fixtures/criteria`, C1–C4) along their

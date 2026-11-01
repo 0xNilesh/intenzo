@@ -528,9 +528,9 @@
 **Goal:** the complete demo story, live on a real PR.
 
 ### T5.1 Evidence GIFs (DOM targets)
-- [ ] **Build:** box track → outline rendering over the evidence window → GIF (≤ 2 MB, 640 px) + still.
-- [ ] **Tests:** GIF size cap logic (fps first, then width); the window is computed from `Tt` (not from the judge's `atMs`).
-- [ ] **Verify:** the C2 GIF shows the total highlighted and still at $50.00 after Apply.
+- [x] **Build:** box track → outline rendering over the evidence window → GIF (≤ 2 MB, 640 px) + still.
+- [x] **Tests:** GIF size cap logic (fps first, then width); the window is computed from `Tt` (not from the judge's `atMs`).
+- [x] **Verify:** the C2 GIF shows the total highlighted and still at $50.00 after Apply.
 
 ### T5.2 SAM 3.1 for the canvas criterion
 - [ ] **Build:** frames at 10 fps padded to ≥ 50; a text-concept prompt + the region box; mask outline rendering; 20 s timeout → annotated-still fallback.

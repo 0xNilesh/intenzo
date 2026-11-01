@@ -5,6 +5,32 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · Evidence GIFs for DOM targets (T5.1, #40)
+
+C2 recorded on the almost-right preview (#17's code) with the worker's own recorder, and its evidence rendered over the judges' window (Tt−1 s to Tt+3 s); then the judged C2 run end to end with `pnpm intenzo run --local`.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| First render | The GIF and still came out, **with no outline**. The box track held 3 samples for the whole lane, at Tt−1.2 s, … +3.4 s, each with a box |
+| Why | The poller samples every animation frame but records a box **only when it changes** (`boxes.ts`). The renderer looked for a sample within 250 ms of each frame, so frames between changes had none |
+| After the fix | Outlined on 40 of 40 frames; the still shows the Total at **$50.00 in red, after Apply**, under the "Discount (SAVE10) −$5.00" line |
+| Size | 85 KB at 640 px and 8 fps for the 4 s window: the 2 MB ladder (fps first, then width) is a safeguard, not the usual path |
+| Judged C2, end to end | Failed by both judges, re-recorded to confirm; the GIF (84 KB) and still went beside take 2's video, the take the verdict rests on, with the total outlined. 34 s, **$0.034**. An earlier judged run while debugging cost about the same; the recording-only check calls no model |
+
+### Decisions
+
+1. **The box at a frame is the last one the track recorded at or before it, up to 50 ms after it allowed for frame timing.** A null sample ends it.
+   - _Alternatives:_ record every frame's box (60 samples a second per target, drained at every reading), or interpolate. Neither adds anything for a page that only changes on actions.
+2. **The outlined element is the first element watch target that shows during the window**, a box held from before it included. Regions aren't in the box track, so a card is never boxed.
+3. **Evidence goes to the public store only when GitHub says the repo is public.** The Cloud reads `base.repo.private` from the PR it already fetches for the bundle, at every spawn, and sends `evidenceStore`; anything else (a private repo, a reply without the field, no bundle) keeps it private. §28 had said public GIFs are for public repos, but nothing enforced it.
+   - _Alternatives:_ a visibility column filled from webhooks: a migration, and stale when a repo changes visibility.
+4. **Passes get a GIF too, not inconclusives;** the comment inlines only a fail's, as §26.1 shows. A render that fails loses the GIF, never the verdict.
+   - _Next:_ T5.2 adds SAM for the canvas chart (C4).
+
+---
+
 ## 2026-11-01 · P4 gate (#39)
 
 `pnpm gate:p4` (`scripts/gates/p4.ts`) scores hosted runs against the golden comment, and passed on six runs of two demo-shop PRs that close #5: #17 on the almost-right code and #18 on the correct code.
