@@ -15,6 +15,14 @@ import {
 // 2026-10-31), like Spark 1.3 (T0.2).
 
 export const META_BASE_URL = "https://api.meta.ai/v1";
+/**
+ * Meta sometimes answers 404 `model_not_found` for a model it serves, seconds after and before
+ * calls that succeed (#115, P4 gate and T5.5): retried like a 5xx. Any other 404 isn't.
+ */
+export function isTransientNotFound(status: number, body: string): boolean {
+  return status === 404 && body.includes("model_not_found");
+}
+
 /** §14: retry 429 and 5xx after these waits, within the call's timeout. */
 export const BACKOFF_MS = [500, 1500, 4000];
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -74,7 +82,8 @@ export function metaModelPort(options: MetaPortOptions): ModelPort {
         ms: Math.round(performance.now() - started),
       });
 
-      // One request, retried on 429/5xx and network errors while there's time.
+      // One request, retried on 429/5xx, network errors and Meta's transient 404 model_not_found
+      // (#115: a served model answered it for minutes at a time) while there's time.
       const send = async (
         messages: ModelRequest<T>["messages"],
       ): Promise<ChatReply | { error: string; raw: string }> => {
@@ -98,7 +107,8 @@ export function metaModelPort(options: MetaPortOptions): ModelPort {
               reply = { status: res.status, text: replyText(json), usage: usageOf(json) };
             } else {
               failure = `HTTP ${res.status}: ${text.slice(0, 300)}`;
-              if (res.status !== 429 && res.status < 500) return { error: failure, raw: text };
+              if (res.status !== 429 && res.status < 500 && !isTransientNotFound(res.status, text))
+                return { error: failure, raw: text };
             }
           } catch (err) {
             failure = `request failed: ${(err as Error).message}`;

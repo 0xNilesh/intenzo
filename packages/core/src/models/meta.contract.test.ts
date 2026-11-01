@@ -86,6 +86,21 @@ describe("metaModelPort", () => {
     expect(waits).toEqual([500, 1500]);
   });
 
+  it("retries Meta's transient 404 model_not_found, but no other 404 (#115)", async () => {
+    const notFound =
+      '{"error":{"code":"model_not_found","message":"The requested model was not found."}}';
+    const flaky = await fake([
+      [404, notFound],
+      [404, notFound],
+      [200, completion('{"op":"click","ref":"e1"}')],
+    ]);
+    expect(await flaky.port.call(request)).toMatchObject({ ok: true, requests: 3 });
+    expect(flaky.waits).toEqual([500, 1500]);
+    server?.close();
+    const missing = await fake([[404, '{"error":{"code":"not_found"}}']]);
+    expect(await missing.port.call(request)).toMatchObject({ ok: false, requests: 1 });
+  });
+
   it("doesn't retry a 400", async () => {
     const { port } = await fake([[400, '{"error":"bad model"}']]);
     const result = await port.call(request);
