@@ -815,6 +815,10 @@ VerifyJob (Modal: 4 CPU, 8 GB, timeout 900 s; Node limit 870 s)
  5. emit finished(outcome, cost, timings)
 ```
 
+- **Built in T7.1, the step 1 preflight** (`apps/worker/src/job/preflight.ts`), which nothing did before: a preview answering 500 was recorded and, with no cached path, explored.
+  - Each preview's root is asked directly, with the bypass and no redirect followed (§21.2); 2xx or 3xx passes. A 5xx or no answer is asked twice more (2 s, 5 s), since a cold function can fail once; a 4xx isn't.
+  - A PR preview that fails ends the job as `failed/preview_unreachable`: the run ends in error with that reason, its check run is neutral, and the comment says "⚠️ preview unreachable" and that the preview didn't answer, not that Intenzo failed.
+  - A base preview that fails only costs the baseline: the run goes on without one, as in §17.3.
 - **Built in T4.6b:** criteria run concurrently through two limits: 2 recording slots (explore, the PR take, the base take) and 2 criteria judged at a time (4 judge calls). A fail or a tie is recorded once more and judged again (§19 e), and the event cites the take the verdict rests on. Liveness is checked before recording and before judging. Without both judges' keys the verdicts stay the stub's. `finished.costUsd` adds up the navigator's and the judges' calls at list price. `pnpm intenzo run --local` runs the job on this machine, its takes in `--out`.
 - **Built in T2.7b, with stub verdicts** (`apps/worker/src/job/verify.ts`):
   - The intent is the demo ticket's (`fixtures/criteria`), and each criterion's path is a saved one, else its hand-written fixture (`fixtures/paths`).
@@ -1327,6 +1331,7 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
 | Unit (Vitest) | schemas, config, `transition()`, outbox keys, route mapping, `durableTarget`, `settle`, judge combination + normalization, aria diff, comment renderer; webhook intake and the database layer, against an in-process Postgres (PGlite) with the real migrations |
 | Model contract | recorded fixtures per prompt version; a nightly live run |
 | Browser | recorder + marker alignment + readings + isolation against local demo-shop |
+| Faults (T7.1) | `pnpm test:faults`: each fault injected end to end against local fakes, to its documented end state. A preview answering 500; a 429 storm on the judges and on the intent read; Baseten cold; duplicate webhooks; a deployment before its PR; Modal cancelling a job (the Cloud, and the shim with the real worker CLI) |
 | Pipeline | `intenzo run --local --pr http://localhost:3001 --base http://localhost:3000 --ticket cases/discount` |
 | System | a real PR on demo-shop through the hosted path |
 

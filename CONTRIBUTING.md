@@ -29,6 +29,7 @@ If `pnpm check` passes, your environment is ready.
 | `pnpm format` / `pnpm format:check`                                     | Prettier write / check                                                                                                                                                                                                                   |
 | `pnpm test`                                                             | Unit tests in every package                                                                                                                                                                                                              |
 | `pnpm test:contract`                                                    | Contract tests in every package                                                                                                                                                                                                          |
+| `pnpm test:faults`                                                      | T7.1's faults, each injected end to end (`*.faults.test.ts`), and the Modal shim's cancel test                                                                                                                                           |
 | `pnpm test:browser`                                                     | Browser tests in every package (needs Playwright Chromium, see below)                                                                                                                                                                    |
 | `pnpm test:live`                                                        | Live model tests: real APIs, spends model credits, **run by hand only** (needs `META_API_KEY`, `BASETEN_API_KEY`)                                                                                                                        |
 | `pnpm test:pg`                                                          | Postgres tests (`*.pg.test.ts`): a real Postgres server at `INTENZO_TEST_PG_URL` (default `localhost:5432`). CI runs them on its own one                                                                                                 |
@@ -171,6 +172,7 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 | ----------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Unit        | `*.test.ts`, next to the source           | Fast, no network, no browser, no real time. Table-driven for rule-heavy code                             |
 | Contract    | `*.contract.test.ts`                      | Pin behavior of things we don't own (model response shapes from recorded fixtures, Playwright internals) |
+| Faults      | `*.faults.test.ts`                        | A fault injected end to end against local fakes, ending in its documented state (T7.1)                   |
 | Browser     | `*.browser.test.ts`                       | Real Chromium against fixture pages or a local demo-shop; no external network                            |
 | Postgres    | `*.pg.test.ts`                            | A real Postgres server, for what PGlite's single connection can't show (two transactions racing)         |
 | Live        | `*.live.test.ts` (`@live` in the roadmap) | Real Meta / Baseten calls. They spend model credits, so they're run by hand and never in CI (for now)    |
@@ -183,6 +185,7 @@ docs/                ARCHITECTURE, ROADMAP, DECISIONS
 | Typecheck, lint, format | ✅                                                |                                                               |
 | Unit tests              | ✅                                                |                                                               |
 | Contract tests          | ✅                                                |                                                               |
+| Fault tests             | ✅                                                |                                                               |
 | Modal shim tests        | ✅                                                |                                                               |
 | Browser tests           | ✅ (as soon as any `*.browser.test.ts` exists)    |                                                               |
 | Postgres tests          | ✅ (a `postgres:18.6` service container)          | `pnpm test:pg` with a local Postgres server                   |

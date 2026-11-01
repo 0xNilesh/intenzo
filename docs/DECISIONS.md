@@ -5,6 +5,38 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · Failure injection (T7.1, #53)
+
+`pnpm test:faults` injects each of the roadmap's six faults where it would happen: a preview or a model API answering badly on a local port, against the real job (`runJob`, the real preflight and model ports), or a webhook, a deployment or a Modal cancel through the Cloud's real intake, handlers and outbox, into a fake GitHub that keeps state. No model calls; 13 tests in about 3 s.
+
+### What we found
+
+| Fault | Before T7.1 | Now |
+| --- | --- | --- |
+| A preview answering 500 | **Recorded anyway** (§19's preflight was never built): with no cached path, Wonder explored the error page, up to $0.26 a criterion (T6.2), and the run ended inconclusive | `failed/preview_unreachable` after three tries, nothing recorded; "⚠️ preview unreachable". A base that fails: no baseline |
+| A 429 storm on the judges | Already right: 4 tries a call, each criterion `inconclusive (infra_error)`, the job finishes | Pinned: 32 requests for 4 criteria |
+| A 429 storm on the intent read | Already right: the read and 5 retries, then the job fails (§14) | Pinned: 24 requests, nothing recorded |
+| Baseten cold | Already right: retries outlast a short cold start; a long one makes Spark Open `infra_error` alone, and Spark 1.3's answer stays in the report | Pinned both |
+| Duplicate webhooks | Already right: a redelivery keeps its delivery id ("the X-GitHub-Delivery header will be the same as in the original delivery", GitHub's webhook best practices) and is stored once; the same event under a new id during its run changes nothing | Pinned: one run, check run, comment and spawn |
+| A deployment before its PR | Already right (§16.2) | Pinned: stored, then the PR's run verifies at once |
+| Modal cancelling a job | Already right: the shim's `cancelled` ends the run cancelled; a superseding push cancels the Modal call once; late events get 410 | Pinned, with the shim's own cancel test |
+
+Each guard was removed once to see its fault test fail: `decide()`'s same-head check, the preflight, and the cancel executor.
+
+### Decisions
+
+1. **Faults are injected at the boundaries, never by switches in production code.**
+   - _Why:_ the code under test is exactly what runs; only the outside world misbehaves. The layer is offline and fast, so it runs in `pnpm check` and in CI.
+   - _Alternatives:_ an `INTENZO_FAULT=` mode in the worker and the Cloud would test the switch as much as the code, and could be left on.
+2. **The preflight retries a 5xx or no answer (after 2 s and 5 s), never a 4xx.**
+   - _Why:_ a cold serverless function can fail its first request; a 401 (no bypass) or a 404 (no deployment) won't heal in seconds.
+3. **Only the PR preview's failure ends the job; a base preview's failure costs the baseline.**
+   - _Why:_ §19 asks for both previews, but the PR's verdicts don't need the base; a run without a baseline is already handled (§17.3), and losing all verdicts to a broken main would be worse.
+4. **A preview that didn't answer gets its own outcome reason, `preview_unreachable`.**
+   - _Why:_ "💥 Intenzo failed" sent the PR author looking at Intenzo, when the fix is theirs. The check stays neutral (§22.5); no migration, since `outcome_reason` is plain text.
+
+---
+
 ## 2026-11-01 · Demo takes: a fresh PR, then a warm second run (T7.2, #54)
 
 `scripts/demo/reset.sh correct` opened demo-shop #25: the correct discount code, closing #5. `scripts/demo/prewarm.sh 25` set the worker's `min_containers=1` and waited for the PR's first run. Reopening the PR started the take. The timings come from the Cloud's `runs` and `job_events`.

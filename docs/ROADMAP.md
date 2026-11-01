@@ -633,9 +633,9 @@
 **Goal:** nothing breaks on camera, and the repo explains itself.
 
 ### T7.1 Failure injection
-- [ ] **Build:** a test mode for each fault: preview returns 500; model 429 storm; Baseten cold start; Modal cancel mid-run; duplicate webhooks; a deployment arriving before the PR.
-- [ ] **Tests:** each fault ends in the documented state (no hangs, no duplicate comments, a correct inconclusive/error outcome).
-- [ ] **Verify:** `pnpm test:faults`.
+- [x] **Build:** a test mode for each fault: preview returns 500; model 429 storm; Baseten cold start; Modal cancel mid-run; duplicate webhooks; a deployment arriving before the PR.
+- [x] **Tests:** each fault ends in the documented state (no hangs, no duplicate comments, a correct inconclusive/error outcome).
+- [x] **Verify:** `pnpm test:faults`.
 
 ### T7.2 Pre-warm and demo scripts
 - [x] **Build:** `scripts/demo/prewarm.sh` (Modal `min_containers=1`, the path cache seeded; Baseten Model APIs need no pre-warming, T0.2b); `scripts/demo/reset.sh` (new demo PR from the almost-right branch).
