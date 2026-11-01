@@ -189,6 +189,12 @@ describe("renderComment (§26.1)", () => {
     expect(text).toContain("| ✅ | **C1** SAVE10 takes 10% off the cart | [▶ 0:04–0:08]");
   });
 
+  it("says when the run was sent to the fixer agent, without notifying anyone (§26.3)", () => {
+    expect(renderComment(failing)).not.toContain("🤖");
+    const text = renderComment({ ...failing, agentRequest: { attempt: 1, max: 3 } });
+    expect(text).toContain("🤖 Sent to `@intenzo-fixer` for a fix (request 1 of 3)");
+  });
+
   it("starts with the group's marker, so a lost comment id can be found again", () => {
     expect(renderComment(model()).startsWith("<!-- intenzo:run-group:2 -->\n")).toBe(true);
   });

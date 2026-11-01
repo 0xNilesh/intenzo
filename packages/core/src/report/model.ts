@@ -55,6 +55,11 @@ export interface ReportModel {
      */
     agentAttemptsLeft: number;
   };
+  /**
+   * §26.3: this run's fix request, once Send to agent was pressed for it: which request it is of
+   * the repo's max_agent_attempts. GitHub shows nothing on a press, so the report says it.
+   */
+  agentRequest?: { attempt: number; max: number } | null;
 }
 
 export type CheckConclusion = "success" | "failure" | "neutral" | "cancelled";

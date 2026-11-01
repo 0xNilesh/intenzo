@@ -13,7 +13,7 @@ import { z } from "zod";
 
 import type { Db } from "../db/db.ts";
 import { repoConfig } from "../db/repos.ts";
-import { criteriaResults, intentVersions, repos, runGroups, runs } from "../db/schema.ts";
+import { criteriaResults, intentVersions, outbox, repos, runGroups, runs } from "../db/schema.ts";
 
 type RunRow = typeof runs.$inferSelect;
 type ResultRow = typeof criteriaResults.$inferSelect;
@@ -84,6 +84,17 @@ export function agentAttemptsLeft(
 ): number {
   if (!policy.agent_handle || policy.agent_trigger !== "button") return 0;
   return Math.max(0, policy.max_agent_attempts - used);
+}
+
+/** §26.3: the run's fix request, if Send to agent was pressed for it. */
+async function agentRequestOf(db: Db, runId: string, max: number) {
+  const [row] = await db
+    .select({ payload: outbox.payloadJson })
+    .from(outbox)
+    .where(and(eq(outbox.effect, "agent"), eq(outbox.runId, runId)))
+    .limit(1);
+  const attempt = (row?.payload as { attempt?: number } | undefined)?.attempt;
+  return attempt ? { attempt, max } : null;
 }
 
 /** A public file's URL by its path (§28: GIFs and stills go to the public store). */
@@ -200,5 +211,6 @@ export async function reportModel(
       agentHandle: config.policy.agent_handle ?? null,
       agentAttemptsLeft: agentAttemptsLeft(config.policy, ctx.group.agentAttempts),
     },
+    agentRequest: await agentRequestOf(db, run.id, config.policy.max_agent_attempts),
   };
 }
