@@ -1,0 +1,104 @@
+# muse-fixer: Intenzo's reference coding agent (ARCHITECTURE §26.4). It fixes the criteria Intenzo
+# found failing when Intenzo's App comments a signed request (§26.3) on a pull request.
+# Installed from agents/muse-fixer in the Intenzo repo (install.ts); change it there.
+#
+# Needs: variables INTENZO_BOT_LOGIN (the Intenzo App's bot, "<slug>[bot]") and
+# INTENZO_FIXER_APP_ID; secrets INTENZO_FIXER_SECRET, INTENZO_FIXER_PRIVATE_KEY and META_API_KEY.
+name: muse-fixer
+
+on:
+  issue_comment:
+    types: [created]
+
+# Writes go through the intenzo-fixer App's token, minted only for the push.
+permissions:
+  contents: read
+
+concurrency:
+  group: fixer-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    # Only the Intenzo App's requests; a human copying the format is skipped here, and again in check.
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.comment.user.login == vars.INTENZO_BOT_LOGIN &&
+      contains(github.event.comment.body, '@intenzo-fixer')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # The fixer itself, from the default branch: never the pull request's copy.
+      - uses: actions/checkout@v7
+        with:
+          path: fixer
+          sparse-checkout: .github/muse-fixer
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check the request
+        id: check
+        run: node fixer/.github/muse-fixer/fix.ts check
+        env:
+          INTENZO_BOT_LOGIN: ${{ vars.INTENZO_BOT_LOGIN }}
+          INTENZO_FIXER_SECRET: ${{ secrets.INTENZO_FIXER_SECRET }}
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # The exact commit Intenzo found failing (check refused a PR that moved on).
+      - if: steps.check.outputs.ok == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.check.outputs.sha }}
+          path: repo
+          persist-credentials: false
+
+      - if: steps.check.outputs.ok == 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: repo/package.json
+
+      - name: Install without scripts
+        if: steps.check.outputs.ok == 'true'
+        working-directory: repo
+        run: pnpm install --ignore-scripts --frozen-lockfile
+
+      # Muse Code is a CLI (DECISIONS 2026-10-30); its sandbox needs bubblewrap on Linux. The
+      # installer is a bash script: Ubuntu's sh (dash) has no pipefail.
+      - name: Install Muse Code
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          sudo apt-get install -y --no-install-recommends bubblewrap
+          curl -fsSL https://dev.meta.ai/install.sh | MUSE_NO_MODIFY_PATH=1 bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Fix
+        if: steps.check.outputs.ok == 'true'
+        run: node fixer/.github/muse-fixer/fix.ts fix --repo repo
+        env:
+          META_API_KEY: ${{ secrets.META_API_KEY }}
+
+      - name: Typecheck
+        if: steps.check.outputs.ok == 'true'
+        working-directory: repo
+        run: pnpm typecheck
+
+      # Minted after the pull request's code has run, and only to push: unlike GITHUB_TOKEN, a push
+      # with an App token starts the repo's CI (and Vercel, and so a new Intenzo run).
+      - name: App token
+        if: steps.check.outputs.ok == 'true'
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.INTENZO_FIXER_APP_ID }}
+          private-key: ${{ secrets.INTENZO_FIXER_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Commit and push
+        if: steps.check.outputs.ok == 'true'
+        run: node fixer/.github/muse-fixer/fix.ts push --repo repo --ref "$REF"
+        env:
+          REF: ${{ steps.check.outputs.ref }}
+          FIXER_TOKEN: ${{ steps.app.outputs.token }}
