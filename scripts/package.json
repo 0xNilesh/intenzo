@@ -24,7 +24,8 @@
     "gate:p3": "node gates/p3.ts",
     "gate:p4": "node gates/p4.ts",
     "gate:p5": "node gates/p5.ts",
-    "gate:p6": "node gates/p6.ts"
+    "gate:p6": "node gates/p6.ts",
+    "docs:links": "node docs/links.ts"
   },
   "dependencies": {
     "@intenzo/core": "workspace:*",

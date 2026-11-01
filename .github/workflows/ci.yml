@@ -57,6 +57,9 @@ jobs:
       - name: Format
         run: pnpm format:check
 
+      - name: Docs links
+        run: pnpm docs:links
+
       - name: Unit tests
         run: pnpm test
 
