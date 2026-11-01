@@ -78,7 +78,8 @@ function commonLines(a: readonly string[], b: readonly string[]): [number, numbe
   return pairs;
 }
 
-const LANDMARK =
+/** A line that opens a landmark or a named container: what's inside isn't all one thing. */
+export const LANDMARK =
   /^- (banner|main|navigation|contentinfo|complementary|region|form|dialog|search)\b/;
 
 /** The landmark that encloses line `index`: the nearest shallower line naming one. */

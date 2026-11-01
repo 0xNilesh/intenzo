@@ -25,25 +25,28 @@ describe("routeSnapshot (§24)", () => {
   it("masks the shopper and marks the lines the trigger's targets touch, nothing else", async () => {
     const snap = await routeSnapshot(page, {
       users: ["shopper-42a1"],
+      // As the navigator saved them on demo-shop #22, and one that isn't on this page.
       targets: [
-        { by: "label", text: "Discount code" },
+        { by: "role", role: "textbox", name: "Discount code" },
         { by: "role", role: "button", name: "Apply" },
-        // Not on this page: touches nothing.
         { by: "role", role: "button", name: "Remove" },
       ],
     });
     const text = snap.lines.map((l) => l.text);
     expect(text.some((t) => t.includes("Signed in as <user>"))).toBe(true);
     expect(text.some((t) => t.includes("shopper-42a1"))).toBe(false);
-    // The label finds the form first (it's labelled "Discount code" too), so all of it is touched.
     const touched = [...snap.touched].sort((a, b) => a - b).map((k) => text[k]);
-    expect(touched).toEqual([
-      '- form "Discount code":',
-      "- text: Discount code",
-      '- textbox "Discount code"',
-      '- button "Apply"',
-    ]);
+    expect(touched).toEqual(['- textbox "Discount code"', '- button "Apply"']);
     // The link in the summary stays the diff's to find.
     expect(text).toContain('- link "Continue":');
+  });
+
+  it("treats a watched container as a region: nothing inside it is touched", async () => {
+    // As the navigator watched C2 on demo-shop #22: the whole Order summary, as an element.
+    const snap = await routeSnapshot(page, {
+      users: [],
+      targets: [{ by: "role", role: "region", name: "Order summary" }],
+    });
+    expect(snap.touched.size).toBe(0);
   });
 });
