@@ -1,0 +1,16 @@
+{
+  "id": "shipping-correct",
+  "ticket": "shipping",
+  "branch": "bench/shipping-correct",
+  "kind": "correct",
+  "seeded": false,
+  "split": "heldout",
+  "labels": {
+    "C1": "pass",
+    "C2": "pass",
+    "C3": "pass",
+    "C4": "pass"
+  },
+  "sideEffect": null,
+  "note": "Written by Muse Code (muse-spark-1.3-contributor) from the ticket, unedited."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "undo-almost-right",
+  "ticket": "undo",
+  "branch": "bench/undo-almost-right",
+  "kind": "almost_right",
+  "seeded": true,
+  "split": "tuning",
+  "labels": {
+    "C1": "pass",
+    "C2": "fail",
+    "C3": "fail"
+  },
+  "sideEffect": null,
+  "note": "undo-correct with Undo putting the item back with quantity 1, not the quantity it had."
+}

@@ -1,0 +1,18 @@
+{
+  "id": "undo-side-effect",
+  "ticket": "undo",
+  "branch": "bench/undo-side-effect",
+  "kind": "side_effect",
+  "seeded": false,
+  "split": "heldout",
+  "labels": {
+    "C1": "pass",
+    "C2": "pass",
+    "C3": "pass"
+  },
+  "sideEffect": {
+    "route": "/cart",
+    "description": "link \"Cart (2)\" → \"Cart\""
+  },
+  "note": "undo-correct, plus the header's cart link without its count (\"Cart (2)\" → \"Cart\"), which the ticket didn't ask for."
+}

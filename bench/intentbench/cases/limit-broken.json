@@ -1,0 +1,15 @@
+{
+  "id": "limit-broken",
+  "ticket": "limit",
+  "branch": "bench/limit-broken",
+  "kind": "broken",
+  "seeded": false,
+  "split": "heldout",
+  "labels": {
+    "C1": "fail",
+    "C2": "fail",
+    "C3": "fail"
+  },
+  "sideEffect": null,
+  "note": "limit-correct with the cart reading the apron's line, which a cart without an apron doesn't have: the cart page throws on every load."
+}

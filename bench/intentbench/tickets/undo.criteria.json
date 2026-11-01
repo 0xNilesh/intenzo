@@ -1,0 +1,38 @@
+[
+  {
+    "id": "C1",
+    "text": "Remove says \"Removed Ceramic mug\" with an Undo button",
+    "trigger": "remove the Ceramic mug from the cart",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The message \"Removed Ceramic mug\" appears with an \"Undo\" button",
+    "watch": ["live regions"],
+    "kind": "copy",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "\"Remove\" shows the message \"Removed Ceramic mug\" (with the item's name) and an \"Undo\" button."
+  },
+  {
+    "id": "C2",
+    "text": "Undo brings the item back with its quantity",
+    "trigger": "set the mug's quantity to 2, remove it, then press \"Undo\"",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The Ceramic mug is back in the cart with quantity 2",
+    "watch": ["mug line", "mug quantity"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "\"Undo\" puts the item back in the cart with the quantity it had."
+  },
+  {
+    "id": "C3",
+    "text": "Undo puts the totals back",
+    "trigger": "set the mug's quantity to 2, remove it, then press \"Undo\"",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The subtotal and total are $70.00 again, as before the remove",
+    "watch": ["order total"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "The subtotal and total go back to what they were before the remove."
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "C1",
+    "text": "The \"+\" button is disabled at 5",
+    "trigger": "press the Canvas tote bag's \"+\" button four times",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "At quantity 5, the tote's \"+\" button is disabled and the quantity stays 5",
+    "watch": ["tote quantity", "tote + button"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "an item's \"+\" button is disabled once its quantity is 5"
+  },
+  {
+    "id": "C2",
+    "text": "At 5, the line shows \"Limit 5 per item\"",
+    "trigger": "press the Canvas tote bag's \"+\" button four times",
+    "setup": ["the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)"],
+    "expected": "The tote's line shows the note \"Limit 5 per item\"",
+    "watch": ["tote line"],
+    "kind": "copy",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "At 5, the item's line shows the note \"Limit 5 per item\"."
+  },
+  {
+    "id": "C3",
+    "text": "Products refuses a sixth",
+    "trigger": "with the tote at 5 in the cart, press \"Add to cart\" for the Canvas tote bag on the Products page",
+    "setup": [
+      "the cart is the $50.00 seed cart (Canvas tote bag + Ceramic mug)",
+      "the tote's quantity is 5"
+    ],
+    "expected": "The message \"You can buy at most 5 of this item\" appears, and the cart still has 5 totes",
+    "watch": ["live regions", "cart count"],
+    "kind": "ui_behavior",
+    "persistence": false,
+    "inferred": false,
+    "sourceQuote": "shows the message \"You can buy at most 5 of this item\", and the cart stays as it was"
+  }
+]

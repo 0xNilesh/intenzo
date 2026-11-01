@@ -1,0 +1,19 @@
+{
+  "id": "shipping-side-effect",
+  "ticket": "shipping",
+  "branch": "bench/shipping-side-effect",
+  "kind": "side_effect",
+  "seeded": false,
+  "split": "tuning",
+  "labels": {
+    "C1": "pass",
+    "C2": "pass",
+    "C3": "pass",
+    "C4": "pass"
+  },
+  "sideEffect": {
+    "route": "/cart",
+    "description": "link \"Checkout\" → \"Place order\""
+  },
+  "note": "shipping-correct, plus the cart's \"Checkout\" link renamed \"Place order\", which the ticket didn't ask for."
+}
