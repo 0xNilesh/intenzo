@@ -5,6 +5,27 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · A repo can allow a built-in deny term (#123)
+
+T6.2's first recording explored IntentBench's 9 `undo` criteria on demo-shop. Each one needs the cart's "Remove" button, and "remove" is a built-in deny term (§29). Before this, `deny_text` could only add to that list. The raw outcomes are in the T6.2 packs.
+
+### What we found
+
+| Outcome                     | Criteria | Notes                                                                                                                                                                                       |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setup_failed: blocked`     | 7 of 9   | Wonder's reason: "the Remove action is refused by the denylist, so the remove-then-Undo trigger cannot be completed". About $0.2 each in Wonder calls (up to 21 calls)                     |
+| "Found" by another control  | 2 of 9   | Both C1s clicked "Decrease quantity of Ceramic mug" at quantity 1. The line goes, but no "Removed Ceramic mug" toast appears (live regions: no change), so a correct case would look like a failure |
+
+### Decisions
+
+1. **`guardrails.allow_text` takes built-in deny terms out; demo-shop allows "remove".**
+   - _Why:_ a cart's "Remove" is ordinary, reversible and the subject of real tickets. With a session hook, every lane is a new shopper, so an allowed action only ever touches a throwaway user's data.
+   - _Guards:_ it accepts only built-in terms, so a typo fails the config instead of passing silently. It needs isolation (a session hook, or a reset hook with users). The Cloud reads the config from the default branch (§11), so a PR can't allow anything itself. A term in `deny_text` still wins.
+   - _Alternatives:_ keeping the undo rows as `setup_failed` would have left 6 of the 28 held-out criteria with nothing to judge. A bench-only denylist would have measured a config no repo can have. Rewording the ticket to avoid "Remove" would have changed the spec to fit the tool.
+   - _Next:_ the navigator swapped a refused control for a different one that happened to remove the line. That's a fidelity risk wherever an action is refused. It was seen on held-out cases, so it isn't tuned now; T6.4's report notes it.
+
+---
+
 ## 2026-11-01 · IntentBench's cases (T6.1, #48)
 
 Four tickets were written for demo-shop and implemented by Muse Code from their text. Hand-seeded variants were branched off those implementations. Then `pnpm bench:validate` proved every label on the twelve previews.

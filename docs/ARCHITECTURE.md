@@ -467,6 +467,7 @@ data:
   - "expired discount code: OLD5"
 guardrails:
   deny_text: ["delete account", "cancel subscription", "pay now", "place order"]
+  allow_text: ["remove"]               # built-in terms the app's tickets need; isolation only (§29)
   extra_navigation_origins: []         # e.g. an auth provider
 judge:
   require_agreement: true              # Spark Open + Spark 1.3 must agree for pass/fail
@@ -484,6 +485,11 @@ tests: { export: suggest, dir: tests/intenzo }
   - `parseConfig()` never throws. Each problem has a path and a line, e.g. `.intenzo.yml:4: policy.auto_merge: unknown key`.
   - `readConfig()` uses the defaults when there's no file, and refuses two config files.
   - `isolationLevel()` applies §21.1: a `reset_hook` only counts with a `users` pool.
+  - `denyText()` is the navigator's denylist (§29): the built-in terms, minus `allow_text`, plus `deny_text`. An added term wins over an allowed one.
+- **`guardrails.allow_text`** (since 2026-11-01) takes built-in deny terms out, such as a cart's "Remove".
+  - Only built-in terms are accepted, so a typo can't pass for an allowance.
+  - It needs isolation (a `session_hook`, or a `reset_hook` with `users`), so an allowed action only ever touches a throwaway user's data.
+  - The Cloud reads the config from the default branch (§11), so a PR can't allow anything itself.
 - There is no `production` baseline option. §29 refuses any URL on the project's production domain, for both the PR and base sides.
 - Secrets are never in the file. They live in Cloud (encrypted).
 
@@ -1292,7 +1298,7 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
 | Bypass header leak | Added only to requests for the lane origin (§21.2) |
 | Test hooks as backdoors | HMAC-signed, with a timestamp; refuse in production; the reference implementation enforces both |
 | Production contact | **The authoritative guard is the deployment environment filter:** only deployments whose GitHub environment is non-production **by name** are ever used, for both sides (Vercel's `production_environment` flag is `false` even on Production, T0.4). `prod_domains` is a second line of defence (production deployments also have unique `*.vercel.app` URLs that it can't list). Hooks refuse production themselves |
-| Destructive actions | `deny_text` + defaults (delete, remove, cancel subscription, pay, purchase, place order, transfer); the navigator only acts on ids from the outline |
+| Destructive actions | `deny_text` + defaults (delete, remove, cancel subscription, pay, purchase, place order, transfer); a repo with isolation may take out a built-in term its tickets need (`allow_text`, §10: demo-shop allows "remove" for its cart); the navigator only acts on ids from the outline |
 | Off-site navigation | Main-frame navigations limited to the lane origin + `extra_navigation_origins` |
 | **Prompt injection** (ticket, PR body, page, console) | Untrusted blocks; the navigator never sees `expected`; two independent judges must agree; `citedValue` is checked against readings; `sourceQuote` is shown in the report so people can spot injected criteria; the agent payload is sanitized (§26.3) |
 | Intent tampering by the PR author | Criteria come from the linked ticket. The PR body is used only when there's no ticket, labelled "unverified" |
