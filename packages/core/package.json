@@ -12,6 +12,7 @@
     "./intent": "./src/intent/index.ts",
     "./coverage": "./src/coverage/index.ts",
     "./judge": "./src/judge/index.ts",
+    "./prompts": "./src/prompts/index.ts",
     "./fixer": "./src/fixer/payload.ts",
     "./changes": "./src/changes/index.ts"
   },
