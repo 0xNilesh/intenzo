@@ -179,9 +179,25 @@ describe("muse-fixer's fix and push, on a real git repo", () => {
     git(dir, "init", "-q", "--bare", "-b", "main", remote);
     git(dir, "clone", "-q", remote, repo);
     git(repo, "checkout", "-q", "-b", "pr/discount-almost-right");
+    // The machine wants every commit signed, and signing always fails: the bot's commit must not
+    // depend on a machine's signing setup (a developer's ~/.gitconfig, a runner's).
+    git(repo, "config", "commit.gpgsign", "true");
+    git(repo, "config", "gpg.program", "false");
     writeFileSync(join(repo, "cart.ts"), "export const total = (sub: number) => sub;\n");
     git(repo, "add", "-A");
-    git(repo, "-c", "user.name=dev", "-c", "user.email=dev@example.com", "commit", "-q", "-m", "x");
+    git(
+      repo,
+      "-c",
+      "user.name=dev",
+      "-c",
+      "user.email=dev@example.com",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "-q",
+      "-m",
+      "x",
+    );
     git(repo, "push", "-q", "origin", "pr/discount-almost-right");
     const muse = join(dir, "muse");
     writeFileSync(muse, `#!/bin/sh\n${edit}\n`);

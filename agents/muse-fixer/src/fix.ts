@@ -186,6 +186,9 @@ export function push(
     "user.name=intenzo-fixer[bot]",
     "-c",
     "user.email=intenzo-fixer[bot]@users.noreply.github.com",
+    // The bot has no signing key: a machine's own commit.gpgsign must not apply to its commits.
+    "-c",
+    "commit.gpgsign=false",
     "commit",
     "-m",
     `fix: make ${ids} pass (muse-fixer)`,
