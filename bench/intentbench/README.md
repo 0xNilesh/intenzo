@@ -49,13 +49,63 @@ criterion's check with a fresh shopper, and each side-effect check. Every observ
 its label. It needs `gh` and demo-shop's `DEMO_SHOP_HOOK_SECRET` and `DEMO_SHOP_BYPASS_SECRET` in
 `.env`. It makes no model calls and takes about 3 minutes.
 
+## Record
+
+```bash
+pnpm bench:record [--only=<case id prefix>] [--concurrency=<n>]
+```
+
+Phase 1 of §31, "record once". For each criterion of each case, Wonder explores the case's preview
+once, as the worker does (§20.3). The recorder then follows the path it found: two PR takes on the
+case's preview (for §19 step e's re-record rule) and one base take on the preview of `main` at
+`83d338a`, where every bench branch starts. Each criterion's pack goes in
+`packs/<case>/<criterion>/` (gitignored, since it holds the videos):
+
+| File                      | What                                                                  |
+| ------------------------- | --------------------------------------------------------------------- |
+| `pack.json`               | `Pack` (`src/pack.ts`): the exploration, the path, each take's lane   |
+| `pr-1/`, `pr-2/`, `base/` | `judge.mp4`, `human.mp4`, `shot-annotated.png` (§21.3–21.4)           |
+| `packs/<case>/diff.json`  | the branch's diff since `83d338a`, in the context bundle's shape (§8) |
+
+- **A failed exploration is kept:** its pack says `setup_failed` or `trigger_absent` and has no
+  takes, so the case's row reports it (§31).
+- **A crash leaves no pack,** so running again records only what's missing. Packs that exist are
+  never re-recorded; delete a pack's folder to record it again.
+- **Secrets are redacted** from every pack and log line. A take keeps no raw video or trace, since a
+  trace holds the request headers, the bypass among them.
+- **`manifest.json` is committed:** a row per pack with its statuses and a sha256 over its files, so
+  results can name the exact evidence they judged.
+
+It needs `gh`, `META_API_KEY` and demo-shop's `DEMO_SHOP_HOOK_SECRET` and `DEMO_SHOP_BYPASS_SECRET`
+in `.env`.
+
 ## Cost
 
-The four correct implementations: Muse Code in contributor mode, about $0.05 in all (2–4.5 min
-each). Validation is free.
+- **The four correct implementations:** Muse Code in contributor mode, about $0.05 in all (2–4.5 min
+  each).
+- **Validation:** free.
+- **Recording:** only the exploring costs, in Wonder calls.
+  - A criterion it finds costs about $0.03 (1–12 calls).
+  - One it can't find costs $0.13–0.26, until its 25 steps or 120 s run out.
+  - The takes are free.
+  - The 42 packs cost $1.78. T6.2 spent $2.79 in all, counting the smoke run and the 11 packs re-recorded after demo-shop allowed "remove" (DECISIONS 2026-11-01).
+
+## Recorded (2026-11-01)
+
+`manifest.json` lists every pack.
+
+| Outcome                                      | Criteria | Where                                                                                                                           |
+| -------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Explored; both PR takes completed            | 37       | every criterion but the five below                                                                                              |
+| `setup_failed`, as the case intends          | 3        | limit-broken: its cart throws on every load                                                                                     |
+| `setup_failed`, the navigator lost its way   | 2        | undo-side-effect C2 and C3: "Undo" went stale after Remove, then 20 steps between `/products` and `/cart` with no "Add to cart" |
+| Base take `trigger_absent` or `setup_failed` | 16       | the base has no discount code field (all 12 discount criteria) or no Undo (4 undo criteria): the base's own state, as expected  |
+
+- **Time:** 39 packs took 13.9 min at concurrency 2, and the 11 re-recorded ones 5.6 min. The packs take 18 MB.
+- **The judge video starts at the trigger:** its first frame is within 50 ms of the first trigger step. A trigger's clicks are about 30 ms apart, so the state between them (the mug at 2 before Remove) is only in the step log and the criterion.
 
 ## Tests
 
 ```bash
-pnpm --filter @intenzo/intentbench test   # the case schema, the split, a check for every criterion
+pnpm --filter @intenzo/intentbench test   # cases, split, checks; the pack schema; reruns
 ```

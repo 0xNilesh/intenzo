@@ -5,6 +5,37 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · IntentBench's evidence packs (T6.2, #49)
+
+`pnpm bench:record` explored and recorded all 42 criteria of the 12 cases on their Vercel previews, with demo-shop's config, at concurrency 2. It recorded 39 packs in 13.9 min. After #123, 11 were recorded again in 5.6 min. The numbers below come from `bench/intentbench/manifest.json` and the packs, which are local.
+
+### What we found
+
+| Measure                     | Result                                                                                                                                                                                         |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Explored                    | 37 of 42, every PR take `completed` (74 takes). 1–12 Wonder calls each, about $0.03                                                                                                             |
+| `setup_failed`              | limit-broken C1–C3: 25 steps on a cart that throws, as the case intends. undo-side-effect C2 and C3: "Undo" went stale after Remove, then 20 steps between `/products` and `/cart` with no "Add to cart" |
+| Base takes                  | 16 not `completed`: main at `83d338a` has no discount code field (all 12 discount criteria) and no Undo (4 undo criteria). That's the base's own state                                         |
+| First recording, before #123 | 7 of 9 undo criteria refused "Remove"; limit-almost-right C1 and C2 ran out of their 120 s budget at 23 calls each. Both explore in the re-record (12 and 4 calls)                             |
+| Spend                       | $1.78 of Wonder calls for the 42 packs; $2.79 with the smoke run ($0.14) and the re-record ($0.74). Estimated $0.6 beforehand, from discount's 1–2-call explores; limit and undo need 3–12    |
+| Evidence spot-check         | discount-almost-right C2: Total stays $50.00 under "Discount (SAVE10) −$5.00". shipping-almost-right C3: $75.00 + $5.00 shipping = $80.00, "Add $0.00 more". undo-almost-right C2: the mug comes back at 1 |
+| Judge video start           | Within 50 ms of the first trigger step. A trigger's clicks are about 30 ms apart, so a 4 fps video can't show the states between them                                                          |
+
+### Decisions
+
+1. **A failed exploration is a pack; a crash is not.**
+   - _Why:_ §31 reports exploration failures as `setup_failed` rows. A crash (a lane that wouldn't open, a video that failed) says nothing about the case, so it leaves no pack, and a rerun records only the missing ones.
+   - _Alternatives:_ counting crashes as `setup_failed`, as the worker does, would let infrastructure noise into the results.
+2. **Packs recorded under the old denylist were recorded again where it could matter.**
+   - _Why:_ the 9 undo packs needed "Remove". limit-almost-right C1 and C2 ran out of time with no trail to rule out a refused "Remove", and both explore under the new config. limit-broken's 3 were kept: its cart throws before any control is shown. Packs that found a path are unaffected, since replaying a found path doesn't consult the denylist.
+3. **Failed explorations aren't re-rolled.**
+   - _Why:_ undo-side-effect is held out. Re-recording until it passes would pick results, and tuning the navigator on its trail would leak the held-out set into tuning. Both C2 and C3 stay `setup_failed`, with their trails.
+4. **A take keeps `judge.mp4`, `human.mp4` and `shot-annotated.png`; the raw video and the trace go.**
+   - _Why:_ the judges read the first and third, and people watch the second. A Playwright trace holds the request headers, the bypass among them.
+   - _Next:_ T6.3 judges these packs offline. The judge video starting at the trigger is part of what arms C and D see, as in production.
+
+---
+
 ## 2026-11-01 · A repo can allow a built-in deny term (#123)
 
 T6.2's first recording explored IntentBench's 9 `undo` criteria on demo-shop. Each one needs the cart's "Remove" button, and "remove" is a built-in deny term (§29). Before this, `deny_text` could only add to that list. The raw outcomes are in the T6.2 packs.

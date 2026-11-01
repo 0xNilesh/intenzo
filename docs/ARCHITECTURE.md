@@ -1354,6 +1354,12 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
   - **Tickets:** `discount` (#5 as text), `shipping` (free shipping progress), `limit` (5 per item) and `undo` (undo Remove), with 14 fixed criteria in core's `Criterion` shape.
   - **Branches:** twelve `bench/<case>` branches, each built by Vercel as a preview. The four correct ones are Muse Code's, unedited (contributor mode, about $0.05 in all). The five almost-right ones each have a one-line defect hand-seeded into a correct branch. The two side-effect ones are correct plus an unrequested rename. The broken one throws on every cart load.
   - **Labels:** 42 labelled criteria, each proven by `pnpm bench:validate`, which runs a Playwright check per criterion with a fresh shopper on the preview. The discount ticket's correct case is a fresh Muse Code implementation, not the demo's hand-written branch.
+- **Built in T6.2** (`pnpm bench:record`): "record once".
+  - **What's recorded:** for each criterion, Wonder explores the case's preview as the worker does (§20.3). Then two PR takes and one base take follow its path; the base is the preview of `main` at `83d338a`, where every bench branch starts.
+  - **Where it goes:** each pack is `packs/<case>/<criterion>/`: `pack.json` plus `judge.mp4`, `human.mp4` and `shot-annotated.png` per take. They're gitignored, since they hold videos. `manifest.json` is committed, with a sha256 per pack. Each case's diff since `83d338a`, in the context bundle's shape, is saved for arm A.
+  - **Failures:** a failed exploration is kept as a pack with no takes. A crash leaves no pack, so a rerun records only what's missing. New packs keep the navigator's trail, a line per step.
+  - **Result:** 37 of 42 criteria explored, with every PR take completed. The 5 `setup_failed` are limit-broken's 3 (its cart throws) and undo-side-effect C2 and C3 (the navigator lost its way after Remove). That cost $1.78 of Wonder calls ($2.79 with the smoke run and the re-record after #123).
+  - **For T6.3:** the judge video begins at the trigger. A multi-step trigger's clicks are about 30 ms apart, so the states between them are only in the step log.
 
 ## 32. Demo storyboard (3 minutes)
 

@@ -600,9 +600,9 @@
 - [x] **Verify:** `pnpm bench:validate` passes for all 12.
 
 ### T6.2 Record once
-- [ ] **Build:** `bench/record.ts`: per case, explore + **2 PR takes** + 1 base take → a frozen evidence pack. Exploration failures are saved as `setup_failed`.
-- [ ] **Tests:** the evidence pack schema; a rerun only re-records missing packs.
-- [ ] **Verify:** every case has a pack; spot-check 3 videos.
+- [x] **Build:** `bench/record.ts`: per case, explore + **2 PR takes** + 1 base take → a frozen evidence pack. Exploration failures are saved as `setup_failed`.
+- [x] **Tests:** the evidence pack schema; a rerun only re-records missing packs.
+- [x] **Verify:** every case has a pack; spot-check 3 videos.
 
 ### T6.3 Judge many (offline)
 - [ ] **Build:** `bench/judge.ts`: arms A (diff-only), B (readings only), C (frames), D (video, dual, plus each model alone); 3 repeats; the real §19 e rule using the 2 takes. Tune on the tuning split only.

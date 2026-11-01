@@ -1,8 +1,9 @@
 // pnpm bench:record [--only=<case id prefix>] [--concurrency=<n>]: records IntentBench's evidence
 // packs (§31, T6.2) into bench/intentbench/packs/ (gitignored), then rewrites manifest.json, which
 // is committed. Packs that exist are kept: a rerun records only what's missing. Exploring costs
-// Meta credit, about $0.014 a criterion (P3 gate); recording is free. Needs gh (signed in) and
-// META_API_KEY, DEMO_SHOP_HOOK_SECRET and DEMO_SHOP_BYPASS_SECRET in .env.
+// Meta credit: about $0.03 a criterion it finds, $0.13–0.26 one it doesn't (T6.2); the takes are
+// free. Needs gh (signed in) and META_API_KEY, DEMO_SHOP_HOOK_SECRET and DEMO_SHOP_BYPASS_SECRET in
+// .env.
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { parseConfig } from "@intenzo/core";
