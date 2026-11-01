@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # A fresh demo PR on demo-shop (ROADMAP T7.2, ARCHITECTURE §32): a new demo/* branch at the head of
 # the almost-right (or correct) discount code, and a PR that closes #5. Open demo PRs from earlier
-# takes are closed first, never merged, so no take starts from another's fix.
+# takes are closed first, never merged, and their branches deleted, so no take starts from another's
+# fix. The closed PR keeps its commits and its report (GitHub keeps refs/pull/<n>/head).
 #
 #   scripts/demo/reset.sh [almost-right|correct] [--keep] [--dry-run]
 #
@@ -51,7 +52,7 @@ if ! $keep; then
     --jq '.[] | select(.headRefName | startswith("demo/")) | .number')
   for pr in $open; do
     echo "closing the earlier demo PR #$pr"
-    act gh pr close "$pr" -R "$REPO" \
+    act gh pr close "$pr" -R "$REPO" --delete-branch \
       --comment "Closed by Intenzo's scripts/demo/reset.sh: a fresh demo PR replaces it."
   done
 fi
