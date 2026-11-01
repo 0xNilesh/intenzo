@@ -23,6 +23,7 @@ import {
   itemKey,
   type BenchVerdict,
   stillCurrent,
+  tally,
 } from "./results.ts";
 
 const T0 = 1_793_000_000_000;
@@ -392,4 +393,39 @@ describe("the results file", () => {
     const kept = stillCurrent(r, { "discount-almost-right/C2": "b".repeat(64) });
     expect([kept.verdicts.length, kept.calls.length]).toEqual([0, 0]);
   });
+
+  it("writes its rows in a fixed order, whatever call finished first", async () => {
+    const r = await results();
+    const shuffled = { ...r, verdicts: [...r.verdicts].reverse(), calls: [...r.calls].reverse() };
+    expect(formatResults(shuffled)).toBe(formatResults(r));
+  });
+
+  it("tallies each arm's views for the run's log", async () => {
+    const r = await results();
+    const flaky = { ...r.verdicts[1]!, verdict: "inconclusive" as const, reason: "flaky" as const };
+    const passed = { ...r.verdicts[2]!, verdict: "pass" as const };
+    expect(tally([r.verdicts[0]!, flaky, passed])).toEqual([
+      { ...counts("dual", 1, 0, 0, 1), usd: 4 * PER_CALL },
+      { ...counts("Spark Open", 0, 0, 1, 0), usd: 2 * PER_CALL },
+      { ...counts("Spark 1.3", 0, 1, 0, 0), usd: 2 * PER_CALL },
+    ]);
+  });
+});
+
+/** A tally row of arm D's view on one label-fail criterion. */
+const counts = (
+  view: string,
+  right: number,
+  wrong: number,
+  inconclusive: number,
+  caught: number,
+) => ({
+  arm: "D",
+  view,
+  n: 1,
+  right,
+  wrong,
+  inconclusive,
+  caught,
+  fails: 1,
 });

@@ -15,3 +15,5 @@ fixtures/aria/*.yml
 bench/intentbench/manifest.json
 # Python virtualenvs (bench/analysis/.venv, T6.4) hold third-party code.
 .venv
+# Written by pnpm bench:judge, one verdict or call per line (T6.3).
+bench/results/judge-*.json

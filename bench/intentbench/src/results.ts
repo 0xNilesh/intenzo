@@ -127,11 +127,79 @@ export function stillCurrent(r: BenchResults, packs: Readonly<Record<string, str
   return { ...r, verdicts: r.verdicts.filter(same), calls: r.calls.filter(same) };
 }
 
-/** One row per line, so a rerun's diff shows the rows it added. */
+const ORDER = ["dual", ...JUDGE_NAMES, "diff", "pr-1", "pr-2"];
+type Row = { repeat: number; arm: string; case: string; criterion: string };
+const byItem = (a: Row, b: Row) =>
+  a.repeat - b.repeat ||
+  a.arm.localeCompare(b.arm) ||
+  a.case.localeCompare(b.case) ||
+  a.criterion.localeCompare(b.criterion);
+const rank = (key: string) => ORDER.indexOf(key);
+
+/**
+ * One row per line, in a fixed order (repeat, arm, case, criterion; then view, or take and
+ * judge), so the file doesn't depend on which call finished first and a rerun's diff shows the
+ * rows it added.
+ */
 export function formatResults(r: BenchResults): string {
+  const verdicts = [...r.verdicts].sort((a, b) => byItem(a, b) || rank(a.view) - rank(b.view));
+  const calls = [...r.calls].sort(
+    (a, b) => byItem(a, b) || rank(a.take) - rank(b.take) || rank(a.judge) - rank(b.judge),
+  );
   const rows = (list: readonly object[]) =>
     list.length === 0 ? "[]" : `[\n${list.map((x) => `    ${JSON.stringify(x)}`).join(",\n")}\n  ]`;
-  const { verdicts, calls, ...head } = r;
-  const top = Object.entries(head).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
+  const top = Object.entries(r)
+    .filter(([k]) => k !== "verdicts" && k !== "calls")
+    .map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
   return `{\n${[...top, `  "verdicts": ${rows(verdicts)}`, `  "calls": ${rows(calls)}`].join(",\n")}\n}\n`;
+}
+
+export interface Tally {
+  arm: string;
+  view: string;
+  n: number;
+  /** The verdict equals the label. */
+  right: number;
+  /** A pass or fail against the label. */
+  wrong: number;
+  inconclusive: number;
+  /** Fails caught: label fail, verdict fail, of the label-fail verdicts. */
+  caught: number;
+  fails: number;
+  usd: number;
+}
+
+/**
+ * A rough count per arm and view, for the run's log. The reported metrics, with their spread over
+ * repeats, are T6.4's.
+ */
+export function tally(verdicts: readonly BenchVerdict[]): Tally[] {
+  const rows = new Map<string, Tally>();
+  for (const v of verdicts) {
+    const key = `${v.arm} ${v.view}`;
+    const t = rows.get(key) ?? {
+      arm: v.arm,
+      view: v.view,
+      n: 0,
+      right: 0,
+      wrong: 0,
+      inconclusive: 0,
+      caught: 0,
+      fails: 0,
+      usd: 0,
+    };
+    t.n++;
+    if (v.verdict === "inconclusive") t.inconclusive++;
+    else if (v.verdict === v.label) t.right++;
+    else t.wrong++;
+    if (v.label === "fail") {
+      t.fails++;
+      if (v.verdict === "fail") t.caught++;
+    }
+    t.usd += v.usd;
+    rows.set(key, t);
+  }
+  return [...rows.values()].sort(
+    (a, b) => a.arm.localeCompare(b.arm) || rank(a.view) - rank(b.view),
+  );
 }
