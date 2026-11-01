@@ -33,7 +33,11 @@ importers:
         specifier: 8.72.1
         version: 8.72.1(eslint@10.13.0)(typescript@6.0.3)
 
-  agents/muse-fixer: {}
+  agents/muse-fixer:
+    devDependencies:
+      vitest:
+        specifier: 5.0.5
+        version: 5.0.5(@types/node@24.19.2)(msw@3.0.3(@types/node@24.19.2)(typescript@6.0.3)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
   apps/cloud:
     dependencies:

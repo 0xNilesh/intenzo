@@ -2,10 +2,17 @@
   "name": "@intenzo/muse-fixer",
   "version": "0.0.0",
   "private": true,
-  "description": "Reference coding agent: a GitHub Action that fixes Intenzo failures with Muse Code.",
+  "description": "Reference coding agent: a GitHub Action that fixes Intenzo failures with Muse Code (ARCHITECTURE \u00a726.4).",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:contract": "vitest run --project contract --passWithNoTests",
+    "test:browser": "vitest run --project browser --passWithNoTests",
+    "install-into": "node install.ts"
+  },
+  "devDependencies": {
+    "vitest": "5.0.5"
   }
 }
