@@ -1,5 +1,6 @@
 // What a job learns, stored where the report reads it (§9, §11): the criteria (intent_ready), a
-// verdict per criterion (criterion_verdict) and its evidence (criterion_evidence). Each changes
+// verdict per criterion (criterion_verdict), its evidence (criterion_evidence) and the
+// unrequested changes (changes_done). Each changes
 // the comment, which is re-rendered from the database (§26.1: verdicts stream in).
 import type { SavedPath, WorkerEvent } from "@intenzo/core";
 import { and, eq, sql } from "drizzle-orm";
@@ -15,6 +16,7 @@ export const RESULT_EVENTS: ReadonlySet<WorkerEvent["kind"]> = new Set([
   "intent_ready",
   "criterion_verdict",
   "criterion_evidence",
+  "changes_done",
 ]);
 
 const merge = (column: typeof criteriaResults.evidenceJson, value: object) =>
@@ -68,6 +70,10 @@ export async function storeResult(db: Db, run: RunRow, event: WorkerEvent): Prom
         });
       return;
     }
+    case "changes_done":
+      // §24: what the aria diff found on the criteria's routes, for the comment's ⚠️ lines.
+      await db.update(runs).set({ changesJson: event.changes }).where(eq(runs.id, run.id));
+      return;
     case "criterion_evidence":
       // Evidence follows its verdict (§15), so the row is there to add to.
       await db
