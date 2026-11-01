@@ -21,9 +21,20 @@ import {
   type RunOutcome,
   SavedPath,
   takePath,
+  type Target,
+  type UnrequestedChange,
   type Verdict,
   type VerifyJob,
 } from "@intenzo/core";
+import {
+  changeRoutes,
+  changeTargets,
+  classifyChanges,
+  diffSnapshots,
+  dropExpected,
+  reportable,
+  skipChanges,
+} from "@intenzo/core/changes";
 import {
   afterRerecord,
   type Judge,
@@ -59,6 +70,7 @@ import {
   type EvidenceInput,
   type EvidenceOutput,
   outlinedLabel,
+  type RouteSnapshot,
   samSegmenter,
 } from "@intenzo/core/browser";
 
@@ -103,7 +115,18 @@ export interface Recorder {
   evidence?(input: Omit<EvidenceInput, "outDir">): Promise<EvidenceOutput>;
   /** Explores the PR app for a criterion's trigger (§20.3), when the worker has the navigator. */
   explore?(input: ExploreInput): Promise<ExploreResult>;
+  /** A route's masked aria snapshot, with a fresh identity, for the aria diff (§24). */
+  snapshot?(input: SnapshotInput): Promise<RouteSnapshot>;
   close(): Promise<void>;
+}
+
+export interface SnapshotInput {
+  origin: string;
+  route: string;
+  /** What the criteria touch there: their trigger targets and watched elements. */
+  targets: readonly Target[];
+  identity?: { hookPath: string; secret: string };
+  bypass?: string;
 }
 
 const NO_TOKENS = { promptTokens: 0, cachedTokens: 0, completionTokens: 0, reasoningTokens: 0 };
@@ -373,6 +396,8 @@ export async function verify(
 
   const identity = hookPath && hookSecret ? { hookPath, secret: hookSecret } : undefined;
   const cache = new PathCache(job.cachedPaths);
+  /** The path each criterion was recorded along, for the aria diff's routes and targets (§24). */
+  const usedPaths = new Map<string, SavedPath>();
 
   const store =
     deps.store ??
@@ -480,6 +505,7 @@ export async function verify(
         if (job.baseUrl) base = await recordSide("base", job.baseUrl, criterion, path);
       }
     }
+    if (path) usedPaths.set(criterion.id, path);
     return { pr, base, path, notFound };
   };
 
@@ -627,8 +653,68 @@ export async function verify(
     }
   };
 
+  /**
+   * §24, T5.6: what the PR changed on the criteria's routes that no criterion explains. After the
+   * verdicts, one route at a time; anything that goes wrong costs the report its ⚠️ lines, never
+   * the run. A run of some criteria only (/intenzo rerun) doesn't look.
+   */
+  const detectChanges = async () => {
+    if (!recorder.snapshot || !models || job.only) return;
+    const skipped = skipChanges({
+      baseUrl: job.baseUrl,
+      baseDrift: job.baseDrift ?? null,
+      baseIsolated: identity !== undefined,
+    });
+    if (skipped) {
+      log(`changes: skipped, ${skipped}`);
+      return;
+    }
+    const paths = [...usedPaths.values()];
+    const routes = changeRoutes(paths, coverage.routes, job.config.start.default);
+    const targets = changeTargets(paths);
+    const found: UnrequestedChange[] = [];
+    try {
+      for (const route of routes) {
+        const snap = (origin: string): Promise<RouteSnapshot> =>
+          slots.run(() =>
+            recorder.snapshot!({
+              origin,
+              route,
+              targets,
+              ...(identity && { identity }),
+              ...(bypass && { bypass }),
+            }),
+          );
+        const base = await snap(job.baseUrl!);
+        const pr = await snap(job.prUrl);
+        const hunks = dropExpected(
+          diffSnapshots(base.lines, pr.lines),
+          { base: base.touched, pr: pr.touched },
+          base.lines,
+          pr.lines,
+        );
+        const classified = await classifyChanges(models, {
+          route,
+          criteria: intent.criteria,
+          hunks,
+        });
+        spent += classified.costUsd;
+        if (classified.error) log(redact(`changes: ${route}: ${classified.error}`).slice(0, 300));
+        found.push(...classified.changes);
+        log(
+          `changes: ${route}: ${hunks.length} change(s) the criteria don't touch, ${classified.changes.length} unrequested`,
+        );
+      }
+      await client.send({ kind: "changes_done", changes: reportable(found) });
+    } catch (err) {
+      if (err instanceof StaleJobError) throw err;
+      log(redact(`changes: not checked: ${(err as Error).message}`).slice(0, 300));
+    }
+  };
+
   const criteria = intent.criteria.filter((c) => !job.only || job.only.includes(c.id));
   const verdicts = await Promise.all(criteria.map(verifyOne));
+  await detectChanges();
   return { outcome: judges ? aggregateOutcome(verdicts) : stubOutcome(verdicts), costUsd: spent };
 }
 
