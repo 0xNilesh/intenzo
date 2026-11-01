@@ -35,9 +35,13 @@ before the pipeline exists, so the pipeline is built to match it. It becomes a t
 
 - **Must match exactly:**
   - the outcome in the header (`❌ 3/4 passed`)
-  - each criterion's verdict, matched by number (C1 ✅, C2 ❌, C3 ✅, C4 ✅)
-  - the C2 readings line
-  - the ⚠️ line
+  - each criterion's verdict, **matched by what the criterion is about** (the line ✅, the total ❌,
+    the expired code ✅, the chart ✅), not by its number: the PM says the total first, so the intent
+    step numbers it C1 (DECISIONS 2026-10-31 · Intent from the PM video; the owner's choice)
+  - the total's readings line, as far as the criterion asks: `+0 s $50.00 · +1 s $50.00 · +3 s $50.00`.
+    The PM never asks for the total to survive a reload, so the criterion read from the recording
+    has no reload probe and no "after reload" reading
+  - the ⚠️ line, from P5 (T5.6)
 - **May differ:** the criteria's wording (the intent step phrases them), and every `{placeholder}`: report links, evidence times, GIF URLs, the base SHA, test counts, elapsed time and cost.
 
 It isn't run through Prettier (`.prettierignore`), so its bytes stay exactly as written.

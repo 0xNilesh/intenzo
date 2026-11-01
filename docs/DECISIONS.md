@@ -5,6 +5,32 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · P4 gate (#39)
+
+`pnpm gate:p4` (`scripts/gates/p4.ts`) scores hosted runs against the golden comment, and passed on six runs of two demo-shop PRs that close #5: #17 on the almost-right code and #18 on the correct code.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| `pnpm check:all` | 8 test runs passed |
+| Almost-right, 3 runs | Each "❌ 3/4 passed": the total ❌ (its readings "+0 s $50.00 · +1 s $50.00 · +3 s $50.00"), the line, the expired code and the chart ✅. Every run's criteria came from the PM's recording |
+| Correct, first 3 runs | **"Not verified", all three.** The first intent call got HTTP 404 `model_not_found` from Meta's API while #17's identical call succeeded; the worker reported an empty intent, the Cloud kept it as the ticket's intent version, and the next two runs reused it |
+| Correct, 3 runs after the fix | Each "✅ 4/4 passed": no false fail |
+| Verdicts | 0 of 24 inconclusive |
+| Time | Median 75 s verifying (66–126 s), 88 s from the push. A PR's first run takes about 50 s more (intent from the recording, exploring) |
+| Cost | Median $0.079 a run; $0.18–0.20 for a PR's first run. The gate's twelve runs (the six scored, the three empty ones, three earlier on these PRs): about $0.85, of which about $0.25 Baseten |
+| One run looked slow | A watcher saw a correct run's result after 756 s; GitHub has its check run completed 83 s after the push. The watcher's polling, not Intenzo |
+
+### Decisions
+
+1. **A failed intent call is tried once more, and a second failure fails the job**, so no empty intent is reported as the ticket's; **the Cloud never reuses an intent version with no criteria**.
+2. **The golden comment is matched by what each criterion is about** (owner's choice), and the total's readings without the after-reload reading the video's criterion doesn't ask for (`demo/README.md` updated).
+3. **`gate:p3`'s live part isn't rerun here**: it records on demo-shop served locally and passed on 2026-10-31 (P3 gate). `gate:p4` reads the hosted runs it scores; it creates nothing and calls no model.
+4. *Next:* P5 (evidence GIFs, the fix loop, PM approval). The ⚠️ unrequested-change line of the golden comment comes with T5.6.
+
+---
+
 ## 2026-10-31 · Hosted intent: the PR's ticket and its recording (T4.8, #107)
 
 P4's goal has a PM's video become criteria on hosted runs, but no task built §8's context bundle, so hosted jobs read the fixtures. T4.8 was added for it. Checked with 22 new unit tests and a hosted run on demo-shop#16.
