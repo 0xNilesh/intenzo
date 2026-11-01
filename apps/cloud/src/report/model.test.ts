@@ -163,6 +163,42 @@ describe("reportModel", () => {
     expect((await reportModel(t.db, groupId, BASE))!.run.id).toBe(RUN_2);
   });
 
+  it("links the evidence GIF from the public store, and nothing without one", async () => {
+    await happen({ kind: "pr_ready", trigger: "opened", headSha: "af1065e", draft: false });
+    await happen(
+      { kind: "preview_ready", sha: "af1065e", url: "https://demo-shop-x.vercel.app" },
+      1,
+    );
+    const [intent] = await t.db
+      .insert(intentVersions)
+      .values({ runGroupId: groupId, ticketHash: INTENT.ticketHash, intentJson: INTENT })
+      .returning();
+    await t.db.update(runs).set({ intentVersionId: intent!.id }).where(eq(runs.id, RUN_1));
+    const gif = {
+      store: "public",
+      path: `runs/${RUN_1}/C2/pr/take-1/evidence.gif`,
+      contentType: "image/gif",
+    };
+    await t.db.insert(criteriaResults).values({
+      runId: RUN_1,
+      criterionId: "C2",
+      verdict: "fail",
+      reasonCode: "agreed",
+      judgesJson: [],
+      lanesJson: [],
+      evidenceJson: { window: null, observed: "x", gif },
+    });
+    const publicFile = (path: string) => `https://store.public.blob.example/${path}`;
+    const withStore = (await reportModel(t.db, groupId, BASE, RUN_1, publicFile))!;
+    expect(withStore.criteria.find((c) => c.id === "C2")!.gif).toBe(
+      `https://store.public.blob.example/runs/${RUN_1}/C2/pr/take-1/evidence.gif`,
+    );
+    expect(withStore.criteria.find((c) => c.id === "C1")!.gif).toBeNull();
+    expect(
+      (await reportModel(t.db, groupId, BASE, RUN_1))!.criteria.find((c) => c.id === "C2")!.gif,
+    ).toBeNull();
+  });
+
   it("is null for a group without runs", async () => {
     expect(await reportModel(t.db, groupId, BASE)).toBeNull();
   });

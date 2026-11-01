@@ -97,11 +97,15 @@ function stateSentence(model: ReportModel): string | null {
 
 function criterionRows(c: ReportCriterion, reportUrl: string): string[] {
   const icon = c.verdict ? ICON[c.verdict] : "⏳";
-  const evidence = c.clip
-    ? `[▶ ${clock(c.clip.startMs)}–${clock(c.clip.endMs)}](${reportUrl}#${c.id})`
-    : c.verdict
-      ? `[report](${reportUrl}#${c.id})`
-      : "";
+  // §26.1: a failed criterion shows its GIF inline; the others link their clip.
+  const evidence =
+    c.verdict === "fail" && c.gif
+      ? `![${c.id}](${c.gif})`
+      : c.clip
+        ? `[▶ ${clock(c.clip.startMs)}–${clock(c.clip.endMs)}](${reportUrl}#${c.id})`
+        : c.verdict
+          ? `[report](${reportUrl}#${c.id})`
+          : "";
   const rows = [`| ${icon} | **${c.id}** ${cell(c.text)} | ${evidence} |`];
   if (c.verdict === "fail" || c.verdict === "inconclusive") {
     // §26.1: what was expected, what the page read, and what the judges saw.

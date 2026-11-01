@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { database } from "./db/client.ts";
 import { privatePut } from "./artifacts/put.ts";
-import { artifactUrls } from "./artifacts/read-urls.ts";
+import { artifactUrls, publicUrl } from "./artifacts/read-urls.ts";
 import { buildBundle } from "./bundle/build.ts";
 import { blobStores, cloudEnv, modalSettings } from "./env.ts";
 import { githubClient } from "./github/api.ts";
@@ -35,7 +35,15 @@ export function cloud() {
   const modal = modalSettings(env);
   const sealKey = env.INTENZO_SECRETS_KEY ? secretsKey(env.INTENZO_SECRETS_KEY) : null;
   const executors = {
-    ...githubExecutors({ db, github, reportBaseUrl: reportBaseUrl(env) }),
+    ...githubExecutors({
+      db,
+      github,
+      reportBaseUrl: reportBaseUrl(env),
+      publicFile: (path) => {
+        const store = blobStores(env).public;
+        return store ? publicUrl(store, path) : null;
+      },
+    }),
     ...(modal &&
       jobExecutors({
         db,
