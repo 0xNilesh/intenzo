@@ -34,6 +34,8 @@ Each guard was removed once to see its fault test fail: `decide()`'s same-head c
    - _Why:_ §19 asks for both previews, but the PR's verdicts don't need the base; a run without a baseline is already handled (§17.3), and losing all verdicts to a broken main would be worse.
 4. **A preview that didn't answer gets its own outcome reason, `preview_unreachable`.**
    - _Why:_ "💥 Intenzo failed" sent the PR author looking at Intenzo, when the fix is theirs. The check stays neutral (§22.5); no migration, since `outcome_reason` is plain text.
+   - _Checked live, free:_ demo-shop's almost-right, correct and main previews answer the preflight 307 with the bypass (to `/products`, on their own origin), so it passes them.
+   - _Next:_ without the bypass, Vercel answers 302 to `vercel.com/sso-api`, its login, and §19's "2xx/3xx" passes that too. A repo with a missing or wrong bypass would still be recorded on a login wall. Treating a redirect off the preview's origin as unreachable would catch it, but it changes §19's rule, so it's left for its own decision.
 
 ---
 
