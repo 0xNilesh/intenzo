@@ -28,9 +28,10 @@ export const ACTIONS = {
 } as const satisfies Record<string, CheckRunAction>;
 
 /**
- * §26.2: pass → Approve (PM), Re-run; fail → Send to agent (when an agent is configured), Re-run;
- * inconclusive → Re-run. Approve is never offered on a failing run, and nothing is offered before
- * the run completes (the buttons can be pressed on a running check, T0.4).
+ * §26.2: pass → Approve (PM), Re-run; fail → Send to agent (when an agent is configured and has
+ * attempts left, §26.3), Re-run; inconclusive → Re-run. Approve is never offered on a failing run,
+ * and nothing is offered before the run completes (the buttons can be pressed on a running check,
+ * T0.4).
  */
 export function actionsFor(model: ReportModel): CheckRunAction[] {
   if (model.run.state !== "done") return [];
@@ -38,7 +39,9 @@ export function actionsFor(model: ReportModel): CheckRunAction[] {
     case "pass":
       return [ACTIONS.approve, ACTIONS.rerun];
     case "fail":
-      return model.policy.agentHandle ? [ACTIONS.fix, ACTIONS.rerun] : [ACTIONS.rerun];
+      return model.policy.agentHandle && model.policy.agentAttemptsLeft > 0
+        ? [ACTIONS.fix, ACTIONS.rerun]
+        : [ACTIONS.rerun];
     case "inconclusive":
       return [ACTIONS.rerun];
     default:

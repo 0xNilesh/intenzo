@@ -46,7 +46,15 @@ export interface ReportModel {
   reportUrl: string;
   /** The group's earlier runs, newest first. */
   history: { headSha: string; attemptNo: number; outcome: RunOutcome | null }[];
-  policy: { inconclusive: "neutral" | "failure"; agentHandle: string | null };
+  policy: {
+    inconclusive: "neutral" | "failure";
+    agentHandle: string | null;
+    /**
+     * Send to agent presses left (§26.3: max_agent_attempts less those used); 0 once they're
+     * used up, or when the repo's agent_trigger isn't the button.
+     */
+    agentAttemptsLeft: number;
+  };
 }
 
 export type CheckConclusion = "success" | "failure" | "neutral" | "cancelled";
