@@ -570,9 +570,9 @@
 - [x] **Verify:** the ⚠️ line appears on the almost-right PR.
 
 ### T5.7 Billing meter
-- [ ] **Build:** the §16.3 rule in the same transaction; displayed in the comment footer.
-- [ ] **Tests:** a run group with only `setup_failed` → not billed; the first judged run → billed once; the 6th judged run → a second unit.
-- [ ] **Verify:** `pnpm --filter @intenzo/cloud test billing`.
+- [x] **Build:** the §16.3 rule in the same transaction; displayed in the comment footer.
+- [x] **Tests:** a run group with only `setup_failed` → not billed; the first judged run → billed once; the 6th judged run → a second unit.
+- [x] **Verify:** `pnpm --filter @intenzo/cloud test billing`.
 
 ### ✅ Phase 5 gate: `pnpm gate:p5` + full manual demo run
 - `gate:p4` passes, plus all P5 tests.

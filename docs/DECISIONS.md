@@ -5,6 +5,18 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · The billing meter (T5.7, #46)
+
+`pnpm --filter @intenzo/cloud test billing`: 5 tests passed, among them §16.3's three cases (a group whose runs judged nothing is never billed; the first judged run bills it once; the 6th judged run makes a second unit).
+
+### Decisions
+
+1. **A run counts when it finishes with at least one stored `pass` or `fail` verdict**, read in `advance()`'s transaction with the run's finish, under the group's row lock.
+2. **Superseded and cancelled runs never count**, even with verdicts streamed in before they stopped: nobody got their result.
+3. **The footer shows the units once there are any**: "🧾 1 unit (2 judged runs)". A group billed nothing shows nothing.
+
+---
+
 ## 2026-11-01 · Unrequested-change detection (T5.6, #45)
 
 `/cart` was snapshotted on main's preview and on the almost-right and correct previews, each with a fresh shopper; the main and almost-right snapshots are kept as fixtures (`fixtures/aria/`). Then the run on demo-shop #22 (a copy of the almost-right code) did it hosted, twice.
