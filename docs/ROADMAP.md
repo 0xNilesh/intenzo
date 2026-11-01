@@ -592,12 +592,12 @@
 **Goal:** honest, held-out numbers that show what video judging adds.
 
 ### T6.1 Cases
-- [ ] **Build:**
+- [x] **Build:**
   - 12 cases in `bench/intentbench/cases/`: 4 correct (implemented by Muse Code), 5 almost-right (hand-seeded, labelled `seeded`), 2 side-effect, 1 broken
   - each case: ticket, branch, per-criterion ground-truth labels
   - the stratified tuning (4) / held-out (8) split
-- [ ] **Tests:** a deterministic Playwright ground-truth test per case **proves each label** (the same idea as T0.6); a schema check on every case file.
-- [ ] **Verify:** `pnpm bench:validate` passes for all 12.
+- [x] **Tests:** a deterministic Playwright ground-truth test per case **proves each label** (the same idea as T0.6); a schema check on every case file.
+- [x] **Verify:** `pnpm bench:validate` passes for all 12.
 
 ### T6.2 Record once
 - [ ] **Build:** `bench/record.ts`: per case, explore + **2 PR takes** + 1 base take → a frozen evidence pack. Exploration failures are saved as `setup_failed`.
