@@ -76,6 +76,7 @@ import {
 
 import { type JobClient, StaleJobError } from "./client.ts";
 import { Limiter } from "./limiter.ts";
+import { type PreflightResult, PreviewUnreachable } from "./preflight.ts";
 import { stubIntent, stubOutcome, stubVerdict } from "./stub.ts";
 import { uploadArtifacts } from "./upload.ts";
 
@@ -117,6 +118,8 @@ export interface Recorder {
   explore?(input: ExploreInput): Promise<ExploreResult>;
   /** A route's masked aria snapshot, with a fresh identity, for the aria diff (§24). */
   snapshot?(input: SnapshotInput): Promise<RouteSnapshot>;
+  /** §19 step 1: whether a preview answers at all, before anything is recorded on it. */
+  preflight?(input: { origin: string; bypass?: string }): Promise<PreflightResult>;
   close(): Promise<void>;
 }
 
@@ -395,6 +398,23 @@ export async function verify(
   const bypass = job.secrets?.bypass;
 
   const identity = hookPath && hookSecret ? { hookPath, secret: hookSecret } : undefined;
+
+  // §19 step 1: a PR preview that doesn't answer ends the job (preflight.ts). A base preview that
+  // doesn't only costs the baseline: the run goes on without one, as when there's none (§17.3).
+  let baseUrl = job.baseUrl;
+  if (recorder.preflight) {
+    const pr = await recorder.preflight({ origin: job.prUrl, ...(bypass && { bypass }) });
+    if (!pr.ok) {
+      throw new PreviewUnreachable(redact(`the preview ${job.prUrl} didn't answer: ${pr.problem}`));
+    }
+    const base = baseUrl
+      ? await recorder.preflight({ origin: baseUrl, ...(bypass && { bypass }) })
+      : null;
+    if (base && !base.ok) {
+      log(redact(`the base preview ${baseUrl} didn't answer (${base.problem}): no baseline`));
+      baseUrl = null;
+    }
+  }
   const cache = new PathCache(job.cachedPaths);
   /** The path each criterion was recorded along, for the aria diff's routes and targets (§24). */
   const usedPaths = new Map<string, SavedPath>();
@@ -497,12 +517,12 @@ export async function verify(
         cache.discard(criterion.id);
         log(redact(`${criterion.id}: ${notFound.status}: ${notFound.reason}`));
       }
-      if (path && job.baseUrl) base = await recordSide("base", job.baseUrl, criterion, path);
+      if (path && baseUrl) base = await recordSide("base", baseUrl, criterion, path);
     } else {
       path = pathFor(criterion.id, job.cachedPaths);
       if (path) {
         pr = await recordSide("pr", job.prUrl, criterion, path);
-        if (job.baseUrl) base = await recordSide("base", job.baseUrl, criterion, path);
+        if (baseUrl) base = await recordSide("base", baseUrl, criterion, path);
       }
     }
     if (path) usedPaths.set(criterion.id, path);
@@ -661,7 +681,7 @@ export async function verify(
   const detectChanges = async () => {
     if (!recorder.snapshot || !models || job.only) return;
     const skipped = skipChanges({
-      baseUrl: job.baseUrl,
+      baseUrl,
       baseDrift: job.baseDrift ?? null,
       baseIsolated: identity !== undefined,
     });
@@ -685,7 +705,7 @@ export async function verify(
               ...(bypass && { bypass }),
             }),
           );
-        const base = await snap(job.baseUrl!);
+        const base = await snap(baseUrl!);
         const pr = await snap(job.prUrl);
         const hunks = dropExpected(
           diffSnapshots(base.lines, pr.lines),

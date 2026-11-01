@@ -4,6 +4,7 @@ import { type Judge, judgesFromEnv } from "@intenzo/core/judge";
 
 import { type JobClient, jobClient, StaleJobError } from "./client.ts";
 import { JobPayload, type SleepJob } from "./payload.ts";
+import { PreviewUnreachable } from "./preflight.ts";
 import { browserRecorder } from "./recorder.ts";
 import { type Recorder, redactor, verify, type VerifyResult } from "./verify.ts";
 
@@ -75,7 +76,9 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
   } catch (err) {
     if (err instanceof StaleJobError) return EXIT.stale;
     const message = redact(err instanceof Error ? err.message : String(err)).slice(0, 500);
-    await client.send({ kind: "failed", error: { code: "crash", message } }).catch(() => {});
+    // A preview that didn't answer is the PR's problem, not Intenzo's: the Cloud says so (§19).
+    const code = err instanceof PreviewUnreachable ? err.code : "crash";
+    await client.send({ kind: "failed", error: { code, message } }).catch(() => {});
     return EXIT.failed;
   }
 }

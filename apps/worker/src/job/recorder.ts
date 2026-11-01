@@ -20,6 +20,7 @@ import { metaModelPort } from "@intenzo/core/models";
 import { explore } from "@intenzo/core/navigator";
 import { chromium, type Browser } from "playwright";
 
+import { preflight } from "./preflight.ts";
 import type { Recorder } from "./verify.ts";
 
 export interface RecorderOptions {
@@ -108,6 +109,8 @@ export function browserRecorder(options: RecorderOptions = {}): Recorder {
       // Its own folder per render; the take folders are named by criterion (§28).
       return renderEvidence(chrome, { ...input, outDir: mkdtempSync(join(root, "evidence-")) });
     },
+    // §19 step 1: one direct request, before Chromium is even started.
+    preflight: ({ origin, bypass }) => preflight(origin, bypass ? { bypass } : {}),
     async close() {
       try {
         if (browser) await (await browser).close();
