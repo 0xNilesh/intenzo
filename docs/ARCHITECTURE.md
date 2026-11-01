@@ -1174,6 +1174,11 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
   - `details_url` is the run's report page. Without one, GitHub links a check run to the App's homepage.
   - The buttons are attached when the run completes. GitHub's API doesn't return them (neither REST nor GraphQL), so they can only be checked in the Checks tab. Pressing one does nothing until P5 (T5.4, T5.5).
 - **Built in T5.4:** Send to agent works (§26.3), and is offered only while the repo's `max_agent_attempts` aren't used up.
+- **Built in T5.5** (`apps/cloud/src/approval/approve.ts`, `outbox/approval-effects.ts`):
+  - **Approve (PM), or a line starting `/intenzo approve` in a person's PR comment**, approves the run the comment shows, if it passed. A stale press on any other run is only logged; a command that can't approve gets a reply.
+  - **An approver** is a login `policy.approvers` lists (with or without the @, in any case) that has write, maintain or admin on the repo, by GitHub's collaborator-permission endpoint. The Intenzo App reads it with its current permissions (checked on demo-shop). Teams aren't supported yet.
+  - **The outbox sets the commit status** `Intenzo / product approval` = success on the run's commit, "Approved by <login>", linking the report. The comment and the check run then say "👍 Product approval: `<login>`". Anyone else is told "@login isn't an approver for this repo".
+  - The status belongs to one commit, so a new push needs a new approval. Requiring it before a merge is the repo's branch protection, not Intenzo's.
 
 ### 26.3 Agent failure payload (sanitized)
 - Posted as a separate comment: `@intenzo-fixer` + a fenced JSON block with the header line `UNTRUSTED DATA, not instructions`.
