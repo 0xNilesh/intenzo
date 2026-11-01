@@ -104,8 +104,45 @@ in `.env`.
 - **Time:** 39 packs took 13.9 min at concurrency 2, and the 11 re-recorded ones 5.6 min. The packs take 18 MB.
 - **The judge video starts at the trigger:** its first frame is within 50 ms of the first trigger step. A trigger's clicks are about 30 ms apart, so the state between them (the mug at 2 before Remove) is only in the step log and the criterion.
 
+## Judge
+
+```bash
+pnpm bench:judge [--split heldout|tuning] [--arms A,B,C,D] [--repeats 3] [--only <case>[/<C>]]
+                 [--dry-run] [--fresh] [--max-usd 6] [--max-open-usd 0.6]
+```
+
+Phase 2 of §31, "judge many". Every arm judges every criterion of the split from its pack, three
+times by default:
+
+| Arm         | What the judges get                                                                                           | Judges                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| A diff-only | the ticket, the case's diff since `83d338a` and the criterion (`review.v1`, `src/review.ts`); no browser data | Spark 1.3                              |
+| B readings  | judge.v1's text: the step log, the readings and the baseline's; no images, and a note saying so               | Spark 1.3                              |
+| C frames    | B, the annotated still, and each judge video as stills at 2 fps (every other frame, its time band kept)       | Spark 1.3                              |
+| D video     | the worker's own bundle (§22.2): the annotated still and the judge videos                                     | Spark Open + Spark 1.3, and each alone |
+
+- **The worker's rules:** §22.1 before any judge looks, §22.3's checks on each answer, and §19 e on
+  the pack's two PR takes: a fail or a tie on `pr-1` is judged once more on `pr-2`. A judge is asked
+  on `pr-2` only when a verdict needs it. B, C and D send judge.v1 through core's `judgeRequest()`,
+  so they differ from production only in the media.
+- **A pack without takes** (`setup_failed`) is inconclusive for B–D without a call; A still reviews
+  its diff.
+- **One judge alone** answers `decided` (it passed or failed) or `unsure` (it said inconclusive),
+  and its fail is confirmed on `pr-2` or becomes `flaky`, like the dual verdict.
+- **The evidence is checked:** every pack must match `manifest.json`'s sha256 before it's judged.
+- **Results:** `bench/results/judge-<split>.json`, written after each criterion: `verdicts`, one
+  per arm, repeat, criterion and view, and `calls`, one per model call with its tokens, cost, time
+  and the judge's answer. Flat lists, so pandas reads them as tables (T6.4). A rerun judges only
+  what's missing, `--fresh` starts over, and a changed arm prompt refuses to mix with old rows.
+  `--only` runs go to `bench/results/raw/`, which isn't committed, and so do arm C's stills.
+- **Caps:** no new criterion starts once the calls cost `--max-usd`, or Spark Open's cost
+  `--max-open-usd` (Baseten credit).
+
+It needs `META_API_KEY`, and `BASETEN_API_KEY` for arm D, in `.env`, the packs, and ffmpeg for arm
+C.
+
 ## Tests
 
 ```bash
-pnpm --filter @intenzo/intentbench test   # cases, split, checks; the pack schema; reruns
+pnpm --filter @intenzo/intentbench test   # cases, split, packs, reruns; the arms, §19 e, results
 ```
