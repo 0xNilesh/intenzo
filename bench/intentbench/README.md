@@ -90,6 +90,31 @@ in `.env`.
   - The takes are free.
   - The 42 packs cost $1.78. T6.2 spent $2.79 in all, counting the smoke run and the 11 packs re-recorded after demo-shop allowed "remove" (DECISIONS 2026-11-01).
 
+## Judge
+
+```bash
+pnpm bench:judge --split=heldout [--arms=A,B,C,D] [--repeats=3] [--d-repeats=2] \
+                 [--only=<case id prefix>] [--max-usd=2.5] [--out=<file>]
+```
+
+Phase 2 of §31, "judge many" (T6.3). Every criterion of the split's cases is judged from its pack by
+four arms, each seeing more of the evidence:
+
+| Arm | Sees                                                                      | Judge                   |
+| --- | ------------------------------------------------------------------------- | ----------------------- |
+| A   | the ticket and the branch's diff (`diff.json`); nothing from the browser  | Spark 1.3               |
+| B   | the judge bundle's text: step log, readings, baseline (`renderJudgeText`) | Spark 1.3               |
+| C   | B plus up to 8 stills cut from the judge video at 2 fps (Tt to Tt+4 s)    | Spark 1.3               |
+| D   | the product's bundle: the annotated still and the judge video             | both (`judgeCriterion`) |
+
+- **§19 e on the two PR takes.** A lone judge's fail is confirmed on take 2, else it's `flaky`. Arm D uses core's `rerecordFor` and `afterRerecord`, and each model's own verdict uses take 2 only when the dual rule re-recorded.
+- **Packs whose exploring failed** give `setup_failed` rows for B–D, without a call. Arm A still judges them from the diff.
+- **A lone judge that answers inconclusive** gets the reason `unsure`, which core doesn't need, since in the product two judges always answer.
+- **`--max-usd`** (default $2.50) stops before any unit the rest of the budget can't cover, and the results file says `stoppedAtCap`.
+- **Output:** `bench/results/judge-<split>.json` (`Results`, `src/results.ts`). It has one row per arm, judge, case, criterion and repeat, and each row names its pack's sha256 from `manifest.json`.
+- **Tune only on `--split=tuning`.** Report only held-out results (§31).
+- **Needs** `META_API_KEY`, `BASETEN_API_KEY` (arm D) and the packs, plus ffmpeg for arm C's stills.
+
 ## Recorded (2026-11-01)
 
 `manifest.json` lists every pack.

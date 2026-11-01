@@ -38,6 +38,7 @@
     "gate:p5": "pnpm --filter @intenzo/scripts gate:p5",
     "bench:validate": "pnpm --filter @intenzo/intentbench validate",
     "bench:record": "pnpm --filter @intenzo/intentbench record",
+    "bench:judge": "pnpm --filter @intenzo/intentbench judge",
     "db:generate": "pnpm --filter @intenzo/cloud db:generate",
     "db:migrate": "pnpm --filter @intenzo/cloud db:migrate",
     "repo:secrets": "pnpm --filter @intenzo/cloud repo:secrets",
