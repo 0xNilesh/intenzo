@@ -35,6 +35,7 @@
     "gate:p2": "pnpm --filter @intenzo/scripts gate:p2",
     "gate:p3": "pnpm --filter @intenzo/scripts gate:p3",
     "gate:p4": "pnpm --filter @intenzo/scripts gate:p4",
+    "gate:p5": "pnpm --filter @intenzo/scripts gate:p5",
     "db:generate": "pnpm --filter @intenzo/cloud db:generate",
     "db:migrate": "pnpm --filter @intenzo/cloud db:migrate",
     "repo:secrets": "pnpm --filter @intenzo/cloud repo:secrets",
