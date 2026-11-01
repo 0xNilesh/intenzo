@@ -15,6 +15,8 @@ import {
 
 const reading = (i: number, value: string | null, kind = "text"): Reading =>
   ({ i, label: "order total", kind, phase: "post", tMs: 0, value, bbox: null }) as Reading;
+/** undo C1's live-region diff, as IntentBench recorded it (T6.2). */
+const TOAST = '+ status: Removed Ceramic mug\n+ button "Undo"';
 
 describe("valueMatches (§22.3: tokens, not substrings)", () => {
   it.each([
@@ -32,6 +34,11 @@ describe("valueMatches (§22.3: tokens, not substrings)", () => {
     ["this code HAS expired", '+ alert "This code has expired"', true],
     ["code has expired", '+ alert "This code has expired"', false],
     ["no change", "no change", true],
+    // A region diff's whole value, copied as judge.v1 asks (#127): each line is a whole line.
+    [TOAST, TOAST, true],
+    ["Removed Ceramic mug\nUndo", TOAST, true],
+    ['+ status: Removed Ceramic mug\n+ button "Cancel"', TOAST, false],
+    ['+ status: Removed\n+ button "Undo"', TOAST, false],
     ["", "$45.00", false],
     [null, "$45.00", false],
     ["$45.00", null, false],
@@ -90,6 +97,15 @@ describe("checkJudge (§22.3)", () => {
       checkJudge(bare, { watch: ["savings chart"], kind: "ui_visual" }, READINGS).verdict,
     ).toBe("pass");
     expect(checkJudge(bare, { watch: [], kind: "ui_behavior" }, READINGS).verdict).toBe("pass");
+  });
+
+  it("keeps a pass that cites a live-region diff's two lines whole (#127)", () => {
+    const toast = { ...reading(3, TOAST, "region_diff"), label: "live regions" } as Reading;
+    const cited = judge({ verdict: "pass", citedReadings: [3], citedValue: TOAST });
+    expect(checkJudge(cited, { watch: ["live regions"], kind: "copy" }, [toast])).toEqual({
+      verdict: "pass",
+      reason: null,
+    });
   });
 
   it("is infra_error when a judge gave no answer", () => {
