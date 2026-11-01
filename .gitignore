@@ -23,3 +23,7 @@ __pycache__/
 # Next.js
 next-env.d.ts
 *.tsbuildinfo
+
+# Python (bench/analysis, T6.4)
+__pycache__/
+.pytest_cache/
