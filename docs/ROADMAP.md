@@ -556,9 +556,9 @@
 - [x] **Verify:** click Send to agent on the almost-right PR → the fixer runs → a new commit → a new run.
 
 ### T5.5 PM approval
-- [ ] **Build:** `Approve (PM)` only on pass; a sender check (`approvers` + write access); `/intenzo approve` fallback; the commit status naming the approver.
-- [ ] **Tests:** an approver → status set; a non-approver → rejected with a reply; Approve is not offered on a failed run.
-- [ ] **Verify:** approve from a second GitHub account listed in `approvers`.
+- [x] **Build:** `Approve (PM)` only on pass; a sender check (`approvers` + write access); `/intenzo approve` fallback; the commit status naming the approver.
+- [x] **Tests:** an approver → status set; a non-approver → rejected with a reply; Approve is not offered on a failed run.
+- [x] **Verify:** approve from a second GitHub account listed in `approvers`. *(Approved by the owner's own account, by his choice: DECISIONS 2026-11-01.)*
 
 ### T5.6 Unrequested-change detection (one route)
 - [ ] **Build:** the skip rules (no baseline, base not isolated, drift > 0); aria-snapshot sequence diff on the trigger route; masks for per-lane strings; drop hunks inside criterion regions; `changes.v1` classification.

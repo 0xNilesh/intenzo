@@ -5,6 +5,29 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · PM approval, live (T5.5, #44)
+
+This branch was deployed to the Cloud. Then demo-shop #21 was opened with a copy of the correct code, linking #5. The owner pressed Approve (PM) on its passing run, as himself: the owner chose that over asking a second account.
+
+### What we found
+
+| Step | Result |
+|---|---|
+| Reading permissions | The Intenzo App reads `GET /repos/{repo}/collaborators/{login}/permission` with its current permissions: sumithprabhu admin, 0xNilesh write, octocat read (demo-shop is public). GitHub's docs name no permission for it |
+| Runs 1 and 2 | **💥 Intenzo failed** after 20 s and 13 s: Meta answered the intent call with HTTP 404 `model_not_found`, on both tries each time. Run `43c44a55` had read the same ticket 40 minutes earlier, and in between a local intent call with the same recording passed (1 call, $0.0315), as did small text and video calls. Filed as #115 |
+| Run 3 | Two minutes later: **✅ 4/4 passed** in 2 m 10 s, $0.21 |
+| Approve (PM) | The commit status **`Intenzo / product approval` = success, "Approved by sumithprabhu"**, linking the report, set by `intenzo-ai[bot]`. The comment says "👍 Product approval: `sumithprabhu`" |
+| Spend | $0.21, plus $0.03 for the local intent check; the failed calls cost nothing |
+
+### Decisions
+
+1. **The approver check is `policy.approvers` plus write access, by GitHub's permission endpoint.** Maintain counts as write, as GitHub maps it. Teams aren't supported yet.
+2. **A stale Approve press is logged; a `/intenzo approve` that can't approve gets a reply.** A button only exists on a passing run, so a press on anything else is an old button. A typed command deserves an answer.
+3. **The Verify used the owner's own account**, by his choice, not a second account. The tests cover the non-approver and the approver without write access.
+4. **Meta's intermittent 404 `model_not_found` gets its own fix (#115)**: it has now failed two demo PRs' first runs.
+
+---
+
 ## 2026-11-01 · Send to agent, live (T5.4, #43)
 
 The Cloud (this branch) and the worker (main, with T5.1 and T5.2) were deployed. Then demo-shop #20 was opened with a copy of the almost-right code, linking ticket #5. The owner pressed Send to agent in its Checks tab.
