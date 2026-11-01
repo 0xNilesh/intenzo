@@ -25,7 +25,7 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 - **With the browser, more evidence was better:** readings 78% → stills 87% → video 91–93% on judgeable criteria. Arm B's misses were mostly "unsure" and readings it contradicted.
 - **The two judges cover each other:** Spark 1.3 alone passed limit-almost-right C1 once (its "+" is disabled only above 5). The dual rule didn't pass it.
 - **Arms A–C gave the same verdicts in both repeats.** Arm D varied slightly (dual 71–79%).
-- **Measured before the run** (8 criteria, one call each): per criterion A $0.0065, B $0.0071, C $0.0178 with 16 stills, D $0.0195. The approved scope would have cost about $2.8 of Meta credit, so the owner chose 2 repeats and 8 stills: $1.749 in all, $0.37 of it the measurement run.
+- **Measured before the run** (8 criteria, one call each): per criterion A $0.0065, B $0.0071, C $0.0178 with 16 stills, D $0.0195. The approved scope would have cost about $2.8 of Meta credit, so the owner chose 2 repeats and 8 stills: $1.749 for the run, after $0.37 for the measurement.
 
 ### Decisions
 
