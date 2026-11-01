@@ -6,7 +6,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { denyText } from "@intenzo/core";
-import { nextTakeDir, recordCriterion, renderEvidence, renderVideos } from "@intenzo/core/browser";
+import {
+  acquireIdentity,
+  nextTakeDir,
+  openLane,
+  recordCriterion,
+  renderEvidence,
+  renderVideos,
+  routeSnapshot,
+  Settler,
+} from "@intenzo/core/browser";
 import { metaModelPort } from "@intenzo/core/models";
 import { explore } from "@intenzo/core/navigator";
 import { chromium, type Browser } from "playwright";
@@ -79,6 +88,20 @@ export function browserRecorder(options: RecorderOptions = {}): Recorder {
           ...(recording.annotatedShotPath && { annotatedShot: recording.annotatedShotPath }),
         },
       };
+    },
+    async snapshot({ origin, route, targets, identity, bypass }) {
+      const chrome = await (browser ??= chromium.launch());
+      const lane = await openLane(chrome, { origin, ...(bypass && { bypass }) });
+      try {
+        const settler = await Settler.install(lane.context, origin);
+        // §24: a fresh identity per side, masked out of the snapshot by name.
+        const users = identity ? [await acquireIdentity(lane, identity)] : [];
+        await lane.page.goto(new URL(route, origin).href, { waitUntil: "load" });
+        await settler.settle(lane.page);
+        return await routeSnapshot(lane.page, { users, targets });
+      } finally {
+        await lane.close();
+      }
     },
     async evidence(input) {
       const chrome = await (browser ??= chromium.launch());

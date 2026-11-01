@@ -1,10 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { ContextBundle, IntenzoConfig, LaneResult, VerifyJob, WorkerEvent } from "@intenzo/core";
+import { snapshotLines, subtrees } from "@intenzo/core/changes";
 import { ticketHash } from "@intenzo/core/intent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -679,7 +680,7 @@ describe("the verify job with a context bundle (§8, §18)", () => {
       WorkerEvent,
       { kind: "intent_ready" }
     >;
-    return { ready, port };
+    return { ready, port, events: cloud.events };
   }
 
   it("reads the ticket and the PM's recording into the criteria, and maps them to the diff", async () => {
@@ -763,6 +764,77 @@ describe("the verify job with a context bundle (§8, §18)", () => {
     const { ready } = await runWithBundle({}, { models: outage, retryDelaysMs: [1, 1, 1, 1, 1] });
     expect(stages.filter((s) => s === "intent")).toHaveLength(5);
     expect(ready.intent.criteria).toHaveLength(2);
+  });
+
+  describe("unrequested changes (§24, T5.6)", () => {
+    // /cart on main and on almost-right, recorded; each side its own shopper, masked by name.
+    const aria = (name: string) =>
+      readFileSync(new URL(`../../../../fixtures/aria/${name}.yml`, import.meta.url), "utf8");
+    const snapshots = (asked: string[]): Recorder => ({
+      ...fakeRecorder().recorder(),
+      async snapshot({ origin, route }) {
+        asked.push(`${origin === BASE ? "base" : "pr"} ${route}`);
+        const [text, user] =
+          origin === BASE
+            ? [aria("cart-main"), "shopper-763377"]
+            : [aria("cart-almost-right"), "shopper-55d37f"];
+        const lines = snapshotLines(text, { users: [user] });
+        return { lines, touched: subtrees(lines, []) };
+      },
+    });
+    /** The models of the other tests, and changes.v1's answer: the form is C2's, the link no one's. */
+    const withChanges = () => {
+      const base = models();
+      const asked: string[] = [];
+      const port: ModelPort = {
+        async call(request) {
+          asked.push(request.stage);
+          if (request.stage !== "changes") return base.call(request);
+          const output = {
+            hunks: [
+              { id: "h1", explainedBy: "C2", description: "the discount form", confidence: 0.9 },
+              { id: "h2", explainedBy: null, description: "link renamed", confidence: 0.92 },
+            ],
+          };
+          const parsed = request.schema.parse(output);
+          return { ok: true, output: parsed, raw: "", usage: NO_USAGE, ms: 0, requests: 1 };
+        },
+      };
+      return { port, asked };
+    };
+    const onCart = IntenzoConfig.parse({
+      version: 1,
+      start: { default: "/cart" },
+      isolation: { session_hook: "/api/test/session" },
+    });
+
+    it("finds the renamed link on /cart and reports it in its own words", async () => {
+      const visits: string[] = [];
+      const { port, asked } = withChanges();
+      const { events } = await runWithBundle(
+        { config: onCart, baseDrift: 0 },
+        { models: port, recorder: snapshots(visits) },
+      );
+      expect(visits).toEqual(["base /cart", "pr /cart"]);
+      expect(asked.at(-1)).toBe("changes");
+      expect(events.find((e) => e.kind === "changes_done")).toMatchObject({
+        changes: [
+          { route: "/cart", description: 'link "Checkout" → "Continue"', confidence: 0.92 },
+        ],
+      });
+    });
+
+    it("doesn't look on a baseline that drifted from the merge base", async () => {
+      const visits: string[] = [];
+      const { port, asked } = withChanges();
+      const { events } = await runWithBundle(
+        { config: onCart, baseDrift: 2 },
+        { models: port, recorder: snapshots(visits) },
+      );
+      expect(visits).toEqual([]);
+      expect(asked).not.toContain("changes");
+      expect(events.some((e) => e.kind === "changes_done")).toBe(false);
+    });
   });
 
   it("falls back to the demo's fixtures without a model to read the ticket", async () => {
