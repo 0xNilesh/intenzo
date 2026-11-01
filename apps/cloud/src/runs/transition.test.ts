@@ -315,6 +315,20 @@ describe("decide", () => {
       ],
     },
     {
+      name: "the PR preview didn't answer the preflight: an error that blames the preview (§19)",
+      steps: [
+        [0, opened("A")],
+        [1, preview("A")],
+        [3, jobFailed("run-1", "preview_unreachable")],
+      ],
+      runs: ["A#1 opened done/error (preview_unreachable)"],
+      effects: [
+        ["check run-1 queued", "comment 7"],
+        ["check run-1 in_progress", "spawn run-1", "comment 7"],
+        ["check run-1 completed neutral", "comment 7"],
+      ],
+    },
+    {
       name: "the shim reports the job cancelled: its run ends cancelled",
       steps: [
         [0, opened("A")],

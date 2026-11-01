@@ -63,7 +63,10 @@ export function statusLine(model: ReportModel): string {
     case "superseded":
       return "⏭ superseded";
     case "error":
-      return "💥 Intenzo failed";
+      // A preview that didn't answer is the PR's problem, not Intenzo's (§19 step 1).
+      return run.outcomeReason === "preview_unreachable"
+        ? "⚠️ preview unreachable"
+        : "💥 Intenzo failed";
     case "cancelled":
       return "⏹ cancelled";
     case null:
@@ -84,6 +87,8 @@ function stateSentence(model: ReportModel): string | null {
       return `${at} wasn't verified: its preview wasn't ready within 20 minutes.`;
     case "preview_failed":
       return `${at} wasn't verified: its preview failed to deploy.`;
+    case "preview_unreachable":
+      return `${at} wasn't verified: its preview didn't answer.`;
     case "deadline_passed":
       return `Verifying ${at} took longer than 15 minutes and was stopped.`;
     case "worker_failed":

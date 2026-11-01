@@ -163,6 +163,25 @@ describe("renderComment (§26.1)", () => {
     await expect(renderComment(m)).toMatchFileSnapshot(`./__snapshots__/comment.${name}.md`);
   });
 
+  it("blames the preview, not Intenzo, when the PR preview didn't answer the preflight (§19)", () => {
+    const text = renderComment(
+      model(
+        { criteria: [] },
+        {
+          outcome: "error",
+          outcomeReason: "preview_unreachable",
+          baseline: null,
+          judges: [],
+          durationMs: null,
+          costUsd: null,
+        },
+      ),
+    );
+    expect(text).toContain("· ⚠️ preview unreachable ·");
+    expect(text).toContain("wasn't verified: its preview didn't answer.");
+    expect(text).not.toContain("Intenzo failed");
+  });
+
   it("shows a failed criterion's GIF inline, and keeps the clip link for the others (§26.1)", () => {
     const gif =
       "https://klfpiscdv04whptv.public.blob.vercel-storage.com/runs/r/C2/pr/take-1/evidence.gif";
