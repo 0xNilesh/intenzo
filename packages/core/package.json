@@ -11,7 +11,8 @@
     "./models": "./src/models/index.ts",
     "./intent": "./src/intent/index.ts",
     "./coverage": "./src/coverage/index.ts",
-    "./judge": "./src/judge/index.ts"
+    "./judge": "./src/judge/index.ts",
+    "./fixer": "./src/fixer/payload.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
