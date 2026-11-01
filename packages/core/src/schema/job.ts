@@ -89,6 +89,11 @@ export const VerifyJob = JobBase.extend({
   /** The merge-base preview; null means no baseline. */
   baseUrl: z.url().nullable(),
   baseSha: Sha.nullable(),
+  /**
+   * §17.3: commits between the merge base and baseSha. Unrequested-change detection runs only on
+   * the merge base itself (0, §24); absent from a Cloud that doesn't send it.
+   */
+  baseDrift: z.number().int().nonnegative().nullable().optional(),
   /** Decrypted just in time and never logged. Null for fork PRs: no secrets reach their code. */
   secrets: z
     .object({

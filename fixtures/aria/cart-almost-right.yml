@@ -1,0 +1,40 @@
+- banner:
+  - link "Demo shop":
+    - /url: /products
+  - navigation "Main":
+    - link "Products":
+      - /url: /products
+    - link "Cart (2)":
+      - /url: /cart
+  - text: Signed in as shopper-55d37f
+- main:
+  - heading "Your cart" [level=1]
+  - list "Cart items":
+    - listitem:
+      - text: Canvas tote bag
+      - button "Decrease quantity of Canvas tote bag": −
+      - text: "1"
+      - button "Increase quantity of Canvas tote bag": +
+      - text: $30.00
+      - button "Remove Canvas tote bag": Remove
+    - listitem:
+      - text: Ceramic mug
+      - button "Decrease quantity of Ceramic mug": −
+      - text: "1"
+      - button "Increase quantity of Ceramic mug": +
+      - text: $20.00
+      - button "Remove Ceramic mug": Remove
+  - form "Discount code":
+    - text: Discount code
+    - textbox "Discount code"
+    - button "Apply"
+  - region "Order summary":
+    - text: Subtotal $50.00 Total $50.00
+    - figure "Canvas tote bag $30.00 Ceramic mug $20.00":
+      - img "Savings chart"
+      - list:
+        - listitem: Canvas tote bag $30.00
+        - listitem: Ceramic mug $20.00
+    - link "Continue":
+      - /url: /checkout
+- alert

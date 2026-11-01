@@ -62,6 +62,8 @@ export interface ReportModel {
   agentRequest?: { attempt: number; max: number } | null;
   /** §26.2: who gave this run product approval (Approve (PM) or `/intenzo approve`), in order. */
   approvedBy?: readonly string[];
+  /** §24: visible changes on the criteria's routes that no criterion explains, at most 3. */
+  unrequestedChanges?: readonly { route: string; description: string }[];
 }
 
 export type CheckConclusion = "success" | "failure" | "neutral" | "cancelled";

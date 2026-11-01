@@ -189,6 +189,16 @@ describe("renderComment (§26.1)", () => {
     expect(text).toContain("| ✅ | **C1** SAVE10 takes 10% off the cart | [▶ 0:04–0:08]");
   });
 
+  it("adds the unrequested changes under the table, as the golden comment writes them (§24)", () => {
+    expect(renderComment(failing)).not.toContain("⚠️ Unrequested");
+    const text = renderComment({
+      ...failing,
+      unrequestedChanges: [{ route: "/cart", description: 'link "Checkout" → "Continue"' }],
+    });
+    expect(text).toContain('⚠️ Unrequested change on /cart: link "Checkout" → "Continue"');
+    expect(text.indexOf("⚠️")).toBeGreaterThan(text.indexOf("| ✅ | **C4**"));
+  });
+
   it("names who gave product approval, without notifying them again (§26.2)", () => {
     expect(renderComment(model())).not.toContain("Product approval");
     const text = renderComment({ ...model(), approvedBy: ["PM-Person", "sumithprabhu"] });

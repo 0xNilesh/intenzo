@@ -9,3 +9,5 @@ demo/expected-comment.md
 apps/cloud/drizzle
 # Snapshot files hold rendered output byte for byte (core/report).
 **/__snapshots__/
+# Aria snapshots captured from demo-shop, byte for byte (T5.6).
+fixtures/aria/*.yml
