@@ -9,7 +9,7 @@ import { ticketHash } from "@intenzo/core/intent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Judge } from "@intenzo/core/judge";
-import { scriptedPort } from "@intenzo/core/models";
+import { type ModelPort, NO_USAGE, scriptedPort } from "@intenzo/core/models";
 
 import { jobClient, StaleJobError } from "./client.ts";
 import { EXIT, runJob } from "./run.ts";
@@ -732,16 +732,37 @@ describe("the verify job with a context bundle (§8, §18)", () => {
         .call(request as never)
         .then((r) => (r.ok ? r.output : null));
     });
-    const { ready } = await runWithBundle({}, { models: flaky, retryDelayMs: 1 });
+    const { ready } = await runWithBundle({}, { models: flaky, retryDelaysMs: [1, 1, 1, 1, 1] });
     expect(flaky.requests.map((r) => r.stage)).toEqual(["intent", "intent", "coverage"]);
     expect(ready.intent.criteria).toHaveLength(2);
   });
 
   it("fails the job rather than report an empty intent when the ticket can't be read", async () => {
     const broken = scriptedPort(() => ({ criteria: "not a list" }));
-    await expect(runWithBundle({}, { models: broken, retryDelayMs: 1 })).rejects.toThrow(
-      /^the ticket couldn't be read: the intent call failed/,
-    );
+    await expect(
+      runWithBundle({}, { models: broken, retryDelaysMs: [1, 1, 1, 1, 1] }),
+    ).rejects.toThrow(/^the ticket couldn't be read: the intent call failed/);
+    // A reply that didn't fit is tried once more, not waited out.
+    expect(broken.requests.filter((r) => r.stage === "intent")).toHaveLength(2);
+  });
+
+  it("waits out an outage of Meta's (its 404 model_not_found, #115) before failing the job", async () => {
+    // The first four intent calls fail the way the Meta port reports Meta's 404.
+    const real = models();
+    const stages: string[] = [];
+    const outage: ModelPort = {
+      async call(request) {
+        stages.push(request.stage);
+        if (request.stage === "intent" && stages.filter((s) => s === "intent").length <= 4) {
+          const error = 'HTTP 404: {"error":{"code":"model_not_found"}}';
+          return { ok: false, error, raw: error, usage: NO_USAGE, ms: 0, requests: 1 };
+        }
+        return real.call(request);
+      },
+    };
+    const { ready } = await runWithBundle({}, { models: outage, retryDelaysMs: [1, 1, 1, 1, 1] });
+    expect(stages.filter((s) => s === "intent")).toHaveLength(5);
+    expect(ready.intent.criteria).toHaveLength(2);
   });
 
   it("falls back to the demo's fixtures without a model to read the ticket", async () => {

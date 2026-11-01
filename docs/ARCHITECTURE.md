@@ -562,7 +562,7 @@ The App is **Intenzo Ai** (`intenzo-ai`, bot `intenzo-ai[bot]`), installed on de
 - **Request:** `stage`, `model`, `promptVersion`, `messages` (text/image/video parts), `schema`, `timeoutMs`, `cacheKey`.
 - **Structured output:** JSON mode if supported. On a parse failure, one retry with the zod error appended.
   - Spark 1.3 takes a strict `json_schema` (nullable fields as `anyOf`). Baseten serves Spark Open **without** structured outputs, so it's asked by prompt and its reply is extracted and zod-checked; in T0.3 it answered valid JSON 20/20 times (DECISIONS 2026-10-30).
-- **Retries:** 429/5xx → backoff 0.5 s / 1.5 s / 4 s, within `timeoutMs`.
+- **Retries:** 429/5xx → backoff 0.5 s / 1.5 s / 4 s, within `timeoutMs`. Meta's 404 `model_not_found` for a model it serves counts as a 5xx (#115); any other 404 doesn't. The intent step, which nothing can run without, waits out a longer outage: 5, 15, 30, 60 and 90 s between tries, about three minutes, before failing the job.
 - **`MediaEncoder` modes:**
   - `video`: MP4 H.264, 960×540, 4 fps (plus a 40 px time band under the frame for judge clips, §21.4)
   - `frames`: JPEG 2 fps, timestamps burned in

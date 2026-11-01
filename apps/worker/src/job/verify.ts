@@ -212,6 +212,11 @@ async function uploadTake(
   throw new Error(`no free take for ${lane.criterionId} ${lane.side} in ${MAX_TAKES} tries`);
 }
 
+/** Waits before the intent call's next try; the last three only for a transient failure. */
+export const INTENT_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000, 90_000];
+/** Failures worth waiting out: Meta's outages, not a reply that didn't fit. */
+const TRANSIENT = /HTTP (404: .*model_not_found|429|5\d\d)|request failed/;
+
 export interface VerifyDeps {
   recorder: Recorder;
   /** The Meta key: the job reads its ticket (intent) and maps coverage with it (§18). */
@@ -220,8 +225,11 @@ export interface VerifyDeps {
   models?: ModelPort;
   /** Reads the PM's recording from its signed URL (transcript and video); injectable for tests. */
   readRecording?: (url: string) => Promise<TicketVideo>;
-  /** The pause before a failed intent call is tried again (tests make it short). */
-  retryDelayMs?: number;
+  /**
+   * The pauses before a failed intent call is tried again (tests make them short): all of them for
+   * a failure that looks transient, the first only for any other.
+   */
+  retryDelaysMs?: readonly number[];
   /** Spark Open and Spark 1.3 (judgesFromEnv); null: stub verdicts. */
   judges?: readonly [Judge, Judge] | null;
   log: (line: string) => void;
@@ -312,18 +320,27 @@ export async function verify(
           mediaHashes: [recording.mediaHash],
         }),
       });
-    // A call that failed (a 404 model_not_found came back once, P4 gate) is tried once more; a
-    // second failure fails the job, so no empty intent is ever reported as the ticket's.
+    // A failed call is tried again: a reply that didn't fit once more, and an outage of Meta's
+    // (429, 5xx, its 404 model_not_found for a served model, #115) for up to about three minutes.
+    // Failed calls cost nothing. Running out fails the job, so no empty intent is ever reported.
     let result = await readTicket();
     spend(INTENT_MODEL, result.usage);
-    if (!result.ok && result.intent.criteria.length === 0) {
-      log(redact(`intent: ${result.problems.join("; ")}: trying once more`).slice(0, 300));
-      await new Promise((resolve) => setTimeout(resolve, deps.retryDelayMs ?? 3000));
+    const delays = deps.retryDelaysMs ?? INTENT_RETRY_DELAYS_MS;
+    for (let n = 0; !result.ok && result.intent.criteria.length === 0; n++) {
+      const problems = result.problems.join("; ");
+      const transient = TRANSIENT.test(problems);
+      if (n >= (transient ? delays.length : 1)) {
+        throw new Error(`the ticket couldn't be read: ${problems}`.slice(0, 400));
+      }
+      log(
+        redact(`intent: ${problems}: trying again in ${Math.round(delays[n]! / 1000)} s`).slice(
+          0,
+          300,
+        ),
+      );
+      await new Promise((resolve) => setTimeout(resolve, delays[n]));
       result = await readTicket();
       spend(INTENT_MODEL, result.usage);
-      if (!result.ok && result.intent.criteria.length === 0) {
-        throw new Error(`the ticket couldn't be read: ${result.problems.join("; ")}`.slice(0, 400));
-      }
     }
     for (const p of result.problems) log(redact(`intent: ${p}`).slice(0, 300));
     log(

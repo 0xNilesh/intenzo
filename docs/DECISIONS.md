@@ -5,6 +5,26 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · Meta's transient 404 model_not_found (#115)
+
+Twice now, a demo PR's first run failed because Meta answered its intent call with HTTP 404 `model_not_found` for `muse-spark-1.3`, a model it serves: demo-shop #18 in the P4 gate, and #21 in T5.5.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| #21's runs | Failed at 11:02 and 11:03 (both tries each time, 3 s apart); passed at 11:05. The outage lasted 1.5 to 3.5 minutes |
+| In between | `GET /v1/models` listed `muse-spark-1.3`; small text and video calls to it answered 200; a local intent call with the same recording passed |
+| Cost of a failed call | None: no tokens are billed |
+
+### Decisions
+
+1. **The Meta port retries a 404 whose body says `model_not_found`, like a 5xx** (0.5, 1.5, 4 s within the call). Any other 404 is still final.
+2. **The intent step waits out a longer outage**: after a failure that looks transient (that 404, a 429, a 5xx, a network error) it tries again after 5, 15, 30, 60 and 90 s, about three minutes, before failing the job. A reply that didn't fit is still tried once more only. Intent is the step nothing else can run without; the run's deadline is 15 minutes.
+   - _Alternatives:_ retrying every model call that long (the judges and coverage already degrade to inconclusive or no coverage rather than failing the run).
+
+---
+
 ## 2026-11-01 · PM approval, live (T5.5, #44)
 
 This branch was deployed to the Cloud. Then demo-shop #21 was opened with a copy of the correct code, linking #5. The owner pressed Approve (PM) on its passing run, as himself: the owner chose that over asking a second account.
