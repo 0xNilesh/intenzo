@@ -18,6 +18,24 @@ import type { Take } from "./pack.ts";
 export const ARMS = ["A", "B", "C", "D"] as const;
 export type Arm = (typeof ARMS)[number];
 
+/** The judges, named as core's judgesFromEnv() names them. */
+export const JUDGE_NAMES = ["Spark Open", "Spark 1.3"] as const;
+export type JudgeName = (typeof JUDGE_NAMES)[number];
+/** Who judges each arm: Spark 1.3 (§31's diff reviewer), and both judges on D, as in production. */
+export const ARM_JUDGES: Readonly<Record<Arm, readonly JudgeName[]>> = {
+  A: ["Spark 1.3"],
+  B: ["Spark 1.3"],
+  C: ["Spark 1.3"],
+  D: ["Spark Open", "Spark 1.3"],
+};
+/** A verdict's source: both judges combined (§22.3), or one judge alone. */
+export type View = "dual" | JudgeName;
+/** What an arm reports: with two judges, their combined verdict and each one's alone (§31). */
+export function viewsOf(arm: Arm): View[] {
+  const judges = ARM_JUDGES[arm];
+  return judges.length === 2 ? ["dual", ...judges] : [...judges];
+}
+
 /** B says what it leaves out, so a judge doesn't take a missing video for a broken one. */
 export const NO_MEDIA_NOTE =
   "MEDIA: none. This bundle has no screenshot and no video: judge from the step log and the readings.";

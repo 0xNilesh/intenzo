@@ -3,7 +3,8 @@
 // step log, readings, stills or video. A bench prompt; the worker never sends it.
 import { type ContextBundle, type Criterion, VerdictValue } from "@intenzo/core";
 import { DIFF_CHAR_CAP } from "@intenzo/core/coverage";
-import type { ModelMessage } from "@intenzo/core/models";
+import { type Judge, judgeRequest } from "@intenzo/core/judge";
+import type { ModelMessage, ModelRequest } from "@intenzo/core/models";
 import { untrusted } from "@intenzo/core/prompts";
 import { z } from "zod";
 
@@ -99,4 +100,16 @@ export function reviewMessages(
     { role: "system", content: REVIEW_SYSTEM },
     { role: "user", content: user },
   ];
+}
+
+/** Arm A's request: the judges' token limit, timeout and effort, with review.v1 in their place. */
+export function reviewRequest(judge: Judge, messages: ModelMessage[]): ModelRequest<ReviewReply> {
+  return {
+    ...judgeRequest(judge, []),
+    stage: "review",
+    promptVersion: REVIEW_V1,
+    messages,
+    schema: ReviewReply,
+    jsonSchema: { name: "ReviewReply", schema: REVIEW_JSON_SCHEMA },
+  };
 }
