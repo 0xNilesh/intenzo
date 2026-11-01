@@ -55,6 +55,7 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
       // A bundle that can't be built leaves the job to the fixtures rather than stopping the run.
       let bundleUrl: string | null = null;
       let intent: CriterionSet | null = null;
+      let repoPublic = false;
       if (deps.bundle) {
         try {
           const built = await deps.bundle({
@@ -65,6 +66,7 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
             isFork: ctx.group.fromFork,
           });
           bundleUrl = built.bundleUrl;
+          repoPublic = built.repoPublic;
           if (built.ticketHash)
             intent = await reusedIntent(deps.db, ctx.group.id, built.ticketHash);
           // The comment says which ticket it verified against (§26.1).
@@ -106,6 +108,8 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
         baseSha: run.baseSha,
         secrets,
         cachedPaths: await cachedPaths(deps.db, ctx.group.id),
+        // §28: a public repo's GIFs show inline; anything else stays private.
+        evidenceStore: repoPublic ? "public" : "private",
       });
       const { callId } = await callModal(deps.modal.spawnUrl, deps.modal.secret, job, Spawned);
       await deps.db

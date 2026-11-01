@@ -14,7 +14,13 @@ const VIDEO = new Uint8Array([1, 2, 3, 4]);
 
 /** GitHub as the demo PR and ticket #5 answer, with what each test changes. */
 function fakeGitHub(
-  over: { body?: string | null; download?: Uint8Array | null; issueIsPr?: boolean } = {},
+  over: {
+    body?: string | null;
+    download?: Uint8Array | null;
+    issueIsPr?: boolean;
+    /** GitHub's base.repo.private; null leaves the field out. demo-shop is public. */
+    repoPrivate?: boolean | null;
+  } = {},
 ) {
   const asked: string[] = [];
   const answers: Record<string, unknown> = {
@@ -22,7 +28,10 @@ function fakeGitHub(
       title: "Discount codes",
       body: over.body === undefined ? "Implements the ticket. Closes #5" : over.body,
       head: { sha: "a".repeat(40) },
-      base: { ref: "main" },
+      base: {
+        ref: "main",
+        ...(over.repoPrivate !== null && { repo: { private: over.repoPrivate ?? false } }),
+      },
       user: { type: "User" },
     },
     [`/repos/${REPO}/issues/5`]: {
@@ -109,6 +118,8 @@ describe("buildBundle (§8, §17.2)", () => {
     // §8: patches cut at 400 lines; a binary file has none.
     expect(built.bundle.diff.files[0]!.patch!.split("\n")).toHaveLength(400);
     expect(built.bundle.diff.files[1]).not.toHaveProperty("patch");
+    // §28: a public repo's evidence may go to the public store.
+    expect(built.repoPublic).toBe(true);
     // The stored bundle is the one returned.
     expect(JSON.parse(store.stored.get(`runs/${RUN}/bundle.json`)!.body as string)).toEqual(
       built.bundle,
@@ -126,6 +137,18 @@ describe("buildBundle (§8, §17.2)", () => {
         [mediaHash],
       ),
     );
+  });
+
+  it.each([
+    ["a private repo", true],
+    ["a reply that doesn't say", null],
+  ])("keeps the evidence of %s out of the public store (§28)", async (_, repoPrivate) => {
+    const { github } = fakeGitHub({ repoPrivate });
+    const built = await buildBundle(
+      { github, ...fakeStore(), log: () => {} },
+      { repo: REPO, prNumber: 7, runId: RUN, isFork: false },
+    );
+    expect(built.repoPublic).toBe(false);
   });
 
   it("goes on without the recording when it can't be downloaded, and says so", async () => {
