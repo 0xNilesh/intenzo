@@ -107,6 +107,7 @@ export async function recordAll(
           modelCalls: explored.modelCalls,
           ms: explored.ms,
           costUsd: cost,
+          trail: explored.steps.map(trailLine),
         },
       };
       let pack: Pack;
@@ -152,4 +153,10 @@ export async function recordAll(
     crashed,
     costUsd: spent,
   };
+}
+
+/** "3. Pressing + until the tote is 5 → Refused: …", cut to a readable length. */
+function trailLine(step: ExploreResult["steps"][number]): string {
+  const meant = step.action ? `[${step.action.phase}] ${step.action.thought}` : "(no reply)";
+  return `${step.n}. ${meant} → ${step.result}`.replace(/\s+/g, " ").slice(0, 400);
 }
