@@ -23,6 +23,16 @@ export {
 } from "./ffmpeg.ts";
 export { BoxPoller, type BoxSample } from "./boxes.ts";
 export {
+  boxAt,
+  captionOf,
+  gifAttempts,
+  MAX_GIF_BYTES,
+  outlinedLabel,
+  renderEvidence,
+  type EvidenceInput,
+  type EvidenceOutput,
+} from "./evidence.ts";
+export {
   LIVE_REGIONS,
   liveRegionLines,
   locate,
