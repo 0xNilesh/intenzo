@@ -1344,6 +1344,10 @@ Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are
   - side-effect detection
   - time to verdict and cost per PR
 - Reported with the mean ± spread over 3 judge repeats, plus the small-n caveat. Python (`analysis/*.py`) reads the results JSON directly.
+- **Built in T6.1** (`bench/intentbench`): four tickets on demo-shop.
+  - **Tickets:** `discount` (#5 as text), `shipping` (free shipping progress), `limit` (5 per item) and `undo` (undo Remove), with 14 fixed criteria in core's `Criterion` shape.
+  - **Branches:** twelve `bench/<case>` branches, each built by Vercel as a preview. The four correct ones are Muse Code's, unedited (contributor mode, about $0.05 in all). The five almost-right ones each have a one-line defect hand-seeded into a correct branch. The two side-effect ones are correct plus an unrequested rename. The broken one throws on every cart load.
+  - **Labels:** 42 labelled criteria, each proven by `pnpm bench:validate`, which runs a Playwright check per criterion with a fresh shopper on the preview. The discount ticket's correct case is a fresh Muse Code implementation, not the demo's hand-written branch.
 
 ## 32. Demo storyboard (3 minutes)
 

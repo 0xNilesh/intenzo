@@ -5,6 +5,27 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · IntentBench's cases (T6.1, #48)
+
+Four tickets were written for demo-shop and implemented by Muse Code from their text. Hand-seeded variants were branched off those implementations. Then `pnpm bench:validate` proved every label on the twelve previews.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| Muse Code, one run per ticket, in parallel | All four implemented on the first try: discount 266 s, shipping 177 s, limit 138 s, undo 209 s; 27–34 model calls each, about $0.05 in all (contributor mode). Each passed demo-shop's typecheck, unit tests, lint and format, with the ticket's strings exact |
+| First `bench:validate` | 42 of 44 agreed. The two misses were limit's C3 on both the correct and the almost-right case, and **the check was wrong**: it reloaded the cart before the last background save finished, which cancels it, so the cart had 4 totes, not 5. Waiting for the network to go quiet fixed it |
+| Final `bench:validate` | **45 of 45**: the split, 42 labels, 2 side effects |
+
+### Decisions
+
+1. **Four tickets with exact strings and numbers**, so every label can be proven by a check instead of judged by a person: discount (#5 as text), free shipping progress, 5 per item, undo Remove. 14 criteria in core's `Criterion` shape, the same for every case and every arm.
+2. **The discount ticket's correct case is a fresh Muse Code implementation**, not the demo's hand-written branch, so all four correct cases are Muse Code's as §31 says. The demo's own branches stay untouched.
+3. **Each almost-right defect is one line, seeded into a correct branch**, with what it breaks in the case's note: a memoised total, an off-by-one threshold, a wrong message, a button enabled one step too long, an Undo that forgets the quantity.
+4. **The split is §31's**: tuning has limit-correct, shipping-almost-right, undo-almost-right and shipping-side-effect; the other 8 are held out.
+
+---
+
 ## 2026-11-01 · P5 gate (#47)
 
 `pnpm gate:p5 --loops=23,24` (`scripts/gates/p5.ts`) passed. It ran `gate:p4` with `check:all`, then scored two live loops on demo-shop #23 and #24: copies of the almost-right code that close #5, opened together. The owner pressed Send to agent on both, then Approve (PM) on both. Before the loops, demo-shop's main was set to require the `Intenzo / product approval` status (owner's choice; admins can still bypass).
