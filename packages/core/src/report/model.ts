@@ -60,6 +60,8 @@ export interface ReportModel {
    * the repo's max_agent_attempts. GitHub shows nothing on a press, so the report says it.
    */
   agentRequest?: { attempt: number; max: number } | null;
+  /** §26.2: who gave this run product approval (Approve (PM) or `/intenzo approve`), in order. */
+  approvedBy?: readonly string[];
 }
 
 export type CheckConclusion = "success" | "failure" | "neutral" | "cancelled";

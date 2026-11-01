@@ -97,6 +97,16 @@ async function agentRequestOf(db: Db, runId: string, max: number) {
   return attempt ? { attempt, max } : null;
 }
 
+/** §26.2: who approved the run, in order (the outbox's approval rows). */
+async function approversOf(db: Db, runId: string): Promise<string[]> {
+  const rows = await db
+    .select({ payload: outbox.payloadJson })
+    .from(outbox)
+    .where(and(eq(outbox.effect, "approval"), eq(outbox.runId, runId)))
+    .orderBy(outbox.id);
+  return rows.map((r) => (r.payload as { login: string }).login);
+}
+
 /** A public file's URL by its path (§28: GIFs and stills go to the public store). */
 export type PublicFile = (path: string) => string | null;
 
@@ -212,5 +222,6 @@ export async function reportModel(
       agentAttemptsLeft: agentAttemptsLeft(config.policy, ctx.group.agentAttempts),
     },
     agentRequest: await agentRequestOf(db, run.id, config.policy.max_agent_attempts),
+    approvedBy: await approversOf(db, run.id),
   };
 }
