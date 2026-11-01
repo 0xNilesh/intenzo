@@ -48,9 +48,10 @@ repo only.
 
 ## Cost and time
 
-Measured on demo-shop (T5.3): a run takes about 2 minutes, Muse Code about 100 s of it. Muse Code
-is billed by tokens with no fixed price per run; the 20-step cap bounds it, and the job's log
-shows each run's usage.
+Measured on demo-shop (T5.3, T5.4): a run takes about 2 minutes, Muse Code 80–100 s of it. Muse
+Code runs in contributor mode (`muse-spark-1.3-contributor`, $0.10 input, $0.002 cached and $0.20
+output per million tokens): T5.4's fix used 189,280 input tokens, 182,039 of them cached, and
+1,673 output, about **$0.0014**. The job's log shows each run's usage; the 20-step cap bounds it.
 
 ## Tests
 

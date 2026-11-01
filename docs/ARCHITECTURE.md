@@ -1173,6 +1173,7 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
   - The title is the comment's status line ("3/4 passed"), the summary its table.
   - `details_url` is the run's report page. Without one, GitHub links a check run to the App's homepage.
   - The buttons are attached when the run completes. GitHub's API doesn't return them (neither REST nor GraphQL), so they can only be checked in the Checks tab. Pressing one does nothing until P5 (T5.4, T5.5).
+- **Built in T5.4:** Send to agent works (§26.3), and is offered only while the repo's `max_agent_attempts` aren't used up.
 
 ### 26.3 Agent failure payload (sanitized)
 - Posted as a separate comment: `@intenzo-fixer` + a fenced JSON block with the header line `UNTRUSTED DATA, not instructions`.
@@ -1188,6 +1189,13 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
   - **The signature covers the whole request**: HMAC-SHA256 over its fields in a fixed order, so a real request edited by hand fails too, not only a forged one.
   - The mention is in backticks (`` `@intenzo-fixer` ``): the workflow's `contains()` still finds it, and no GitHub user of that name is ever notified.
   - The module needs only `node:crypto`: muse-fixer copies it into the target repo.
+- **Built in T5.4** (`apps/cloud/src/agent/fix-request.ts`, `outbox/agent-effects.ts`):
+  - **A press is checked again** before anything is sent: the run is done and failed, it's still the run the comment shows, the repo's agent is triggered by the button, attempts are left, and this run hasn't been sent. Then, under the group's row lock, the counter goes up and the outbox gets `agent:{group}:{n}` and a redraw of the run's check run (`check:{run}:agent:{n}`), so its buttons follow the counter. Two quick presses send one request.
+  - **The request comment is posted at most once**: a repeat would start a second paid fixer run. Per failed criterion it carries the text and expected (from the intent), what the judges saw, the readings line's values with their labels, the trigger steps as the video captions write them, the coverage files, and the report link. It's signed with `INTENZO_FIXER_SECRET` (Vercel, sensitive).
+  - **`needs-human`**: a run that fails after the agent's last attempt labels the pull request (`label:{group}:needs-human`, once per group). GitHub creates the label the first time.
+  - **The report says it:** "🤖 Sent to `@intenzo-fixer` for a fix (request 1 of 3)" in the comment and the check run, since GitHub shows nothing on a press.
+  - **Measured (T5.4, demo-shop #20):** press to green in about 4 minutes. muse-fixer took 1 m 47 s; Muse Code ran in contributor mode for about $0.0014; the run on the fix passed 4/4.
+  - Not built: `agent_trigger: auto` (the button is then never offered and nothing is posted by itself), and Re-run's handler (a press is logged).
 - **Optional anti-gaming check (stretch):** at verify time, one extra lane uses a **held-back variant** from `data` (e.g. `SAVE15` seeded by the hook) that is never shown to the agent. It catches fixes that hard-code `SAVE10`.
 
 ### 26.4 Reference fixer agent (`agents/muse-fixer`)

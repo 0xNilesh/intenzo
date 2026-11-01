@@ -5,6 +5,32 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · Send to agent, live (T5.4, #43)
+
+The Cloud (this branch) and the worker (main, with T5.1 and T5.2) were deployed. Then demo-shop #20 was opened with a copy of the almost-right code, linking ticket #5. The owner pressed Send to agent in its Checks tab.
+
+### What we found
+
+| Step | Result |
+|---|---|
+| Intenzo run 1 | **❌ 3/4 passed** in 2 m 7 s for $0.22 (a PR's first run: intent from the video, exploring). The failing total's GIF and the chart's SAM GIF showed inline, from the public store |
+| The press | Fix request 1 of 3 queued (`agent:28:1`) and posted as `intenzo-ai[bot]`. The check run looked unchanged: GitHub shows nothing on a press, so the owner saw "nothing happening" |
+| muse-fixer | Started 9 s later and succeeded in 1 m 47 s: Muse Code 83 s, then typecheck and push. It fixed the planted bug again (`d9ca5c2`, the total's `useMemo` dependencies) |
+| Muse Code's usage | `muse-spark-1.3-contributor`, 7 calls, 189,280 input tokens (182,039 cached), 1,673 output. At contributor-mode prices ($0.10 / $0.002 cached / $0.20 per M tokens, dev.meta.ai/docs/pricing-rate-limits) that's **about $0.0014** |
+| Intenzo run 2 | On the fix: **✅ 4/4 passed** in 1 m 24 s for $0.09 (the group's intent and paths reused). demo-shop's CI passed too |
+| Press to green | About 4 minutes |
+| Spend | About $0.31: $0.22 + $0.0014 + $0.09 |
+| Re-run | Pressed too; logged, nothing else, as built |
+
+### Decisions
+
+1. **The report says when a fix was requested**: "🤖 Sent to `@intenzo-fixer` for a fix (request 1 of 3)" in the comment and the check run, re-rendered on the press. GitHub gives a press no feedback of its own.
+2. **Muse Code is cheap enough to run on every press.** It's billed in contributor mode at about a tenth of Spark 1.3's prices: a fix cost about $0.0014, against $0.09–0.22 for the runs around it.
+3. **One request per run, `needs-human` after the last attempt, at most once per request**, as built and tested (§26.3).
+   - _Next:_ T5.5 (PM approval); Re-run's handler is still open.
+
+---
+
 ## 2026-11-01 · muse-fixer, the reference fixer agent (T5.3, #42)
 
 `agents/muse-fixer` was installed into demo-shop's main (`c17d893`, then `81f68cd` and `83d338a`) with the owner's go-ahead, along with a new GitHub App, intenzo-fixer, and demo-shop's variables and secrets. Then a signed request for C2 was posted, as `intenzo-ai[bot]`, on a draft scratch PR (demo-shop #19) holding a copy of the almost-right code. Drafts start no Intenzo run.

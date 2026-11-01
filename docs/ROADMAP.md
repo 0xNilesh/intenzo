@@ -551,9 +551,9 @@
 - [x] **Verify:** trigger it by hand once on a scratch PR.
 
 ### T5.4 "Send to agent" loop
-- [ ] **Build:** requested actions by outcome (§26.2); `fix` → outbox `agent:{group}:{n}` with an atomic counter; `needs-human` after the max.
-- [ ] **Tests:** two quick clicks → one mention; the counter increments; at the max the button is gone and the label is set.
-- [ ] **Verify:** click Send to agent on the almost-right PR → the fixer runs → a new commit → a new run.
+- [x] **Build:** requested actions by outcome (§26.2); `fix` → outbox `agent:{group}:{n}` with an atomic counter; `needs-human` after the max.
+- [x] **Tests:** two quick clicks → one mention; the counter increments; at the max the button is gone and the label is set.
+- [x] **Verify:** click Send to agent on the almost-right PR → the fixer runs → a new commit → a new run.
 
 ### T5.5 PM approval
 - [ ] **Build:** `Approve (PM)` only on pass; a sender check (`approvers` + write access); `/intenzo approve` fallback; the commit status naming the approver.
