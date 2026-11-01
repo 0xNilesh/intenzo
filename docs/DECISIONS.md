@@ -5,6 +5,37 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · SAM for the canvas criterion (T5.2, #41)
+
+C4 recorded on the almost-right preview (#17's code); its evidence window (Tt−1 s to Tt+3 s) cut at 10 fps into 40 frames, the last one held to 50, H.264. Then each way of naming the discount slice was tried on that clip, once. The SAM output is kept as a fixture (`fixtures/sam/c4-point.txt`).
+
+### What we found
+
+| Prompt | Result |
+|---|---|
+| ARCHITECTURE §23's plan: a text concept plus the region's DOM box | **Not possible.** Meta's docs: a request names its target "in one of two ways, never both"; a phrase with box or point prompts answers 400 `object prompts cannot be combined with a phrase` |
+| Concept "discount slice" | 0 frames, 3.7 s |
+| Concept "chart slice" | 0 frames, 4.2 s |
+| Concept "green slice" | 49 frames, the slice's box [899,321,958,375] (the still shows it at about 899–958 × 320–378), confidence 0.80, 5.7 s |
+| Spark 1.3 asked to point at "the discount slice of the savings chart" on the frame at Tt+1000 | (944, 348), on the slice; 4.7 s; 1,337 prompt and 513 completion tokens, about $0.004 |
+| SAM point prompt at (944, 348) on frame 20 | 49 frames (none on frame 0, before the slice appears), the same box, confidence about 0.96, 7.4 s |
+| Masks | one_bit, as for every point prompt; a 55 × 60 raster over the 60 × 55 box: the raster covers the box (`@meta-sam/graphics` scales it into x1…x2+1) |
+| Judged C4, end to end (`pnpm intenzo run --local`), twice | Pass (agreed) both times; Spark pointed at (915, 360) then (930, 347), both on the slice; 49 masks each; the still shows the discount slice outlined. 29 s, $0.029 a run |
+| Spend | The experiment about $0.05, the two judged runs $0.058: about $0.11 |
+
+### Decisions
+
+1. **SAM gets a point that Spark 1.3 picks on the frame at Tt+1000, and tracks it both ways.**
+   - _Why:_ SAM's phrases name what things look like ("green slice"), not what they mean ("discount slice"), and the criterion only says what they mean. A point is also one object, with no choosing among a chart's slices. Confidence 0.96 against 0.80 for the best phrase.
+   - _Alternatives:_ Spark writes a phrase "as it looks" and the region's box filters SAM's objects (two places to go wrong); the region's box as SAM's prompt (it outlines the whole chart).
+2. **A mask is drawn as an outline only, 3 px.** A 25% red fill turned the green slice olive, and color is what a visual criterion is about.
+3. **The fallback is the element's box (T5.1), not the annotated screenshot.** It's the same highlight the judges' screenshot uses, animated over the window. It's used on a SAM timeout (20 s), an error, a point that finds nothing, or no masks.
+4. **`@meta-sam/parser` 0.1.0 decodes the masks** (Meta's own package, no dependencies, SAM License: use and redistribution allowed with the license kept). Both encodings are range-coded with a context model, 490 lines to port, so it isn't re-implemented.
+5. **A visual criterion's GIF is inline in the comment when it passes too.** Otherwise C4's highlight would appear nowhere (the report shows videos), and the demo (§32) shows it.
+   - _Next:_ T5.3, the muse-fixer reference agent.
+
+---
+
 ## 2026-11-01 · Evidence GIFs for DOM targets (T5.1, #40)
 
 C2 recorded on the almost-right preview (#17's code) with the worker's own recorder, and its evidence rendered over the judges' window (Tt−1 s to Tt+3 s); then the judged C2 run end to end with `pnpm intenzo run --local`.

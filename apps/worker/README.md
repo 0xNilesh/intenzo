@@ -102,7 +102,9 @@ pnpm intenzo run --local --pr <url> --base <url> --ticket fixtures/tickets/42.md
 
 Each judged pass or fail also gets its evidence (ARCHITECTURE §23, T5.1): `evidence.gif` and
 `evidence.png` beside the take's video in `--out` (`C2/pr/take-2/`), the watched element outlined
-in red over the window from 1 s before the trigger to 3 s after it.
+in red over the window from 1 s before the trigger to 3 s after it. For a `ui_visual` criterion
+(C4's chart, T5.2), Spark 1.3 points at what it's about and SAM 3.1 outlines that thing on each
+frame instead: about $0.014 and 12 s more (the point $0.004, SAM's 50-frame minimum $0.01).
 
 ## `intenzo job` (T2.5a, T2.7b)
 
