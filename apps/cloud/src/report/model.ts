@@ -12,6 +12,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { billingUnits } from "../billing/meter.ts";
 import type { Db } from "../db/db.ts";
 import { repoConfig } from "../db/repos.ts";
 import { criteriaResults, intentVersions, outbox, repos, runGroups, runs } from "../db/schema.ts";
@@ -226,6 +227,7 @@ export async function reportModel(
     },
     agentRequest: await agentRequestOf(db, run.id, config.policy.max_agent_attempts),
     approvedBy: await approversOf(db, run.id),
+    billing: { judgedRuns: ctx.group.judgedRuns, units: billingUnits(ctx.group.judgedRuns) },
     unrequestedChanges: (UnrequestedChanges.safeParse(run.changesJson).data ?? []).map((c) => ({
       route: c.route,
       description: c.description,

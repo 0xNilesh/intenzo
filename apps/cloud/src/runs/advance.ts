@@ -4,6 +4,7 @@
 // a crash can't separate a run's change from what it has to tell GitHub (T2.4).
 import { eq } from "drizzle-orm";
 
+import { meterFinished } from "../billing/meter.ts";
 import type { Db } from "../db/db.ts";
 import { previewRules, repoConfig } from "../db/repos.ts";
 import { repos, runGroups, runs } from "../db/schema.ts";
@@ -56,6 +57,11 @@ export async function advance(
         .set({ state, outcome, outcomeReason, prUrl, startedAt, deadlineAt, finishedAt })
         .where(eq(runs.id, run.id));
     }
+    // §16.3: the meter changes with the runs it counts, in this transaction.
+    const finished = decision.updated.filter(
+      (r) => r.state === "done" && rows.find((x) => x.id === r.id)?.state !== "done",
+    );
+    await meterFinished(tx, groupId, finished, clock.now);
     await enqueueEffects(tx, groupId, decision.effects);
     return decision;
   });

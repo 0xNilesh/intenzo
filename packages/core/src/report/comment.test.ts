@@ -199,6 +199,13 @@ describe("renderComment (§26.1)", () => {
     expect(text.indexOf("⚠️")).toBeGreaterThan(text.indexOf("| ✅ | **C4**"));
   });
 
+  it("shows the billing units in the footer once the group is billed (§16.3)", () => {
+    expect(renderComment({ ...failing, billing: { judgedRuns: 0, units: 0 } })).not.toContain("🧾");
+    expect(renderComment({ ...failing, billing: { judgedRuns: 6, units: 2 } })).toContain(
+      "🧾 2 units (6 judged runs)",
+    );
+  });
+
   it("names who gave product approval, without notifying them again (§26.2)", () => {
     expect(renderComment(model())).not.toContain("Product approval");
     const text = renderComment({ ...model(), approvedBy: ["PM-Person", "sumithprabhu"] });
