@@ -1275,6 +1275,11 @@ Across the gate's six runs: median 75 s verifying, 88 s from the push, 0 of 24 v
 
 Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are explored once beforehand, and the video says so. The fix loop is shown with an honest on-screen time-lapse marker.
 
+- **Built in T7.2** (`scripts/demo/`):
+  - `reset.sh` opens a fresh demo PR from the almost-right (or correct) branch's head and closes the earlier ones, so no take starts from another's fix.
+  - `prewarm.sh <pr>` keeps one worker container up: `min_containers=1` through Modal's `Function.autoscaler`, until `prewarm.sh off` or the next deploy, at about $0.76 an hour. It then waits for the PR's first run.
+  - Paths are cached per PR (§19 3a), so that first run explores, and the take is the PR's second run, started by reopening it on the same preview.
+
 ## 28. Artifact storage and privacy
 - **Paths:** `runs/{runId}/{criterion}/{side}/take-{n}/{file}`. Every recording is a new take, so re-records never overwrite the take a verdict cites. Verdicts reference takes explicitly.
 - **Upload:** the worker requests tokens **when it needs them** (per file, or a small batch) from `/api/worker/upload-tokens`. Cloud issues a client token for that exact pathname if it's under `runs/{runId}/` for the job's run. Uploads go straight to Blob, so large videos never pass through Vercel functions.
