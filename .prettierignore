@@ -11,3 +11,5 @@ apps/cloud/drizzle
 **/__snapshots__/
 # Aria snapshots captured from demo-shop, byte for byte (T5.6).
 fixtures/aria/*.yml
+# Written by pnpm bench:record, one pack per line (T6.2).
+bench/intentbench/manifest.json
