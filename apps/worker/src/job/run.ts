@@ -1,6 +1,7 @@
 // Runs one job and reports how it went (§9). Whatever happens, the Cloud hears of it: finished, or
 // failed with a code. The one exception is a 410, after which the worker stops without a word.
 import { type Judge, judgesFromEnv } from "@intenzo/core/judge";
+import type { ModelPort } from "@intenzo/core/models";
 
 import { type JobClient, jobClient, StaleJobError } from "./client.ts";
 import { JobPayload, type SleepJob } from "./payload.ts";
@@ -20,6 +21,10 @@ export interface RunOptions {
   log?: (line: string) => void;
   /** The two judges; by default from the environment (both keys), null for stub verdicts. */
   judges?: readonly [Judge, Judge] | null;
+  /** The port for intent and coverage; by default the Meta API with the environment's key. */
+  models?: ModelPort;
+  /** The pauses before a failed intent call is tried again (§14); tests make them short. */
+  retryDelaysMs?: readonly number[];
 }
 
 export async function runJob(payload: unknown, options: RunOptions = {}): Promise<number> {
@@ -58,6 +63,10 @@ export async function runJob(payload: unknown, options: RunOptions = {}): Promis
             // Tests pass judges: null, so a unit test never reads a ticket with a model either.
 
             ...(judges && metaKey && { metaKey }),
+
+            ...(options.models && { models: options.models }),
+
+            ...(options.retryDelaysMs && { retryDelaysMs: options.retryDelaysMs }),
 
             log: options.log ?? console.log,
           });

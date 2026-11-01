@@ -63,6 +63,9 @@ jobs:
       - name: Contract tests
         run: pnpm test:contract
 
+      - name: Fault tests
+        run: pnpm test:faults
+
       - name: Modal shim tests
         run: pnpm test:modal
 
