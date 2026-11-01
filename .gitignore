@@ -16,6 +16,8 @@ probes/
 # local recordings (pnpm intenzo record)
 out/
 bench/results/raw/
+# IntentBench's evidence packs: videos, recorded by pnpm bench:record (T6.2)
+bench/intentbench/packs/
 __pycache__/
 .venv/
 # Next.js

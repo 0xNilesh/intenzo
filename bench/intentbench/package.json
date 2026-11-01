@@ -10,7 +10,8 @@
     "test": "vitest run --project unit",
     "test:contract": "vitest run --project contract --passWithNoTests",
     "test:browser": "vitest run --project browser --passWithNoTests",
-    "validate": "node src/validate.ts"
+    "validate": "node src/validate.ts",
+    "record": "node src/record.ts"
   },
   "dependencies": {
     "@intenzo/core": "workspace:*",
