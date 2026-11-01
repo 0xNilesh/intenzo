@@ -17,4 +17,5 @@ export {
   renderIntent,
   type TicketText,
 } from "./intent.v1.ts";
+export { POINT_JSON_SCHEMA, POINT_SYSTEM, POINT_V1, PointReply, renderPoint } from "./point.v1.ts";
 export { untrusted } from "./untrusted.ts";

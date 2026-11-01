@@ -12,15 +12,18 @@ import { join } from "node:path";
 
 import type { Browser } from "playwright";
 
+import { SAM_MIN_FRAMES } from "../models/sam.ts";
 import type { BoxSample } from "./boxes.ts";
 import { ffmpegAsync } from "./ffmpeg.ts";
 import { VIEWPORT } from "./lane.ts";
+import type { FrameMask, Segmenter, SegmentResult } from "./segment.ts";
 
 // The evidence GIF and still for a DOM target (ARCHITECTURE §23): the human video over the
 // evidence window, the watched element outlined in red on every frame where the box track saw it,
 // and a caption band above the page ("C2 ❌ The total stayed $50.00 after Apply"). Chromium draws
 // the outline and the caption, as for the annotated still (no ffmpeg drawtext, §21.4); ffmpeg cuts
-// the frames and encodes the GIF with its own palette. The still is the frame at Tt+1000.
+// the frames and encodes the GIF with its own palette. The still is the frame at Tt+1000. For a
+// visual criterion (T5.2), SAM's mask of the thing it's about replaces the element's box.
 
 /** GitHub shows inline images up to 10 MB; §23 keeps the GIF under 2 MB so the comment loads fast. */
 export const MAX_GIF_BYTES = 2 * 1024 * 1024;
@@ -93,6 +96,11 @@ export function captionOf(
   return `${criterionId} ${icon} ${text}`;
 }
 
+/** Frames to hold the last frame for, so SAM gets its 50-frame minimum (it bills 50 anyway). */
+export function samPadding(frames: number): number {
+  return Math.max(0, SAM_MIN_FRAMES - frames);
+}
+
 export interface EvidenceInput {
   /** human.mp4 (1280×720) and its offset: file ms = canonical ms + humanOffsetMs (§21.4). */
   humanVideo: string;
@@ -105,6 +113,11 @@ export interface EvidenceInput {
   label: string | null;
   caption: string;
   outDir: string;
+  /**
+   * For a visual criterion (T5.2): SAM's masks for the window, drawn instead of the element's box.
+   * Without masks (not found, a timeout, an error), the box outline is drawn as before.
+   */
+  segment?: Segmenter;
 }
 
 export interface EvidenceOutput {
@@ -113,9 +126,11 @@ export interface EvidenceOutput {
   fps: number;
   width: number;
   bytes: number;
-  /** Frames on which the element was outlined, of all frames. */
+  /** Frames on which something was outlined (a mask or the element's box), of all frames. */
   outlined: number;
   frames: number;
+  /** What SAM did, when there was a segmenter: masks drawn, or why the box was drawn instead. */
+  segmentation?: Omit<SegmentResult, "masks"> & { masked: number };
 }
 
 function escapeHtml(text: string): string {
@@ -123,6 +138,31 @@ function escapeHtml(text: string): string {
     /[&<>"]/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
   );
+}
+
+/** The window's frames as SAM takes them: H.264 at 10 fps, the last one held to 50 frames. */
+async function samClip(
+  work: string,
+  frames: number,
+): Promise<{ clip: Uint8Array; clipFrames: number }> {
+  const pad = samPadding(frames);
+  const out = join(work, "sam.mp4");
+  await ffmpegAsync(
+    "-framerate",
+    String(SOURCE_FPS),
+    "-i",
+    join(work, "raw-%04d.png"),
+    "-vf",
+    `tpad=stop_mode=clone:stop=${pad}`,
+    "-c:v",
+    "libx264",
+    "-pix_fmt",
+    "yuv420p",
+    "-r",
+    String(SOURCE_FPS),
+    out,
+  );
+  return { clip: readFileSync(out), clipFrames: frames + pad };
 }
 
 /** Renders the GIF and the still into outDir. */
@@ -153,8 +193,36 @@ export async function renderEvidence(
     if (raws.length === 0) throw new Error("no frames in the evidence window");
     // The canonical time of the first frame (the window may start before the video does).
     const canonicalStart = fileStart - input.humanOffsetMs;
+    // The still: the frame nearest Tt+1000.
+    const stillIndex = Math.min(
+      raws.length - 1,
+      Math.max(0, Math.round(((input.tTriggerMs + 1000 - canonicalStart) * SOURCE_FPS) / 1000)),
+    );
 
-    // 2. Each frame drawn with the outline and the caption, by Chromium.
+    // 2. For a visual criterion, SAM's masks over the same frames (T5.2).
+    let masks: Map<number, FrameMask> | null = null;
+    let segmentation: EvidenceOutput["segmentation"];
+    if (input.segment) {
+      const { clip, clipFrames } = await samClip(work, raws.length);
+      const result = await input.segment({
+        clip,
+        clipFrames,
+        stillFrame: stillIndex,
+        still: readFileSync(join(work, raws[stillIndex]!)),
+        width: VIEWPORT.width,
+        height: VIEWPORT.height,
+      });
+      masks = result.masks;
+      const masked = masks ? [...masks.keys()].filter((i) => i < raws.length).length : 0;
+      segmentation = {
+        outcome: result.outcome,
+        costUsd: result.costUsd,
+        detail: result.detail,
+        masked,
+      };
+    }
+
+    // 3. Each frame drawn with the outline and the caption, by Chromium.
     const page = await browser.newPage({
       viewport: { width: VIEWPORT.width, height: VIEWPORT.height + CAPTION_BAND },
       deviceScaleFactor: 1,
@@ -167,17 +235,24 @@ export async function renderEvidence(
           `<div style="position:relative;width:${VIEWPORT.width}px;height:${VIEWPORT.height}px">` +
           `<img id="f" style="position:absolute;left:0;top:0;width:${VIEWPORT.width}px;height:${VIEWPORT.height}px">` +
           `<div id="b" style="position:absolute;display:none;border:2px solid ${OUTLINE};box-sizing:border-box"></div>` +
+          `<svg id="s" width="${VIEWPORT.width}" height="${VIEWPORT.height}" style="position:absolute;left:0;top:0;display:none">` +
+          // An outline only: a fill would change the colors a visual criterion is about.
+          `<path id="p" fill="none" stroke="${OUTLINE}" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>` +
           `</div></body></html>`,
       );
       for (const [i, raw] of raws.entries()) {
         const tMs = canonicalStart + (i * 1000) / SOURCE_FPS;
-        const box = input.label ? boxAt(input.boxTrack, input.label, tMs) : null;
-        if (box) outlined++;
+        // With masks, SAM's object is the highlight; a frame without it shows none.
+        const mask = masks?.get(i) ?? null;
+        const box = !masks && input.label ? boxAt(input.boxTrack, input.label, tMs) : null;
+        if (box || mask) outlined++;
         const src = `data:image/png;base64,${readFileSync(join(work, raw)).toString("base64")}`;
         await page.evaluate(
-          ([url, b]) => {
+          ([url, b, m]) => {
             const img = document.getElementById("f") as HTMLImageElement;
             const div = document.getElementById("b") as HTMLDivElement;
+            const svg = document.getElementById("s") as unknown as SVGSVGElement;
+            const path = document.getElementById("p") as unknown as SVGPathElement;
             img.src = url as string;
             const r = b as [number, number, number, number] | null;
             if (r) {
@@ -186,9 +261,23 @@ export async function renderEvidence(
             } else {
               div.style.display = "none";
             }
+            const k = m as FrameMask | null;
+            if (k) {
+              // The raster covers the box, x2 and y2 inclusive (@meta-sam/graphics draws it so).
+              const sx = (k.box.x2 + 1 - k.box.x1) / k.rasterWidth;
+              const sy = (k.box.y2 + 1 - k.box.y1) / k.rasterHeight;
+              path.setAttribute("d", k.path);
+              path.setAttribute(
+                "transform",
+                `translate(${k.box.x1} ${k.box.y1}) scale(${sx} ${sy})`,
+              );
+              svg.style.display = "block";
+            } else {
+              svg.style.display = "none";
+            }
             return img.decode();
           },
-          [src, box] as const,
+          [src, box, mask] as const,
         );
         await page.screenshot({ path: join(work, `ann-${String(i + 1).padStart(4, "0")}.png`) });
       }
@@ -196,15 +285,11 @@ export async function renderEvidence(
       await page.close();
     }
 
-    // 3. The still: the frame nearest Tt+1000.
-    const stillIndex = Math.min(
-      raws.length - 1,
-      Math.max(0, Math.round(((input.tTriggerMs + 1000 - canonicalStart) * SOURCE_FPS) / 1000)),
-    );
+    // 4. The still: the frame at Tt+1000, as drawn.
     const still = join(input.outDir, "evidence.png");
     copyFileSync(join(work, `ann-${String(stillIndex + 1).padStart(4, "0")}.png`), still);
 
-    // 4. The GIF, smaller until it fits (§23).
+    // 5. The GIF, smaller until it fits (§23).
     const gif = join(input.outDir, "evidence.gif");
     for (const { fps, width } of gifAttempts()) {
       await ffmpegAsync(
@@ -220,7 +305,16 @@ export async function renderEvidence(
       );
       const bytes = statSync(gif).size;
       if (bytes <= MAX_GIF_BYTES)
-        return { gif, still, fps, width, bytes, outlined, frames: raws.length };
+        return {
+          gif,
+          still,
+          fps,
+          width,
+          bytes,
+          outlined,
+          frames: raws.length,
+          ...(segmentation && { segmentation }),
+        };
     }
     throw new Error(`the GIF stays over ${MAX_GIF_BYTES} bytes even at 4 fps and 360 px`);
   } finally {

@@ -29,9 +29,20 @@ export {
   MAX_GIF_BYTES,
   outlinedLabel,
   renderEvidence,
+  samPadding,
   type EvidenceInput,
   type EvidenceOutput,
 } from "./evidence.ts";
+export {
+  masksOf,
+  POINT_MODEL,
+  SAM_TIMEOUT_MS,
+  samSegmenter,
+  type FrameMask,
+  type SegmentInput,
+  type Segmenter,
+  type SegmentResult,
+} from "./segment.ts";
 export {
   LIVE_REGIONS,
   liveRegionLines,

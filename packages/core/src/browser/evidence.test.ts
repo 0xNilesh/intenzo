@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BoxSample } from "./boxes.ts";
-import { boxAt, captionOf, gifAttempts, outlinedLabel } from "./evidence.ts";
+import { boxAt, captionOf, gifAttempts, outlinedLabel, samPadding } from "./evidence.ts";
 
 describe("the evidence GIF's rules (§23)", () => {
   it("lowers the frame rate first, then the width, to fit under 2 MB", () => {
@@ -45,6 +45,12 @@ describe("the evidence GIF's rules (§23)", () => {
     const gone = track.filter((b) => b.label === "order total" && b.tMs < 2000);
     expect(outlinedLabel(gone, { startMs: 1300, endMs: 1900 })).toBeNull();
     expect(outlinedLabel([], { startMs: 0, endMs: 1000 })).toBeNull();
+  });
+
+  it("holds the last frame so SAM gets its 50-frame minimum, which it bills anyway", () => {
+    expect(samPadding(40)).toBe(10);
+    expect(samPadding(50)).toBe(0);
+    expect(samPadding(73)).toBe(0);
   });
 
   it("captions the verdict on one short line", () => {
