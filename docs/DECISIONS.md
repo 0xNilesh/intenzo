@@ -32,6 +32,7 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 1. **The headline is the browser arms' safety, not diff-only accuracy.** On these seeded defects the diff shows the bug, so arm A scores well. But it passes a build that doesn't run, which is the error that matters for merging. T6.4 reports wrong passes and judgeable accuracy beside §31's metrics.
 2. **Arm C uses 8 stills,** covering Tt to Tt+4 s, the window §22.3 judges.
 3. **2 repeats, not 3** (the owner, for budget). Small n: 8 held-out cases.
+4. **These rows were judged before #128's citation fix.** That fix lets a judge cite a multi-line reading whole. The `contradicts_readings` verdicts here (B 4, C 6, D dual 3) may include right answers the old check refused, so B–D may be understated. *Next:* re-judge those units with the fixed rule, a few cents, before the P6 gate quotes the numbers.
 ## 2026-11-01 · A citation may copy a reading's whole value (#127)
 
 T6.3's first run judged the tuning split's 14 criteria once with arms A, B and C (Spark 1.3; `bench/results/judge-tuning.json` on the T6.3 branch).
