@@ -46,5 +46,58 @@ export const Results = z.strictObject({
   }),
   /** True when the --max-usd cap stopped the run early: the rows are what was judged. */
   stoppedAtCap: z.boolean(),
+  /** Units judged again later (--redo), whose rows replaced the first ones. */
+  rejudged: z
+    .array(
+      z.strictObject({
+        at: z.iso.datetime(),
+        why: z.string(),
+        units: z.number().int().nonnegative(),
+        calls: z.number().int().nonnegative(),
+        usd: z.number().nonnegative(),
+      }),
+    )
+    .optional(),
 });
+
+/** A unit of judging: one arm's judgement of one criterion in one repeat (all its judges' rows). */
+export const unitKey = (r: Pick<ResultRow, "arm" | "caseId" | "criterionId" | "repeat">) =>
+  `${r.arm}|${r.caseId}|${r.criterionId}|${r.repeat}`;
+
+/** The units in which any row came out with this reason. */
+export function unitsWith(results: Results, reason: ResultRow["reason"]): Set<string> {
+  return new Set(results.rows.filter((r) => r.reason === reason).map(unitKey));
+}
+
+/** The first results with the redone units' rows replaced, and the redo added to the totals. */
+export function mergeRedo(
+  first: Results,
+  redo: Results,
+  units: ReadonlySet<string>,
+  why: string,
+): Results {
+  const kept = first.rows.filter((r) => !units.has(unitKey(r)));
+  const fresh = redo.rows.filter((r) => units.has(unitKey(r)));
+  const round = (n: number) => Math.round(n * 1e4) / 1e4;
+  return Results.parse({
+    ...first,
+    rows: [...kept, ...fresh],
+    totals: {
+      calls: first.totals.calls + redo.totals.calls,
+      usd: round(first.totals.usd + redo.totals.usd),
+      ms: first.totals.ms + redo.totals.ms,
+    },
+    stoppedAtCap: first.stoppedAtCap || redo.stoppedAtCap,
+    rejudged: [
+      ...(first.rejudged ?? []),
+      {
+        at: redo.startedAt,
+        why,
+        units: units.size,
+        calls: redo.totals.calls,
+        usd: redo.totals.usd,
+      },
+    ],
+  });
+}
 export type Results = z.infer<typeof Results>;

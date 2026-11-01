@@ -59,7 +59,7 @@ import {
   type Pack,
   type Take,
 } from "./pack.ts";
-import { Results, type ResultRow } from "./results.ts";
+import { mergeRedo, Results, unitKey, unitsWith, type ResultRow } from "./results.ts";
 
 const ROOT = new URL("../../../", import.meta.url).pathname;
 const RESULTS_DIR = new URL("../../results/", import.meta.url).pathname;
@@ -301,6 +301,8 @@ export interface JudgeArgs {
   only?: string;
   maxUsd: number;
   out?: string;
+  /** A results file whose contradicts_readings units are judged again (and replaced). */
+  redo?: string;
 }
 
 export function parseJudgeArgs(argv: readonly string[]): JudgeArgs {
@@ -321,6 +323,7 @@ export function parseJudgeArgs(argv: readonly string[]): JudgeArgs {
   if (!(maxUsd > 0)) throw new Error("--max-usd must be above 0");
   const only = arg("only");
   const out = arg("out");
+  const redo = arg("redo");
   return {
     split,
     arms: arms as Arm[],
@@ -329,10 +332,15 @@ export function parseJudgeArgs(argv: readonly string[]): JudgeArgs {
     maxUsd,
     ...(only && { only }),
     ...(out && { out }),
+    ...(redo && { redo }),
   };
 }
 
-export async function runJudge(args: JudgeArgs): Promise<Results> {
+export async function runJudge(
+  args: JudgeArgs,
+  /** Only these units (unitKey) are judged; the rest are skipped without a call. */
+  only?: ReadonlySet<string>,
+): Promise<Results> {
   const judges = judgesFromEnv();
   const spark = judges?.[1];
   if (!spark) throw new Error("META_API_KEY and BASETEN_API_KEY must be in .env");
@@ -370,6 +378,11 @@ export async function runJudge(args: JudgeArgs): Promise<Results> {
     const repeats = arm === "D" ? args.dRepeats : args.repeats;
     for (let repeat = 1; repeat <= repeats; repeat++) {
       for (const u of units) {
+        if (
+          only &&
+          !only.has(unitKey({ arm, caseId: u.case.id, criterionId: u.criterion.id, repeat }))
+        )
+          continue;
         if (total.usd + worst[arm] > args.maxUsd) {
           stoppedAtCap = true;
           break outer;
@@ -417,10 +430,36 @@ if (import.meta.main) {
   process.loadEnvFile(`${ROOT}.env`);
   const args = parseJudgeArgs(process.argv.slice(2));
   const started = Date.now();
-  const results = await runJudge(args);
-  mkdirSync(RESULTS_DIR, { recursive: true });
-  const out =
+  let results: Results;
+  let out =
     args.out ?? join(RESULTS_DIR, `judge-${args.split}${args.only ? `-${args.only}` : ""}.json`);
+  if (args.redo) {
+    // Judge again only the units the §22.3 checks refused for contradicting the readings: the
+    // citation check was too strict before #128.
+    const first = Results.parse(JSON.parse(readFileSync(args.redo, "utf8")));
+    const units = unitsWith(first, "contradicts_readings");
+    console.log(`re-judging ${units.size} units of ${args.redo}`);
+    const redo = await runJudge(
+      {
+        ...args,
+        split: first.split,
+        arms: first.arms,
+        repeats: first.repeats.ABC,
+        dRepeats: first.repeats.D,
+      },
+      units,
+    );
+    results = mergeRedo(
+      first,
+      redo,
+      units,
+      "contradicts_readings, judged before #128's citation fix",
+    );
+    out = args.out ?? args.redo;
+  } else {
+    results = await runJudge(args);
+  }
+  mkdirSync(RESULTS_DIR, { recursive: true });
   writeFileSync(out, `${JSON.stringify(results, null, 2)}\n`);
   const t = results.totals;
   console.log(

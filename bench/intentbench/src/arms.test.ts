@@ -15,7 +15,7 @@ import {
 } from "./arms.ts";
 import { loadTicket } from "./case.ts";
 import { capLone, parseJudgeArgs } from "./judge.ts";
-import { ResultRow, Results } from "./results.ts";
+import { mergeRedo, ResultRow, Results, unitsWith } from "./results.ts";
 
 const ticket = loadTicket("discount");
 const criterion = ticket.criteria.find((c) => c.id === "C2")!;
@@ -205,6 +205,81 @@ describe("results", () => {
     expect(ResultRow.safeParse({ ...row, judge: "wonder" }).success).toBe(false);
     expect(ResultRow.safeParse({ ...row, reason: "vibes" }).success).toBe(false);
     expect(ResultRow.safeParse({ ...row, note: "x" }).success).toBe(false);
+  });
+});
+
+describe("redo", () => {
+  const row = (over: Record<string, unknown>) =>
+    ResultRow.parse({
+      arm: "B",
+      judge: "spark-1.3",
+      caseId: "x",
+      criterionId: "C1",
+      kind: "almost_right",
+      split: "heldout",
+      label: "pass",
+      repeat: 1,
+      verdict: "pass",
+      reason: "agreed",
+      rerecorded: false,
+      calls: 1,
+      usd: 0.01,
+      ms: 1000,
+      pack: "a",
+      ...over,
+    });
+  const file = (rows: ResultRow[], usd: number) =>
+    Results.parse({
+      startedAt: "2026-11-01T10:00:00.000Z",
+      split: "heldout",
+      arms: ["B", "D"],
+      repeats: { ABC: 2, D: 2 },
+      rows,
+      totals: { calls: rows.length, usd, ms: 1000 * rows.length },
+      stoppedAtCap: false,
+    });
+
+  it("re-judges whole units: every judge's row of a D unit goes together", () => {
+    const first = file(
+      [
+        row({ criterionId: "C1", verdict: "inconclusive", reason: "contradicts_readings" }),
+        row({ criterionId: "C2" }),
+        row({
+          arm: "D",
+          judge: "dual",
+          criterionId: "C3",
+          verdict: "inconclusive",
+          reason: "contradicts_readings",
+        }),
+        row({ arm: "D", judge: "spark-open", criterionId: "C3" }),
+        row({
+          arm: "D",
+          judge: "spark-1.3",
+          criterionId: "C3",
+          verdict: "inconclusive",
+          reason: "contradicts_readings",
+        }),
+      ],
+      0.05,
+    );
+    const units = unitsWith(first, "contradicts_readings");
+    expect([...units].sort()).toEqual(["B|x|C1|1", "D|x|C3|1"]);
+    const redo = file(
+      [
+        row({ criterionId: "C1" }),
+        row({ arm: "D", judge: "dual", criterionId: "C3" }),
+        row({ arm: "D", judge: "spark-open", criterionId: "C3" }),
+        row({ arm: "D", judge: "spark-1.3", criterionId: "C3" }),
+      ],
+      0.04,
+    );
+    const merged = mergeRedo(first, redo, units, "why");
+    expect(merged.rows).toHaveLength(5);
+    expect(merged.rows.filter((r) => r.reason === "contradicts_readings")).toEqual([]);
+    expect(merged.totals.usd).toBeCloseTo(0.09);
+    expect(merged.rejudged).toEqual([
+      { at: redo.startedAt, why: "why", units: 2, calls: 4, usd: 0.04 },
+    ]);
   });
 });
 
