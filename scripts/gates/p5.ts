@@ -37,8 +37,14 @@ const run = (command: string, args: string[]) => {
 };
 const gh = <T>(path: string, jq?: string): T | null => {
   const r = run("gh", ["api", path, ...(jq ? ["--jq", jq] : [])]);
-  if (!r.ok || !r.out.trim()) return null;
-  return JSON.parse(r.out) as T;
+  const text = r.out.trim();
+  if (!r.ok || !text) return null;
+  // --jq prints a string as it is, without JSON quotes.
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as T;
+  }
 };
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const minutes = (from: Date, to: Date) =>
@@ -46,7 +52,11 @@ const minutes = (from: Date, to: Date) =>
 
 console.log("Phase 5 gate\n");
 const p4 = run("pnpm", ["gate:p4", `--almost-right=${p4AlmostRight}`, `--correct=${p4Correct}`]);
-check("gate:p4 (with pnpm check:all)", p4.ok, p4.out.trim().split("\n").at(-1) ?? "");
+check(
+  "gate:p4 (with pnpm check:all)",
+  p4.ok,
+  /PHASE 4 GATE: \w+/.exec(p4.out)?.[0] ?? "no verdict",
+);
 
 process.loadEnvFile(`${REPO_ROOT}apps/cloud/.env.local`);
 const pool = new pg.Pool({
