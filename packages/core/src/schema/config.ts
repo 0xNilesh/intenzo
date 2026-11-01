@@ -11,7 +11,10 @@ const SecretName = z.string().regex(/^[A-Z][A-Z0-9_]*$/, {
   message: "must name a stored secret (e.g. INTENZO_USER_1), never contain the value",
 });
 
-/** Built-in action denylist (§29). `guardrails.deny_text` adds to it; it can't remove from it. */
+/**
+ * Built-in action denylist (§29). `guardrails.deny_text` adds to it. `guardrails.allow_text` takes
+ * built-in terms out, and only where every lane has its own throwaway user or a reset (§21.1).
+ */
 export const DEFAULT_DENY_TEXT = [
   "delete",
   "remove",
@@ -63,6 +66,8 @@ export const IntenzoConfig = z
     guardrails: z
       .strictObject({
         deny_text: z.array(z.string().min(1)).default([]),
+        /** Built-in terms this app's tickets need, e.g. a cart's "Remove" (§29). */
+        allow_text: z.array(z.string().min(1)).default([]),
         extra_navigation_origins: z.array(z.url()).default([]),
       })
       .prefault({}),
@@ -98,6 +103,26 @@ export const IntenzoConfig = z
         code: "custom",
         path: ["isolation", "users"],
         message: "form_login needs a users pool to log in with",
+      });
+    }
+    const builtIn: readonly string[] = DEFAULT_DENY_TEXT;
+    config.guardrails.allow_text.forEach((term, i) => {
+      if (!builtIn.includes(term.trim().toLowerCase())) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["guardrails", "allow_text", i],
+          message: `"${term}" isn't a built-in term (${DEFAULT_DENY_TEXT.join(", ")})`,
+        });
+      }
+    });
+    // An allowed "remove" may only ever remove a throwaway user's data (isolationLevel, §21.1).
+    const { session_hook, reset_hook, users } = config.isolation;
+    const isolated = !!session_hook || (!!reset_hook && !!users?.length);
+    if (config.guardrails.allow_text.length > 0 && !isolated) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["guardrails", "allow_text"],
+        message: "needs isolation: a session_hook, or a reset_hook with users",
       });
     }
   });

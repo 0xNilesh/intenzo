@@ -62,7 +62,24 @@ describe("denyText", () => {
     expect(list).toEqual([...DEFAULT_DENY_TEXT, "delete account", "refund"]);
   });
 
-  it("can't drop the built-in entries", () => {
+  it("keeps every built-in entry unless the repo allows it", () => {
     expect(denyText(config({}))).toEqual([...DEFAULT_DENY_TEXT]);
+  });
+
+  it("drops the built-in terms the repo allows, and nothing else", () => {
+    const isolation = { session_hook: "/api/test/session" };
+    const list = denyText(config({ isolation, guardrails: { allow_text: [" Remove "] } }));
+    expect(list).toEqual(DEFAULT_DENY_TEXT.filter((t) => t !== "remove"));
+    // "delete" stays: the guard still stops "Delete account" and "Delete Ceramic mug".
+    expect(list).toContain("delete");
+  });
+
+  it("lets an addition win over an allowance", () => {
+    const isolation = { session_hook: "/api/test/session" };
+    const both = config({
+      isolation,
+      guardrails: { allow_text: ["remove"], deny_text: ["Remove"] },
+    });
+    expect(denyText(both)).toContain("remove");
   });
 });

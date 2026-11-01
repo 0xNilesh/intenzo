@@ -120,6 +120,48 @@ describe("IntenzoConfig", () => {
   });
 });
 
+describe("guardrails.allow_text (§29)", () => {
+  const withHook = { session_hook: "/api/test/session" };
+
+  it("takes built-in terms out where every lane has its own user", () => {
+    const config = IntenzoConfig.parse({
+      version: 1,
+      isolation: withHook,
+      guardrails: { allow_text: ["Remove"] },
+    });
+    expect(config.guardrails.allow_text).toEqual(["Remove"]);
+    expect(IntenzoConfig.parse({ version: 1 }).guardrails.allow_text).toEqual([]);
+  });
+
+  it("allows only built-in terms, so a typo can't pass for an allowance", () => {
+    const input = {
+      version: 1,
+      isolation: withHook,
+      guardrails: { allow_text: ["remove", "rmove"] },
+    };
+    expect(issues(IntenzoConfig, input)).toEqual([
+      expect.stringMatching(/^guardrails\.allow_text\.1: "rmove" isn't a built-in term/),
+    ]);
+  });
+
+  it("needs isolation: an allowed action may only touch a throwaway user's data", () => {
+    const allow = { allow_text: ["remove"] };
+    expect(issues(IntenzoConfig, { version: 1, guardrails: allow })).toEqual([
+      "guardrails.allow_text: needs isolation: a session_hook, or a reset_hook with users",
+    ]);
+    // A reset hook isolates only with a users pool to reset (§21.1).
+    const resetOnly = { reset_hook: "/api/test/reset" };
+    expect(
+      issues(IntenzoConfig, { version: 1, isolation: resetOnly, guardrails: allow }),
+    ).toHaveLength(1);
+    const pool = {
+      ...resetOnly,
+      users: [{ username_secret: "QA_USER", password_secret: "QA_PASS" }],
+    };
+    expect(issues(IntenzoConfig, { version: 1, isolation: pool, guardrails: allow })).toEqual([]);
+  });
+});
+
 describe("DEFAULT_DENY_TEXT", () => {
   it("covers the destructive actions from §29", () => {
     expect(DEFAULT_DENY_TEXT).toEqual(
