@@ -29,6 +29,11 @@ const CloudEnv = z.object({
     .string()
     .regex(/^[A-Za-z0-9+/]{43}=$/)
     .optional(),
+  /**
+   * Signs the fix requests Intenzo posts for the repos' fixer agent (§26.3, T5.4); the agent's
+   * workflow checks them with the same secret. Without it no request is posted.
+   */
+  INTENZO_FIXER_SECRET: z.string().min(32).optional(),
   /** What Modal's cron sends to POST /api/internal/sweep (T2.5b). */
   INTENZO_SWEEP_SECRET: z.string().min(32).optional(),
   /**

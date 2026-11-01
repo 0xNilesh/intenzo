@@ -24,6 +24,8 @@ export function outboxRows(groupId: number, effects: readonly Effect[], commentS
         return row(effect, groupId, effect.runId, `spawn:${effect.runId}:verify`);
       case "cancel_job":
         return row(effect, groupId, effect.runId, `cancel:${effect.runId}`);
+      case "label":
+        return row(effect, groupId, null, `label:${groupId}:${effect.name}`);
     }
   });
 }

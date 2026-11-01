@@ -55,6 +55,7 @@ type Steps = readonly (readonly [minute: number, fact: Fact])[];
 function simulate(
   steps: Steps,
   inconclusiveConclusion: Group["inconclusiveConclusion"] = "neutral",
+  agentUsedUp = false,
 ) {
   let runs: Run[] = [];
   const previews = new Map<string, string>();
@@ -62,7 +63,7 @@ function simulate(
   let ids = 0;
   for (const [minute, fact] of steps) {
     if (fact.kind === "preview_ready") previews.set(fact.sha, fact.url);
-    const decision = decide({ id: 7, runs, previews, inconclusiveConclusion }, fact, {
+    const decision = decide({ id: 7, runs, previews, inconclusiveConclusion, agentUsedUp }, fact, {
       now: at(minute),
       newRunId: () => `run-${++ids}`,
     });
@@ -85,6 +86,8 @@ function describeEffect(e: Effect): string {
       return `spawn ${e.runId}`;
     case "cancel_job":
       return `cancel ${e.runId}`;
+    case "label":
+      return `label ${e.groupId} ${e.name}`;
   }
 }
 
@@ -94,6 +97,29 @@ function summarize(r: Run): string {
   const reason = r.outcomeReason ? ` (${r.outcomeReason})` : "";
   return `${r.headSha}#${r.attemptNo} ${r.trigger} ${r.state}${outcome}${reason}`;
 }
+
+describe("decide, after the fixer agent's attempts (§26.3)", () => {
+  const failing: Steps = [
+    [0, opened("A")],
+    [1, preview("A")],
+    [3, jobFinished("run-1", "fail")],
+  ];
+
+  it("labels the PR needs-human when a run fails and the agent has had all its attempts", () => {
+    const { effects } = simulate(failing, "neutral", true);
+    expect(effects.at(-1)).toEqual([
+      "check run-1 completed failure",
+      "label 7 needs-human",
+      "comment 7",
+    ]);
+  });
+
+  it("leaves the label alone while the agent has attempts left, or when the run passes", () => {
+    expect(simulate(failing, "neutral", false).effects.at(-1)).not.toContain("label 7 needs-human");
+    const passing: Steps = [...failing.slice(0, 2), [3, jobFinished("run-1", "pass")]];
+    expect(simulate(passing, "neutral", true).effects.at(-1)).not.toContain("label 7 needs-human");
+  });
+});
 
 describe("decide", () => {
   // The roadmap's T2.2 cases first, then the edges around them.

@@ -23,6 +23,7 @@ import {
   previewUrl,
 } from "../deployments/match.ts";
 import { findPreview, recordDeployment } from "../deployments/store.ts";
+import { requestFix } from "../agent/fix-request.ts";
 import { advance } from "../runs/advance.ts";
 import { describeBaseline, resolveBaseline } from "../runs/baseline.ts";
 import type { Decision, Effect, Fact, Run } from "../runs/transition.ts";
@@ -42,7 +43,42 @@ export interface HandlerContext {
 }
 
 export function eventHandlers(ctx: HandlerContext): Record<string, EventHandler> {
-  return { pull_request: onPullRequest(ctx), deployment_status: onDeploymentStatus(ctx) };
+  return {
+    pull_request: onPullRequest(ctx),
+    deployment_status: onDeploymentStatus(ctx),
+    check_run: onCheckRun(ctx),
+  };
+}
+
+// Intake keeps only the App's own check runs, whose external_id is the run's id (§26.2).
+const CheckRunEvent = z.looseObject({
+  action: z.string(),
+  check_run: z.looseObject({ external_id: z.string().nullish() }),
+  requested_action: z.looseObject({ identifier: z.string() }).nullish(),
+  sender: z.looseObject({ login: z.string() }),
+});
+
+/** §26.2's buttons. Send to agent asks the fixer (§26.3); Approve and Re-run come later. */
+function onCheckRun(ctx: HandlerContext): EventHandler {
+  return async ({ payload }) => {
+    const event = CheckRunEvent.parse(payload);
+    if (event.action !== "requested_action" || !event.requested_action) return;
+    const runId = z.uuid().safeParse(event.check_run.external_id);
+    if (!runId.success) return;
+    const who = `${event.sender.login} pressed`;
+    const prefix = `run ${runId.data.slice(0, 8)}`;
+    if (event.requested_action.identifier !== "fix") {
+      ctx.log(`${prefix}: ${who} ${event.requested_action.identifier}, which isn't handled yet`);
+      return;
+    }
+    const result = await requestFix(ctx.db, runId.data);
+    if ("skipped" in result) {
+      ctx.log(`${prefix}: ${who} Send to agent: not sent, ${result.skipped}`);
+      return;
+    }
+    ctx.log(`${prefix}: ${who} Send to agent: fix request ${result.sent} queued`);
+    await ctx.drain();
+  };
 }
 
 const PullRequestEvent = z.looseObject({
@@ -270,5 +306,7 @@ function describeEffect(effect: Effect): string {
       return "spawn job";
     case "cancel_job":
       return "cancel job";
+    case "label":
+      return `label ${effect.name}`;
   }
 }

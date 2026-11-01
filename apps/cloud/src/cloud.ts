@@ -10,6 +10,7 @@ import { blobStores, cloudEnv, modalSettings } from "./env.ts";
 import { githubClient } from "./github/api.ts";
 import { installationTokens } from "./github/app-auth.ts";
 import { drainOutbox } from "./outbox/drain.ts";
+import { agentExecutors } from "./outbox/agent-effects.ts";
 import { githubExecutors } from "./outbox/github-effects.ts";
 import { jobExecutors } from "./outbox/job-effects.ts";
 import { secretsKey } from "./secrets/seal.ts";
@@ -35,6 +36,12 @@ export function cloud() {
   const modal = modalSettings(env);
   const sealKey = env.INTENZO_SECRETS_KEY ? secretsKey(env.INTENZO_SECRETS_KEY) : null;
   const executors = {
+    ...agentExecutors({
+      db,
+      github,
+      reportBaseUrl: reportBaseUrl(env),
+      fixerSecret: env.INTENZO_FIXER_SECRET ?? null,
+    }),
     ...githubExecutors({
       db,
       github,

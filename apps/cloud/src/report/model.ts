@@ -41,6 +41,12 @@ export function shownRun(groupRuns: readonly RunRow[]): RunRow | undefined {
  * report: they're too long for a line.
  */
 export function readingsLine(lane: LaneResult): string | null {
+  const parts = readingParts(lane).map((p) => p.value);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/** readingsLine()'s readings one by one, with their labels: "order total", "+1 s $50.00" (§26.3). */
+export function readingParts(lane: LaneResult): { label: string; value: string }[] {
   const t0 = lane.tTriggerMs;
   // Stored JSON: tolerate a lane without readings rather than fail the whole report.
   const readings = (lane.readings ?? []).filter((r) => r.phase !== "pre");
@@ -48,7 +54,7 @@ export function readingsLine(lane: LaneResult): string | null {
   const shown = element
     ? readings.filter((r) => r.label === element && r.kind !== "region_diff")
     : readings.filter((r) => r.label === "live regions" && r.value && r.value !== "no change");
-  const parts = shown.map((r) => {
+  return shown.map((r) => {
     const when =
       r.phase === "after_reload"
         ? "after reload"
@@ -56,9 +62,8 @@ export function readingsLine(lane: LaneResult): string | null {
           ? ""
           : `+${Math.round((r.tMs - t0) / 1000)} s`;
     const value = r.kind === "absent" ? "(absent)" : (r.value ?? "").split("\n")[0];
-    return `${when} ${value}`.trim();
+    return { label: r.label, value: `${when} ${value}`.trim() };
   });
-  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 const PublicRef = z.object({ store: z.literal("public"), path: z.string().min(1) });
@@ -67,6 +72,18 @@ const PublicRef = z.object({ store: z.literal("public"), path: z.string().min(1)
 function gifOf(stored: unknown, publicFile?: PublicFile): string | null {
   const ref = PublicRef.safeParse(stored);
   return ref.success && publicFile ? publicFile(ref.data.path) : null;
+}
+
+/**
+ * §26.3: Send to agent presses left. The button only exists for agent_trigger: button (auto posts
+ * by itself), and only while the group has used fewer than max_agent_attempts.
+ */
+export function agentAttemptsLeft(
+  policy: { agent_handle?: string; agent_trigger: "button" | "auto"; max_agent_attempts: number },
+  used: number,
+): number {
+  if (!policy.agent_handle || policy.agent_trigger !== "button") return 0;
+  return Math.max(0, policy.max_agent_attempts - used);
 }
 
 /** A public file's URL by its path (§28: GIFs and stills go to the public store). */
@@ -181,6 +198,7 @@ export async function reportModel(
     policy: {
       inconclusive: config.policy.inconclusive_conclusion,
       agentHandle: config.policy.agent_handle ?? null,
+      agentAttemptsLeft: agentAttemptsLeft(config.policy, ctx.group.agentAttempts),
     },
   };
 }

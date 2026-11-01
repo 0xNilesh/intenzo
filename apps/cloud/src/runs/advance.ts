@@ -38,6 +38,7 @@ export async function advance(
         runs: groupRuns,
         previews: await storedPreviews(tx, repo!.id, [...shas], previewRules(repo!)),
         inconclusiveConclusion: repoConfig(repo!).policy.inconclusive_conclusion,
+        agentUsedUp: agentUsedUp(repoConfig(repo!).policy, group.agentAttempts),
       },
       fact,
       clock,
@@ -90,4 +91,12 @@ function toRun(row: typeof runs.$inferSelect): Run {
     deadlineAt: row.deadlineAt,
     finishedAt: row.finishedAt,
   };
+}
+
+/** §26.3: the repo has a fixer agent and the group has used all its attempts. */
+export function agentUsedUp(
+  policy: { agent_handle?: string; max_agent_attempts: number },
+  used: number,
+): boolean {
+  return Boolean(policy.agent_handle) && used >= policy.max_agent_attempts;
 }
