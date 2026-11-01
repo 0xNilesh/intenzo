@@ -538,17 +538,17 @@
 - [x] **Verify:** `@live`: the C4 GIF highlights the discount slice of the canvas chart.
 
 ### T5.3 muse-fixer reference agent (`agents/muse-fixer`)
-- [ ] **Build:**
+- [x] **Build:**
   - the workflow with all §26.4 guards: bot author, `sig`, same-repo only, concurrency group, `contents: read`
   - an App token via `actions/create-github-app-token`
   - `pnpm install --ignore-scripts`
   - a Muse Code call (per the P0 decision), patch, typecheck, push with the App token
-- [ ] **Tests:**
+- [x] **Tests:**
   - a payload with a bad signature → exits without changes
   - a fork PR → exits
   - a human comment in the bot format → exits
   - a valid payload on a test branch → a commit is pushed and **CI runs on it**
-- [ ] **Verify:** trigger it by hand once on a scratch PR.
+- [x] **Verify:** trigger it by hand once on a scratch PR.
 
 ### T5.4 "Send to agent" loop
 - [ ] **Build:** requested actions by outcome (§26.2); `fix` → outbox `agent:{group}:{n}` with an atomic counter; `needs-human` after the max.
