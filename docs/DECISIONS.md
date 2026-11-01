@@ -5,6 +5,21 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · A ticket's intent is reused across the repo's PRs (P5 gate)
+
+The P5 gate's two loops (demo-shop #23 and #24, both closing #5) started within two minutes of each other on Modal. Both intent calls got Meta's 404 `model_not_found` first (#115).
+- **#24's** answered after waits of 5 and 15 s.
+- **#23's** answered 404 to all six tries, over about 3.5 minutes, and the run failed "the ticket couldn't be read".
+
+### Decisions
+
+1. **The Cloud reuses an intent version from any PR of the same repo with the same ticket hash**: the PR's own first, else the latest; never one with no criteria.
+   - _Why:_ the intent depends on the ticket and its recording alone, and every call that isn't made can't fail. The outage isn't a short blip: one worker kept getting the 404 for minutes while another, at the same time, read the same ticket. Waiting longer (#115) doesn't help such a worker.
+   - _Alternatives:_ falling back to another model for intent (Wonder costs about ten times as much; contributor mode is cheaper but trades data use, which the owner hasn't agreed to).
+   - _Next:_ a ticket edited after its first read gets a new hash, so it's read again as before.
+
+---
+
 ## 2026-11-01 · The billing meter (T5.7, #46)
 
 `pnpm --filter @intenzo/cloud test billing`: 5 tests passed, among them §16.3's three cases (a group whose runs judged nothing is never billed; the first judged run bills it once; the 6th judged run makes a second unit).

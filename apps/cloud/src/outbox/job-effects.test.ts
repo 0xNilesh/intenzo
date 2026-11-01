@@ -165,6 +165,24 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
     });
   });
 
+  it("reuses the intent another PR of the repo read from the same ticket (P5 gate)", async () => {
+    const other = await ensureRunGroup(t.db, repoId, 8);
+    await t.db.insert(intentVersions).values({
+      runGroupId: other.id,
+      ticketHash: HASH,
+      intentJson: { criteria: CRITERIA, intentSource: "linked_issue_video", ticketHash: HASH },
+    });
+    await drainWith(async () => ({
+      bundleUrl: "https://private.blob.example/b.json",
+      ticketHash: HASH,
+      bundle: {} as never,
+      repoPublic: false,
+    }));
+    expect(calls[0]!.body).toMatchObject({
+      intent: { criteria: [{ id: "C1" }], ticketHash: HASH },
+    });
+  });
+
   it("never reuses an intent with no criteria: the job reads the ticket again", async () => {
     await t.db.insert(intentVersions).values({
       runGroupId: groupId,
