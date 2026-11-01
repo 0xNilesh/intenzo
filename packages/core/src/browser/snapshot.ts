@@ -1,6 +1,6 @@
 import type { Page } from "playwright";
 
-import { type SnapshotLine, snapshotLines, subtrees } from "../changes/diff.ts";
+import { LANDMARK, type SnapshotLine, snapshotLines, subtrees } from "../changes/diff.ts";
 import type { Target } from "../schema/index.ts";
 import { locate } from "./readings.ts";
 
@@ -27,7 +27,9 @@ export async function routeSnapshot(
       const element = locate(page, target).first();
       if ((await element.count()) === 0) continue; // the base app may not have it
       const own = snapshotLines(await element.ariaSnapshot({ timeout: 2_000 }), { users })[0];
-      if (!own) continue;
+      // A container (the navigator watches the Order summary when the discount line isn't there
+      // yet, T5.6) is a region: what's inside it goes to the classifier, not out of the diff.
+      if (!own || LANDMARK.test(own.text)) continue;
       lines.forEach((line, k) => {
         if (line.text === own.text) roots.add(k);
       });
