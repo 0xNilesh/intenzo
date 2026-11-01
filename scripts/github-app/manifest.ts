@@ -46,3 +46,22 @@ export function buildManifest(options: ManifestOptions) {
     default_events: EVENTS,
   };
 }
+
+/**
+ * The intenzo-fixer App (§26.4): muse-fixer pushes its fixes with this App's token, so the push
+ * starts the repo's CI. It can write code and nothing else, and gets no webhooks.
+ */
+export const FIXER_PERMISSIONS = { contents: "write", metadata: "read" } as const;
+
+export function buildFixerManifest(options: Omit<ManifestOptions, "hookUrl">) {
+  return {
+    name: options.name,
+    url: "https://github.com/0xNilesh/intenzo",
+    description: options.description,
+    hook_attributes: { url: "https://example.com/intenzo-fixer-has-no-webhook", active: false },
+    redirect_url: options.redirectUrl,
+    public: false,
+    default_permissions: FIXER_PERMISSIONS,
+    default_events: [],
+  };
+}
