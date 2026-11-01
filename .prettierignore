@@ -13,3 +13,5 @@ apps/cloud/drizzle
 fixtures/aria/*.yml
 # Written by pnpm bench:record, one pack per line (T6.2).
 bench/intentbench/manifest.json
+# Python virtualenvs (bench/analysis/.venv, T6.4) hold third-party code.
+.venv
