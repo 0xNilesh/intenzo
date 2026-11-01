@@ -150,7 +150,12 @@ describe("reportModel", () => {
     ]);
     expect(model.reportUrl).toBe(`${BASE}/r/${RUN_2}`);
     expect(model.history).toEqual([{ headSha: "af1065e", attemptNo: 1, outcome: "superseded" }]);
-    expect(model.policy).toEqual({ inconclusive: "neutral", agentHandle: null });
+    // demo-shop's seed config names no agent, so there's no button to press.
+    expect(model.policy).toEqual({
+      inconclusive: "neutral",
+      agentHandle: null,
+      agentAttemptsLeft: 0,
+    });
   });
 
   it("describes a given run, so a superseded run's check run keeps saying so", async () => {

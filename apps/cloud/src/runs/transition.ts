@@ -49,6 +49,11 @@ export interface Group {
   previews: ReadonlyMap<string, string>;
   /** The repo's policy.inconclusive_conclusion (§22.5). */
   inconclusiveConclusion: "neutral" | "failure";
+  /**
+   * §26.3: the fixer agent has had all its attempts, so a run that fails now needs a human. False
+   * when the repo has no agent.
+   */
+  agentUsedUp?: boolean;
 }
 
 /** Something that happened to the group, already filtered by the webhook handlers (§17). */
@@ -87,7 +92,9 @@ export type Effect =
   /** Re-render the group's one comment from the database (§26.1). */
   | { kind: "comment"; groupId: number }
   | { kind: "spawn_job"; runId: string }
-  | { kind: "cancel_job"; runId: string };
+  | { kind: "cancel_job"; runId: string }
+  /** §26.3: label the pull request, once: `needs-human` after the agent's last attempt failed. */
+  | { kind: "label"; groupId: number; name: "needs-human" };
 
 export interface Decision {
   /** Runs to insert, already in their state after the fact. */
@@ -284,6 +291,9 @@ export function decide(group: Group, fact: Fact, clock: Clock): Decision {
               jobEnded: true,
             },
       );
+      if (fact.kind === "job_finished" && fact.outcome === "fail" && group.agentUsedUp) {
+        effects.push({ kind: "label", groupId: group.id, name: "needs-human" });
+      }
       break;
     }
   }
