@@ -68,7 +68,7 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
           bundleUrl = built.bundleUrl;
           repoPublic = built.repoPublic;
           if (built.ticketHash)
-            intent = await reusedIntent(deps.db, ctx.group.id, built.ticketHash);
+            intent = await reusedIntent(deps.db, ctx.group.id, ctx.repo.id, built.ticketHash);
           // The comment says which ticket it verified against (§26.1).
           const ticket = built.bundle.ticket;
           await deps.db
@@ -146,14 +146,34 @@ export async function cachedPaths(db: Db, groupId: number): Promise<SavedPath[]>
 }
 
 /** The intent an earlier run of the group read from the same ticket (§18), if any. */
-async function reusedIntent(db: Db, groupId: number, hash: string): Promise<CriterionSet | null> {
-  const [row] = await db
-    .select({ intent: intentVersions.intentJson })
+/**
+ * §18: the criteria an earlier run read from the same ticket (the same text and recording): this
+ * PR's own first, else the latest any PR of the repo read. The intent depends on the ticket alone,
+ * and every call that isn't made can't fail: Meta's 404 model_not_found once lasted minutes on
+ * one worker while another read the same ticket (P5 gate). An intent with no criteria is never
+ * reused: the ticket is read again (P4 gate).
+ */
+async function reusedIntent(
+  db: Db,
+  groupId: number,
+  repoId: number,
+  hash: string,
+): Promise<CriterionSet | null> {
+  const rows = await db
+    .select({ intent: intentVersions.intentJson, groupId: intentVersions.runGroupId })
     .from(intentVersions)
-    .where(and(eq(intentVersions.runGroupId, groupId), eq(intentVersions.ticketHash, hash)));
-  const intent = row ? CriterionSet.safeParse(row.intent).data : undefined;
-  // An intent with no criteria is never reused: the ticket is read again (P4 gate).
-  return intent && intent.criteria.length > 0 ? intent : null;
+    .innerJoin(runGroups, eq(intentVersions.runGroupId, runGroups.id))
+    .where(and(eq(runGroups.repoId, repoId), eq(intentVersions.ticketHash, hash)))
+    .orderBy(desc(intentVersions.id));
+  const ordered = [
+    ...rows.filter((r) => r.groupId === groupId),
+    ...rows.filter((r) => r.groupId !== groupId),
+  ];
+  for (const row of ordered) {
+    const intent = CriterionSet.safeParse(row.intent).data;
+    if (intent && intent.criteria.length > 0) return intent;
+  }
+  return null;
 }
 
 /** The repo's secrets for its job; a repo with sealed secrets and no key to open them is an error. */
