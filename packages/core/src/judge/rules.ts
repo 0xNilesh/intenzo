@@ -57,8 +57,9 @@ function lineForms(line: string): string[] {
 
 /**
  * §22.3 valueMatches, on tokens rather than substrings. If the cited value has numbers, each must
- * equal a whole numeric token of a cited reading (5.00 ≠ 45.00). Otherwise the normalized value
- * must equal a whole line of a cited reading, or the text of a region_diff line. Empty → no match.
+ * equal a whole numeric token of a cited reading (5.00 ≠ 45.00). Otherwise each of its lines must
+ * equal a whole line of a cited reading, or the text of a region_diff line, so a judge may copy a
+ * reading's whole value, as judge.v1 asks, even when it has several lines (#127). Empty → no match.
  */
 export function valueMatches(citedValue: string | null, cited: readonly Reading[]): boolean {
   if (citedValue === null || citedValue.trim() === "") return false;
@@ -68,8 +69,9 @@ export function valueMatches(citedValue: string | null, cited: readonly Reading[
     const have = new Set(lines.flatMap(numbersIn));
     return wanted.every((n) => have.has(n));
   }
-  const value = normalize(citedValue);
-  return lines.some((line) => lineForms(line).includes(value));
+  const forms = new Set(lines.flatMap(lineForms));
+  const values = citedValue.split("\n").filter((line) => line.trim() !== "");
+  return values.every((value) => forms.has(normalize(value)));
 }
 
 /** §22.3 per judge: a wrong target is inconclusive; a pass or fail must cite matching readings. */
