@@ -513,6 +513,7 @@
   - *Live, demo-shop#16 (the almost-right code, "Closes #5"):* the four criteria came from the recording at +61 s, in the PM's order (C1 the total, C2 the line, C3 the expired code, C4 the chart); the navigator explored all four; C1 ❌ (confirmed on a second take), C2–C4 ✅: "❌ 3/4 passed" in 127 s, 💲 $0.20. demo-shop was made public first (DECISIONS 2026-10-31 · Hosted intent).
 
 ### ✅ Phase 4 gate: `pnpm gate:p4`
+- **Passed 2026-11-01** (#39): `pnpm gate:p4 --almost-right=17 --correct=18`. Six hosted runs on demo-shop PRs that close #5, every run's criteria read from the PM's recording. The almost-right PR: 3 of 3 runs "❌ 3/4 passed", the total ❌ with its readings "+0 s $50.00 · +1 s $50.00 · +3 s $50.00"; the correct PR: 3 of 3 runs "✅ 4/4 passed" (0 false fails). 0 of 24 verdicts inconclusive; median 75 s verifying (88 s from the push); median $0.079 a run. Matched by what each criterion is about, not by number, and `gate:p3`'s live part is P3's (DECISIONS 2026-11-01 · P4 gate).
 - `gate:p3` passes, plus all P4 tests.
 - **Golden test:** on the almost-right PR, the hosted run's comment matches `demo/expected-comment.md` (verdict per criterion, the readings line for C2) in **3 of 3 runs**.
 - On the correct PR, all criteria `pass` in 3 of 3 runs (**0 false fails**).

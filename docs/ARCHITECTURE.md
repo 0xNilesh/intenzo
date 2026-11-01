@@ -1203,7 +1203,14 @@ Baseline: main@a1b2c3 (merge base) · Judges: Spark Open + Spark 1.3 (agreement 
 | **First run with a failure** | verdicts ≈ 3–5 min; evidence streams 30–60 s later | exploration + intent + re-recording the failing lane + SAM. Measured in the P3 gate on demo-shop: **2 Wonder calls and 5.5–7.3 s per criterion** (mean 6.1 s, 12 runs), about $0.014 each, so exploring 4 criteria adds about 25 s when done one at a time |
 | Fix loop (button → agent → Vercel rebuild → new run) | ≈ 3–4 min | the agent ≈ 60–90 s, the Vercel build ≈ 60 s, the new run reuses intent and paths |
 
-All numbers get re-measured on Friday with the walking skeleton, and this table is updated.
+**Measured at the P4 gate (2026-11-01), hosted, demo-shop, 4 criteria, both judges:**
+
+| Run | Verifying (preview ready → verdict) | From the push | Cost |
+|---|---|---|---|
+| A PR's first run: intent from the recording (Transcribe + Spark video, ~45 s), coverage, exploring all 4, a fail re-recorded | 115–126 s | 118–128 s | $0.18–0.20 |
+| Later runs: intent version reused, cached paths | 66–78 s | 80–93 s | $0.07–0.09 |
+
+Across the gate's six runs: median 75 s verifying, 88 s from the push, 0 of 24 verdicts inconclusive. The preview build is the rest: 13–16 s after the run is created on an empty commit.
 
 Demo: Modal pre-warmed (Baseten Model APIs showed no cold start). Demo paths are explored once beforehand, and the video says so. The fix loop is shown with an honest on-screen time-lapse marker.
 
