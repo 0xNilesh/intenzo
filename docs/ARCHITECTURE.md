@@ -644,6 +644,7 @@ Built in T2.3 (`apps/cloud/src/github/handlers.ts`, `src/runs/advance.ts`):
   - Runs where every criterion is `setup_failed`, `precondition_unmet`, `not_verifiable`, `no_isolation` or `infra_error` are **never** billed.
   - Every further 5 judged runs in the same group (the first one included in the count) adds one unit.
   - Hackathon: metered and displayed only.
+- **Built in T5.7** (`apps/cloud/src/billing/meter.ts`): `advance()` meters each run its decision finishes, in the same transaction. A run counts when it ends pass, fail, inconclusive or error (not superseded or cancelled) with at least one `pass` or `fail` verdict stored: `judged_runs` + 1, and `billed_at` set the first time. Units are `ceil(judged_runs / 5)`, shown in the comment's footer as "🧾 1 unit (2 judged runs)".
 
 ### 16.4 `advance()` and the outbox
 ```
