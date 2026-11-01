@@ -252,8 +252,9 @@ async function failedRun(sha: string, minute: number, outcome: "fail" | "pass" =
   return id;
 }
 
+// A fix request carries the payload's header; the report comment only names the agent.
 const requests = () =>
-  sent.filter((s) => s.call === "POST comment" && s.body.body.includes("@intenzo-fixer"));
+  sent.filter((s) => s.call === "POST comment" && s.body.body.includes("UNTRUSTED DATA"));
 const agentRows = () => t.db.select().from(outbox).where(eq(outbox.effect, "agent"));
 const attempts = async () =>
   (await t.db.select().from(runGroups).where(eq(runGroups.id, groupId)))[0]!.agentAttempts;
@@ -278,6 +279,9 @@ describe("Send to agent (§26.2, §26.3)", () => {
     ]);
 
     expect(requests()).toHaveLength(1);
+    // GitHub shows nothing on a press: the report comment says the request went out.
+    const report = sent.filter((s) => s.call === "PATCH comment").at(-1)!.body.body as string;
+    expect(report).toContain("🤖 Sent to `@intenzo-fixer` for a fix (request 1 of 2)");
     const request = parseFixerComment(requests()[0]!.body.body)!;
     expect(verifyFixerSig(SECRET, request)).toBe(true);
     expect(request).toMatchObject({

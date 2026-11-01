@@ -9,6 +9,7 @@ import { buildFixerPayload, type FixerPayload } from "@intenzo/core/fixer";
 import type { Db } from "../db/db.ts";
 import { repoConfig } from "../db/repos.ts";
 import { criteriaResults, intentVersions, outbox, repos, runGroups, runs } from "../db/schema.ts";
+import { enqueueEffects } from "../outbox/rows.ts";
 import { agentAttemptsLeft, readingParts, shownRun, type StoredEvidence } from "../report/model.ts";
 
 export type FixRequest = { sent: number } | { skipped: string };
@@ -70,6 +71,8 @@ export function requestFix(db: Db, runId: string): Promise<FixRequest> {
         },
       ])
       .onConflictDoNothing({ target: outbox.idemKey });
+    // The comment says the request went out: GitHub shows nothing on a press.
+    await enqueueEffects(tx, group!.id, [{ kind: "comment", groupId: group!.id }]);
     return { sent: n };
   });
 }

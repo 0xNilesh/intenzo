@@ -147,6 +147,14 @@ export function reportBody(model: ReportModel): string {
     facts.push(`Judges: ${run.judges.map((j) => cell(j, 60)).join(" + ")}`);
   // Blank lines between them: the Checks tab doesn't turn a single newline into a break.
   if (facts.length > 0) lines.push(facts.join(" · "), "");
+  if (model.agentRequest && model.policy.agentHandle) {
+    // In backticks, so the handle notifies no one (§26.3).
+    const { attempt, max } = model.agentRequest;
+    lines.push(
+      `🤖 Sent to \`${model.policy.agentHandle}\` for a fix (request ${attempt} of ${max})`,
+      "",
+    );
+  }
   if (run.outcome === "inconclusive" && criteria.length > 0) {
     lines.push(
       `Inconclusive is reported as **${model.policy.inconclusive}** here (\`policy.inconclusive_conclusion\`).`,
