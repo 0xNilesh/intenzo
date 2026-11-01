@@ -18,6 +18,8 @@ export interface GitHubEffectDeps {
   github: (installationId: number) => GitHub;
   /** Where the report pages live: https://intenzo-cloud.vercel.app */
   reportBaseUrl: string;
+  /** The public Blob store's URL for a path (evidence GIFs, §28); absent when it isn't set. */
+  publicFile?: (path: string) => string | null;
 }
 
 export function githubExecutors(deps: GitHubEffectDeps): Record<string, EffectExecutor> {
@@ -60,7 +62,13 @@ export function checkRunExecutor(deps: GitHubEffectDeps): EffectExecutor {
           .where(eq(runs.id, runId));
         const { run, repo, installation } = ctx!;
         const github = deps.github(installation.ghInstallationId);
-        const model = await reportModel(tx, run.runGroupId, deps.reportBaseUrl, runId);
+        const model = await reportModel(
+          tx,
+          run.runGroupId,
+          deps.reportBaseUrl,
+          runId,
+          deps.publicFile,
+        );
         const payload = checkRunPayload(model!);
         const fields = {
           status: payload.status,
@@ -133,7 +141,13 @@ export function commentExecutor(deps: GitHubEffectDeps): EffectExecutor {
           .where(eq(runGroups.id, groupId));
         const { group, repo, installation } = ctx!;
         const github = deps.github(installation.ghInstallationId);
-        const model = await reportModel(tx, groupId, deps.reportBaseUrl);
+        const model = await reportModel(
+          tx,
+          groupId,
+          deps.reportBaseUrl,
+          undefined,
+          deps.publicFile,
+        );
         if (!model) return null; // a group without runs has nothing to say yet
         const body = renderComment(model);
         const comments = `/repos/${repo.fullName}/issues/${group.prNumber}/comments`;

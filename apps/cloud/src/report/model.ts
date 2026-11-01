@@ -9,6 +9,7 @@ import {
   type VerdictValue,
 } from "@intenzo/core";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 
 import type { Db } from "../db/db.ts";
 import { repoConfig } from "../db/repos.ts";
@@ -60,9 +61,21 @@ export function readingsLine(lane: LaneResult): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+const PublicRef = z.object({ store: z.literal("public"), path: z.string().min(1) });
+
+/** The evidence GIF's URL, when the worker sent one and the public store is known. */
+function gifOf(stored: unknown, publicFile?: PublicFile): string | null {
+  const ref = PublicRef.safeParse(stored);
+  return ref.success && publicFile ? publicFile(ref.data.path) : null;
+}
+
+/** A public file's URL by its path (§28: GIFs and stills go to the public store). */
+export type PublicFile = (path: string) => string | null;
+
 function reportCriterion(
   c: { id: string; text: string; expected: string },
   result: ResultRow | undefined,
+  publicFile?: PublicFile,
 ): ReportCriterion {
   const evidence = (result?.evidenceJson ?? {}) as StoredEvidence;
   const lanes = (result?.lanesJson ?? []) as LaneResult[];
@@ -83,6 +96,7 @@ function reportCriterion(
     observed: evidence.observed ?? null,
     clip,
     readings: pr ? readingsLine(pr) : null,
+    gif: gifOf(evidence.gif, publicFile),
   };
 }
 
@@ -95,6 +109,7 @@ export async function reportModel(
   groupId: number,
   reportBaseUrl: string,
   runId?: string,
+  publicFile?: PublicFile,
 ): Promise<ReportModel | null> {
   const [ctx] = await db
     .select({ group: runGroups, repo: repos })
@@ -122,6 +137,7 @@ export async function reportModel(
         reportCriterion(
           c,
           results.find((r) => r.criterionId === c.id),
+          publicFile,
         ),
       );
     }

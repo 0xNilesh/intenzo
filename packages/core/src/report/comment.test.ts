@@ -163,6 +163,19 @@ describe("renderComment (§26.1)", () => {
     await expect(renderComment(m)).toMatchFileSnapshot(`./__snapshots__/comment.${name}.md`);
   });
 
+  it("shows a failed criterion's GIF inline, and keeps the clip link for the others (§26.1)", () => {
+    const gif =
+      "https://klfpiscdv04whptv.public.blob.vercel-storage.com/runs/r/C2/pr/take-1/evidence.gif";
+    const text = renderComment({
+      ...failing,
+      criteria: failing.criteria.map((c) => ({ ...c, gif: c.id === "C2" ? gif : `${gif}?other` })),
+    });
+    expect(text).toContain(
+      `| ❌ | **C2** The total drops 10% to $45.00 right away, with no refresh | ![C2](${gif}) |`,
+    );
+    expect(text).toContain("| ✅ | **C1** SAVE10 takes 10% off the cart | [▶ 0:04–0:08]");
+  });
+
   it("starts with the group's marker, so a lost comment id can be found again", () => {
     expect(renderComment(model()).startsWith("<!-- intenzo:run-group:2 -->\n")).toBe(true);
   });
