@@ -5,6 +5,26 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · A citation may copy a reading's whole value (#127)
+
+T6.3's first run judged the tuning split's 14 criteria once with arms A, B and C (Spark 1.3; `bench/results/judge-tuning.json` on the T6.3 branch).
+
+### What we found
+
+| Check | Result |
+| --- | --- |
+| undo-almost-right C1, arms B and C | Both judges said pass, which is right, citing reading 3's whole value: `+ status: Removed Ceramic mug` and `+ button "Undo"`. `valueMatches` compared the citation with one line at a time, so both passes became `inconclusive (contradicts_readings)` |
+| The rest of the run | The only 2 of 50 calls the §22.3 checks changed. A got 14 of 14 right; B and C 13 of 14, the two above |
+
+### Decisions
+
+1. **A citation of several lines matches when each of its lines equals a whole line of the cited readings.**
+   - _Why:_ judge.v1 asks for the decisive value "copied exactly from the value of one of those readings", and a region diff has a line per change, so a toast with a button is two lines. The rule was stricter than its own prompt and turned a right pass into an inconclusive. Each line must still be a whole line, so no substring passes ("+ status: Removed" doesn't match).
+   - _Alternatives:_ asking for one line in the prompt would change judge.v1 for every repo, to fit a rule that was wrong.
+   - _Next:_ only the worker runs this check, so the worker on Modal is redeployed with it. The demo's toasts are one line, so it wasn't affected. T6.3 judges the tuning split again before the held-out run.
+
+---
+
 ## 2026-11-01 · IntentBench's evidence packs (T6.2, #49)
 
 `pnpm bench:record` explored and recorded all 42 criteria of the 12 cases on their Vercel previews, with demo-shop's config, at concurrency 2. It recorded 39 packs in 13.9 min. After #123, 11 were recorded again in 5.6 min. The numbers below come from `bench/intentbench/manifest.json` and the packs, which are local.

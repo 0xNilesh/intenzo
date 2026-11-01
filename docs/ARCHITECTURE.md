@@ -1058,6 +1058,7 @@ final = A'.verdict == B'.verdict ∈ {pass, fail}  → that verdict (reason agre
   - Tokenize both strings into numbers (currency/thousands stripped, parsed to 2-decimal values) and quoted or contiguous words.
   - If `citedValue` contains numbers, **every number must equal a whole numeric token** of a cited reading (`5.00` does not match `45.00`).
   - Otherwise the normalized cited string must **equal** a whole line of the reading, or a `region_diff` line (`+ alert "This code has expired"`).
+  - A citation of several lines, such as a region diff's whole value copied as judge.v1 asks, matches when **each of its lines** does (#127).
   - An empty or null `citedValue` with non-empty `watch` → no match.
   - An `absent` reading has no value to cite. A live-region diff with nothing in it reads `no change`, which is citable: that's how a missing toast or error is cited (both judges did exactly this in T0.3).
 - **Live-region readings count as citable.** A toast or portal error cited from the live-region diff satisfies the rule.
