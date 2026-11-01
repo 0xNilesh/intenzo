@@ -1,6 +1,7 @@
-// The stub verdicts (ROADMAP T2.7): until the judges arrive (P4), a job reports the demo ticket's
-// criteria (fixtures/criteria) with fixed verdicts, as the almost-right branch earns them: C2
-// fails, the rest pass. Every verdict names "stub" as its judge, so the report says so.
+// The stub verdicts (ROADMAP T2.7): when the worker has no judges (no model keys, as in the README's
+// quick start), a job reports the demo ticket's criteria (fixtures/criteria) with fixed verdicts,
+// as the almost-right branch earns them: C2 fails, the rest pass. Every verdict names "stub" as its
+// judge, so the report says so.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -31,7 +32,9 @@ export function stubIntent(): CriterionSet {
 
 export function stubVerdict(criterionId: string): Verdict {
   const verdict = STUB_VERDICTS[criterionId] ?? "inconclusive";
-  const observed = "Stub verdict: fixed until the judges arrive (P4).";
+  // What a reader of the README's quick start sees with no keys, and a worker without them reports.
+  const observed =
+    "Stub verdict, not a judgement: the judges need META_API_KEY and BASETEN_API_KEY.";
   const judge = {
     model: "stub",
     verdict,
