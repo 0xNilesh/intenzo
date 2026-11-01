@@ -106,6 +106,10 @@ in red over the window from 1 s before the trigger to 3 s after it. For a `ui_vi
 (C4's chart, T5.2), Spark 1.3 points at what it's about and SAM 3.1 outlines that thing on each
 frame instead: about $0.014 and 12 s more (the point $0.004, SAM's 50-frame minimum $0.01).
 
+After the verdicts, a run with a baseline also looks for unrequested changes (ARCHITECTURE §24,
+T5.6): each criterion's route is snapshotted on both sides, diffed, and what no criterion explains
+is sent as `changes_done`. One more Spark 1.3 call when anything is left to classify.
+
 ## `intenzo job` (T2.5a, T2.7b)
 
 Runs one job (ARCHITECTURE §8), read from a file or stdin, which is how the Modal shim hands it over,

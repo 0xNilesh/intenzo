@@ -1120,6 +1120,13 @@ report: explainedBy == null && confidence ≥ 0.7 (max 3), e.g. 'checkout button
 ```
 The sequence diff handles inserted content without shifting everything after it, unlike a pixel diff. Cut order: last-but-one (§33).
 
+- **Built in T5.6** (`core/changes`, `core/browser/snapshot.ts`, `prompts/changes.v1.ts`; the worker's `detectChanges`):
+  - **What's dropped is narrower than above.** On demo-shop the renamed link sits inside the Order summary that C2 watches, so dropping everything inside a watched region would hide the very change the demo reports (DECISIONS 2026-11-01). Dropped: the lines the criteria's trigger targets and watched *elements* touch, line by line, plus a changed container holding one (the discount form around the field the trigger fills). A target that resolves to a landmark or named container counts as a region and drops nothing, since the navigator watches the Order summary when the discount line isn't on the page yet. The classifier decides the rest.
+  - **Snapshots:** Playwright's `ariaSnapshot()` of `body`, after the route settles, each side with its own shopper. Masked: that shopper, emails, dates, times and amounts. Diffed by line (LCS), and a hunk's landmark is its nearest enclosing landmark line.
+  - **Routes:** each criterion's path's first `goto` (else the start route), then coverage's routes, without ephemeral ids, at most 2. Skipped with no baseline, an unisolated base side, drift above 0 (the job now carries `baseDrift`), and for a run of some criteria only.
+  - **`changes.v1`** is text only: no element crops yet. The model says only what a criterion explains and how sure it is; the report's wording is the code's (`link "Checkout" → "Continue"`). Reported: unexplained, at least 0.7 sure, 3 at most. Stored as `runs.changes_json` (`changes_done`, migration 0006) and shown under the comment's table.
+  - **Measured (T5.6, demo-shop #22):** one change left after the drop, unexplained at 0.99, so the comment says `⚠️ Unrequested change on /cart: link "Checkout" → "Continue"`. On the correct code the only difference is the discount form, which is dropped.
+
 ## 25. Test generation (Muse Code). **Stretch for the hackathon.**
 - For each `pass` criterion with a portable path, **Muse Code** (testgen.v1) gets the saved path, the PASSING readings and `expected`. It returns a Playwright spec using the same durable targets, with assertions built from the passing readings:
   `await expect(page.getByTestId("order-total")).toHaveText("$45.00", { timeout: 1000 })`

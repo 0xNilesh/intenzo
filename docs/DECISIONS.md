@@ -5,6 +5,31 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · Unrequested-change detection (T5.6, #45)
+
+`/cart` was snapshotted on main's preview and on the almost-right and correct previews, each with a fresh shopper; the main and almost-right snapshots are kept as fixtures (`fixtures/aria/`). Then the run on demo-shop #22 (a copy of the almost-right code) did it hosted, twice.
+
+### What we found
+
+| Check | Result |
+|---|---|
+| main → almost-right, masked | Three differences before masking: the signed-in shopper, the added `form "Discount code"` (textbox and Apply), and `link "Checkout"` → `link "Continue"`. The shopper masks away |
+| Where the link is | Inside `region "Order summary"`, **the region C2 watches**. §24's "drop hunks inside regions touched by any criterion's watch region" would drop it |
+| main → correct | Only the discount form |
+| Run 1 on #22 | **No ⚠️**: "0 change(s) the criteria don't touch". The navigator had watched C2 with the whole Order summary as an *element*, so everything in it counted as touched |
+| Run 2, after the fix below | One change left; `changes.v1` called it unexplained at **0.99**; the comment said `⚠️ Unrequested change on /cart: link "Checkout" → "Continue"`, as the golden comment does. ❌ 3/4 in 2 m 3 s, $0.14 |
+
+### Decisions
+
+1. **Drop only what the criteria's triggers and watched elements touch, not everything inside a watched region.** That's line by line (a diff merges neighbouring changes into one hunk), plus a changed container holding a touched line, so the inserted discount form goes as a whole.
+   - _Why:_ the region rule would hide the demo's one unrequested change.
+   - _Alternatives:_ region-level drops with an exception list (brittle).
+2. **A target that resolves to a landmark or named container counts as a region**: it drops nothing. The navigator falls back to containers when the element it wants isn't on the page yet.
+3. **The report's wording comes from the code, the verdict from the model.** `describeHunk` writes `link "Checkout" → "Continue"`, while Spark only says what a criterion explains and how sure it is. That makes the line deterministic and lets the golden comment match it byte for byte.
+4. **`changes.v1` is text only for now**: no element crops. The snapshot carries roles and names, which is enough for renamed and added controls.
+
+---
+
 ## 2026-11-01 · Meta's transient 404 model_not_found (#115)
 
 Twice now, a demo PR's first run failed because Meta answered its intent call with HTTP 404 `model_not_found` for `muse-spark-1.3`, a model it serves: demo-shop #18 in the P4 gate, and #21 in T5.5.

@@ -561,13 +561,13 @@
 - [x] **Verify:** approve from a second GitHub account listed in `approvers`. *(Approved by the owner's own account, by his choice: DECISIONS 2026-11-01.)*
 
 ### T5.6 Unrequested-change detection (one route)
-- [ ] **Build:** the skip rules (no baseline, base not isolated, drift > 0); aria-snapshot sequence diff on the trigger route; masks for per-lane strings; drop hunks inside criterion regions; `changes.v1` classification.
-- [ ] **Tests:**
+- [x] **Build:** the skip rules (no baseline, base not isolated, drift > 0); aria-snapshot sequence diff on the trigger route; masks for per-lane strings; drop hunks inside criterion regions; `changes.v1` classification. *(Drops what the triggers and watched elements touch, not whole watched regions: DECISIONS 2026-11-01.)*
+- [x] **Tests:**
   - inserted content doesn't shift the diff
   - the ephemeral user name is masked
   - the change inside the C2 region is dropped
   - the "Checkout" → "Continue" fixture is reported
-- [ ] **Verify:** the ⚠️ line appears on the almost-right PR.
+- [x] **Verify:** the ⚠️ line appears on the almost-right PR.
 
 ### T5.7 Billing meter
 - [ ] **Build:** the §16.3 rule in the same transaction; displayed in the comment footer.
