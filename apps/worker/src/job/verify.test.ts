@@ -337,11 +337,27 @@ describe("the verify job with judges (T4.6b)", () => {
           lane,
           video: { humanFile, offsets: { human: 500 - T0, judge: -T0 } },
           judge: { video: humanFile },
+          boxTrack: [
+            {
+              tMs: T0 + 5500,
+              label: "order total",
+              box: [880, 410, 96, 24] as [number, number, number, number],
+            },
+          ],
         };
+      },
+      async evidence(input) {
+        evidence.push(input);
+        const gif = join(dir, `evidence-${evidence.length}.gif`);
+        const still = join(dir, `evidence-${evidence.length}.png`);
+        writeFileSync(gif, "GIF89a");
+        writeFileSync(still, "png");
+        return { gif, still, fps: 8, width: 640, bytes: 6, outlined: 30, frames: 40 };
       },
       async close() {},
     });
-    return { recorder, recorded, most: () => most };
+    const evidence: Parameters<NonNullable<Recorder["evidence"]>>[0][] = [];
+    return { recorder, recorded, most: () => most, evidence };
   }
 
   type Answer = "pass" | "fail" | "inconclusive";
@@ -367,7 +383,8 @@ describe("the verify job with judges (T4.6b)", () => {
           targetCorrect: true,
           citedReadings: verdict === "inconclusive" ? [] : [0],
           citedValue: verdict === "inconclusive" ? null : `VALUE ${take}`,
-          atMs: null,
+          // A decisive moment far from Tt: the evidence window must not follow it (§22.3).
+          atMs: verdict === "inconclusive" ? null : 60_000,
           observed: `${id} take ${take}: ${verdict}`,
         };
       }),
@@ -399,6 +416,47 @@ describe("the verify job with judges (T4.6b)", () => {
     expect(verdicts[0]!.judges.map((j) => j.model)).toEqual(["Spark Open", "Spark 1.3"]);
     expect(verdicts[0]!.observed).toBe("C1 take 1: pass");
     expect(cloud.events.at(-1)).toMatchObject({ kind: "finished", outcome: "fail" });
+  });
+
+  it("sends each judged criterion's GIF and still, in the public store, cut from Tt's window, not the judges' atMs (§23)", async () => {
+    const cloud = await fakeCloud();
+    const fake = judgingRecorder();
+    const judges = scriptedJudges((id) => (id === "C2" ? ["fail", "fail"] : ["pass", "pass"]));
+    await runJudged(verifyJob(cloud.base, { evidenceStore: "public" }), fake.recorder, judges.pair);
+    const sent = cloud.events.filter((e) => e.kind === "criterion_evidence") as Extract<
+      WorkerEvent,
+      { kind: "criterion_evidence" }
+    >[];
+    expect(sent.map((e) => e.criterionId).sort()).toEqual(["C1", "C2", "C3", "C4"]);
+    const c2 = sent.find((e) => e.criterionId === "C2")!;
+    // The fail was re-recorded: the GIF comes from the take the verdict rests on.
+    expect(c2.gif).toMatchObject({
+      store: "public",
+      path: `runs/${RUN}/C2/pr/take-2/evidence.gif`,
+      contentType: "image/gif",
+    });
+    expect(c2.still).toMatchObject({ store: "public", contentType: "image/png" });
+    const c2Input = fake.evidence.find((e) => e.caption.startsWith("C2"))!;
+    expect(c2Input).toMatchObject({
+      window: { startMs: T0 + 4000, endMs: T0 + 8000 },
+      tTriggerMs: T0 + 5000,
+      label: "order total",
+      caption: "C2 ❌ C2 take 2: fail",
+    });
+  });
+
+  it("keeps a private repo's evidence in the private store (§28)", async () => {
+    const cloud = await fakeCloud();
+    const judges = scriptedJudges((id) => (id === "C2" ? ["fail", "fail"] : ["pass", "pass"]));
+    await runJudged(verifyJob(cloud.base), judgingRecorder().recorder, judges.pair);
+    const sent = cloud.events.filter((e) => e.kind === "criterion_evidence") as Extract<
+      WorkerEvent,
+      { kind: "criterion_evidence" }
+    >[];
+    expect(sent).toHaveLength(4);
+    expect(sent.flatMap((e) => [e.gif.store, e.still.store]).every((s) => s === "private")).toBe(
+      true,
+    );
   });
 
   it("records a fail once more to confirm it, and cites the new take", async () => {

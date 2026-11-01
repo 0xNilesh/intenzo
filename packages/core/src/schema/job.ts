@@ -98,6 +98,11 @@ export const VerifyJob = JobBase.extend({
     })
     .nullable(),
   cachedPaths: z.array(SavedPath),
+  /**
+   * Where the evidence GIFs and stills go (§28): "public" only for a public repo, so GitHub can
+   * show them inline; absent means private, and the comment links the report instead.
+   */
+  evidenceStore: z.enum(["public", "private"]).optional(),
   /** Re-run only these criteria ("/intenzo rerun C2"). */
   only: z.array(CriterionId).optional(),
 });

@@ -53,6 +53,13 @@ import {
   recordWithPath,
   type ExploreResult,
 } from "@intenzo/core/navigator";
+import {
+  type BoxSample,
+  captionOf,
+  type EvidenceInput,
+  type EvidenceOutput,
+  outlinedLabel,
+} from "@intenzo/core/browser";
 
 import { type JobClient, StaleJobError } from "./client.ts";
 import { Limiter } from "./limiter.ts";
@@ -73,6 +80,8 @@ export interface LaneInput {
 export interface RecordedLane {
   /** humanVideo and videoOffsets are filled in here, once the video is uploaded. */
   lane: LaneResult;
+  /** Where each watched element was on every animation frame (§21.3), for the evidence GIF. */
+  boxTrack?: BoxSample[];
   /** human.mp4 on disk and both videos' offsets (§21.4), when the video could be made. */
   video: { humanFile: string; offsets: { human: number; judge: number } } | null;
   /** judge.mp4 and the annotated Tt+1000 still on disk, for the judges (§22.2). */
@@ -89,6 +98,8 @@ export interface ExploreInput {
 
 export interface Recorder {
   record(input: LaneInput): Promise<RecordedLane>;
+  /** Renders a criterion's evidence GIF and still (§23); the recorder's own Chromium draws them. */
+  evidence?(input: Omit<EvidenceInput, "outDir">): Promise<EvidenceOutput>;
   /** Explores the PR app for a criterion's trigger (§20.3), when the worker has the navigator. */
   explore?(input: ExploreInput): Promise<ExploreResult>;
   close(): Promise<void>;
@@ -168,18 +179,29 @@ export function recordedVerdict(
   };
 }
 
+/** A file of a take: videos to the private store, GIFs and stills to the public one (§28). */
+export interface StoredFile {
+  name: string;
+  contentType: string;
+  body: Uint8Array<ArrayBuffer>;
+  store?: "public" | "private";
+  /** The take the file belongs to: the evidence goes beside the video it's cut from (§28). */
+  take?: number;
+}
+
 /** Uploads one file of a take into the first take number no earlier job of the run has used. */
 async function uploadTake(
   client: JobClient,
   lane: LaneResult,
   runId: string,
-  file: { name: string; contentType: string; body: Uint8Array<ArrayBuffer> },
+  file: StoredFile,
 ): Promise<ArtifactRef> {
-  for (let take = 1; take <= MAX_TAKES; take++) {
+  const takes = file.take ? [file.take] : Array.from({ length: MAX_TAKES }, (_, i) => i + 1);
+  for (const take of takes) {
     const path = takePath(runId, lane.criterionId, lane.side, take, file.name);
     try {
       const [ref] = await uploadArtifacts(client, [
-        { store: "private", path, contentType: file.contentType, body: file.body },
+        { store: file.store ?? "private", path, contentType: file.contentType, body: file.body },
       ]);
       return ref!;
     } catch (err) {
@@ -203,10 +225,7 @@ export interface VerifyDeps {
   judges?: readonly [Judge, Judge] | null;
   log: (line: string) => void;
   /** Where a take's human video goes; by default the run's private Blob store (§28). */
-  store?: (
-    lane: LaneResult,
-    file: { name: string; contentType: string; body: Uint8Array<ArrayBuffer> },
-  ) => Promise<ArtifactRef>;
+  store?: (lane: LaneResult, file: StoredFile) => Promise<ArtifactRef>;
 }
 
 export interface VerifyResult {
@@ -219,6 +238,8 @@ export interface VerifyResult {
 interface Side {
   lane: LaneResult;
   judge: JudgeSide;
+  /** The human video and box track the evidence GIF is cut from (§23). */
+  evidence?: { humanFile: string; humanOffsetMs: number; boxTrack: BoxSample[] };
 }
 
 /** A verdict decided without the judges, in their place in the report (§22.1). */
@@ -348,7 +369,7 @@ export async function verify(
     path: SavedPath,
   ): Promise<Side | null> => {
     try {
-      const { lane, video, judge } = await recorder.record({
+      const { lane, video, judge, boxTrack } = await recorder.record({
         side,
         origin,
         criterion,
@@ -373,6 +394,10 @@ export async function verify(
           ...(judge?.video && { judgeVideo: judge.video }),
           ...(judge?.annotatedShot && { annotatedShot: judge.annotatedShot }),
         },
+        ...(video &&
+          boxTrack && {
+            evidence: { humanFile: video.humanFile, humanOffsetMs: video.offsets.human, boxTrack },
+          }),
       };
     } catch (err) {
       if (err instanceof StaleJobError) throw err;
@@ -506,7 +531,67 @@ export async function verify(
     }
     const lanes = [pr?.lane, recorded.base?.lane].filter((l): l is LaneResult => Boolean(l));
     await client.send({ kind: "criterion_verdict", verdict, lanes });
+    if (judges && pr) await sendEvidence(criterion, verdict, pr);
     return verdict;
+  };
+
+  /**
+   * §19 step 4, §23: the GIF and still of a judged criterion, cut from the take its verdict rests
+   * on over the evidence window, the watched element outlined. A failure here costs the report its
+   * GIF, never the verdict.
+   */
+  const sendEvidence = async (criterion: Criterion, verdict: Verdict, pr: Side) => {
+    const source = pr.evidence;
+    const window = verdict.evidenceWindow;
+    const tt = pr.lane.tTriggerMs;
+    if (
+      !recorder.evidence ||
+      !source ||
+      !window ||
+      tt === null ||
+      verdict.verdict === "inconclusive"
+    )
+      return;
+    // §28: a private repo's pages never go to the public store.
+    const evidenceStore = job.evidenceStore ?? "private";
+    // The element the readings watched, as the box track names it (§20.4: element watch targets).
+    const label = outlinedLabel(source.boxTrack, window);
+    try {
+      const rendered = await slots.run(() =>
+        recorder.evidence!({
+          humanVideo: source.humanFile,
+          humanOffsetMs: source.humanOffsetMs,
+          window,
+          tTriggerMs: tt,
+          boxTrack: source.boxTrack,
+          label,
+          caption: redact(captionOf(criterion.id, verdict.verdict, verdict.observed)),
+        }),
+      );
+      // Beside the take's video: the take its verdict rests on (after a re-record, the second).
+      const take = Number(/\/take-(\d+)\//.exec(pr.lane.humanVideo?.path ?? "")?.[1]) || undefined;
+      const gif = await store(pr.lane, {
+        name: "evidence.gif",
+        contentType: "image/gif",
+        body: readFileSync(rendered.gif),
+        store: evidenceStore,
+        ...(take && { take }),
+      });
+      const still = await store(pr.lane, {
+        name: "evidence.png",
+        contentType: "image/png",
+        body: readFileSync(rendered.still),
+        store: evidenceStore,
+        ...(take && { take }),
+      });
+      await client.send({ kind: "criterion_evidence", criterionId: criterion.id, gif, still });
+      log(
+        `${criterion.id}: evidence GIF, ${rendered.width} px at ${rendered.fps} fps, ${Math.round(rendered.bytes / 1024)} KB`,
+      );
+    } catch (err) {
+      if (err instanceof StaleJobError) throw err;
+      log(redact(`${criterion.id}: no evidence GIF: ${(err as Error).message}`).slice(0, 300));
+    }
   };
 
   const criteria = intent.criteria.filter((c) => !job.only || job.only.includes(c.id));
