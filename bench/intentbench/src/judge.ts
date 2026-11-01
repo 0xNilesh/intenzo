@@ -12,7 +12,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import type { Criterion, LaneResult } from "@intenzo/core";
 import {
@@ -428,7 +428,14 @@ export async function runJudge(
 
 if (import.meta.main) {
   process.loadEnvFile(`${ROOT}.env`);
-  const args = parseJudgeArgs(process.argv.slice(2));
+  const parsed = parseJudgeArgs(process.argv.slice(2));
+  // Paths are the caller's: pnpm runs this script from the package folder.
+  const fromUser = (p: string) => resolve(process.env.INIT_CWD ?? process.cwd(), p);
+  const args: JudgeArgs = {
+    ...parsed,
+    ...(parsed.out && { out: fromUser(parsed.out) }),
+    ...(parsed.redo && { redo: fromUser(parsed.redo) }),
+  };
   const started = Date.now();
   let results: Results;
   let out =
