@@ -1,5 +1,11 @@
 import { metaModelPort, sparkOpenPort } from "../models/meta.ts";
-import type { ModelPort, ModelUsage, ReasoningEffort } from "../models/port.ts";
+import type {
+  ContentPart,
+  ModelPort,
+  ModelRequest,
+  ModelUsage,
+  ReasoningEffort,
+} from "../models/port.ts";
 import { JUDGE_JSON_SCHEMA, JUDGE_SYSTEM, JUDGE_V1, JudgeReply } from "../prompts/judge.v1.ts";
 import type { Criterion, JudgeOutput, Verdict } from "../schema/index.ts";
 import { judgeBundle, type JudgeSide } from "./bundle.ts";
@@ -52,6 +58,28 @@ export function judgesFromEnv(
   ];
 }
 
+/**
+ * What a judge is asked (§22.2): judge.v1's system prompt, then the bundle's parts as the user
+ * message, with the strict reply schema, at the judge's effort. IntentBench asks with it too
+ * (T6.3), so its arms differ from the worker's judging only in the parts they send.
+ */
+export function judgeRequest(judge: Judge, parts: ContentPart[]): ModelRequest<JudgeOutput> {
+  return {
+    stage: "judge",
+    model: judge.model,
+    promptVersion: JUDGE_V1,
+    messages: [
+      { role: "system", content: JUDGE_SYSTEM },
+      { role: "user", content: parts },
+    ],
+    schema: JudgeReply,
+    jsonSchema: { name: "JudgeOutput", schema: JUDGE_JSON_SCHEMA },
+    maxTokens: MAX_TOKENS,
+    timeoutMs: TIMEOUT_MS,
+    ...(judge.effort && { reasoningEffort: judge.effort }),
+  };
+}
+
 export interface JudgeCall {
   judge: string;
   model: string;
@@ -88,25 +116,7 @@ export async function judgeCriterion(
     return { combined: pre, outputs: [null, null], checked: [none, none], calls: [] };
   }
   const bundle = judgeBundle(criterion, pr, base);
-  const messages = [
-    { role: "system" as const, content: JUDGE_SYSTEM },
-    { role: "user" as const, content: bundle.parts },
-  ];
-  const results = await Promise.all(
-    judges.map((j) =>
-      j.port.call({
-        stage: "judge",
-        model: j.model,
-        promptVersion: JUDGE_V1,
-        messages,
-        schema: JudgeReply,
-        jsonSchema: { name: "JudgeOutput", schema: JUDGE_JSON_SCHEMA },
-        maxTokens: MAX_TOKENS,
-        timeoutMs: TIMEOUT_MS,
-        ...(j.effort && { reasoningEffort: j.effort }),
-      }),
-    ),
-  );
+  const results = await Promise.all(judges.map((j) => j.port.call(judgeRequest(j, bundle.parts))));
   const outputs = results.map((r) => (r.ok ? r.output : null)) as [
     JudgeOutput | null,
     JudgeOutput | null,

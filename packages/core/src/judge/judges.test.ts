@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { sparkOpenPort } from "../models/meta.ts";
 import { scriptedPort, type ScriptedPort } from "../models/scripted.ts";
 import { Criterion, LaneResult, type JudgeOutput } from "../schema/index.ts";
-import { type Judge, judgeCriterion, judgesFromEnv, verdictOf } from "./judges.ts";
+import { judgeBundle } from "./bundle.ts";
+import { type Judge, judgeCriterion, judgeRequest, judgesFromEnv, verdictOf } from "./judges.ts";
 
 const T0 = 1_900_000_000_000;
 const TT = T0 + 4500;
@@ -92,6 +93,10 @@ describe("judgeCriterion (§22)", () => {
       "Spark Open true",
       "Spark 1.3 true",
     ]);
+    // What IntentBench sends (T6.3) is exactly what the worker sends.
+    const parts = judgeBundle(C2, { lane: lane() }).parts;
+    expect(ports[0].requests[0]).toEqual(judgeRequest(pair[0], parts));
+    expect(ports[1].requests[0]).toEqual(judgeRequest(pair[1], parts));
 
     const verdict = verdictOf(C2, judged, pair, TT);
     expect(verdict).toMatchObject({

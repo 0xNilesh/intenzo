@@ -2,6 +2,7 @@
 export { judgeBundle, renderJudgeText, type JudgeBundle, type JudgeSide } from "./bundle.ts";
 export {
   judgeCriterion,
+  judgeRequest,
   judgesFromEnv,
   SPARK_13_MODEL,
   SPARK_OPEN_MODEL,
