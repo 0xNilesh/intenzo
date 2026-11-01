@@ -38,6 +38,7 @@
     "gate:p3": "pnpm --filter @intenzo/scripts gate:p3",
     "gate:p4": "pnpm --filter @intenzo/scripts gate:p4",
     "gate:p5": "pnpm --filter @intenzo/scripts gate:p5",
+    "gate:p6": "pnpm --filter @intenzo/scripts gate:p6",
     "bench:validate": "pnpm --filter @intenzo/intentbench validate",
     "bench:record": "pnpm --filter @intenzo/intentbench record",
     "bench:judge": "pnpm --filter @intenzo/intentbench judge",
