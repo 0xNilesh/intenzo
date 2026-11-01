@@ -5,6 +5,17 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-01 · P6 gate (#52)
+
+`pnpm gate:p6` (`scripts/gates/p6.ts`) passed: `pnpm check:all` (10 test runs) and `pnpm test:analysis` (8); `bench/results/judge-heldout.json` with every held-out criterion for arms A–D (D with both judges and each alone), 2 repeats each, not capped; `rates.png`, `accuracy.png` and `cost.png`; and the README's IntentBench section with a row per arm and the small-n caveat.
+
+### Decisions
+
+1. **The README leads with the browser arms' safety:** diff-only was right on every judgeable criterion but passed a broken build 4 times in 6; no arm that watched the app passed it or failed a working criterion (DECISIONS · IntentBench judged).
+2. **P6's spend:** $1.86 re-recording the packs on this machine, $0.37 measuring, $1.88 judging (with the redo): $4.11 in all, about $0.4 of it on Baseten.
+
+---
+
 ## 2026-11-01 · IntentBench judged (T6.3, #50)
 
 `pnpm bench:judge --split=heldout --repeats=2 --d-repeats=2` on the packs re-recorded on 2026-11-01 (`manifest.json`). The run came before #128, so its 13 `contradicts_readings` units were then judged again with the fixed citation rule (`--redo`). Results: `bench/results/judge-heldout.json`, 336 rows. Held out: 8 cases, 28 criteria, 23 of them judgeable (5 packs are `setup_failed`).
