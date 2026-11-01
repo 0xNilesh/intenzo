@@ -2,14 +2,12 @@
 // checked against the schema, the split is §31's, and on each case's Vercel preview every
 // criterion's ground-truth check must agree with its label, and a side-effect case's unrequested
 // change must be there. Needs gh (signed in) and the demo-shop secrets in .env. No model calls.
-import { spawnSync } from "node:child_process";
-
 import { chromium } from "playwright";
 
 import { type BenchCase, loadCases, loadTicket, splitCounts } from "./case.ts";
+import { previewOf } from "./github.ts";
 import { CHECKS, type Shop, SIDE_EFFECTS } from "./ground-truth.ts";
 
-const REPO = "sumithprabhu/demo-shop";
 const ROOT = new URL("../../../", import.meta.url).pathname;
 process.loadEnvFile(`${ROOT}.env`);
 /** Cases whose id starts with this: --only=limit checks the three limit cases. */
@@ -20,29 +18,6 @@ const report = (ok: boolean, line: string) => {
   if (!ok) failed = true;
   console.log(`${ok ? "✓" : "✗"} ${line}`);
 };
-
-const gh = (path: string, jq: string) => {
-  const r = spawnSync("gh", ["api", path, "--jq", jq], { encoding: "utf8" });
-  return r.status === 0 ? r.stdout.trim() : "";
-};
-
-/** The branch's newest successful Preview deployment. */
-function previewOf(branch: string): string | null {
-  const sha = gh(`repos/${REPO}/commits/${branch}`, ".sha");
-  const id = sha
-    ? gh(
-        `repos/${REPO}/deployments?sha=${sha}&per_page=10`,
-        '[.[] | select(.environment | startswith("Preview"))][0].id',
-      )
-    : "";
-  const url = id
-    ? gh(
-        `repos/${REPO}/deployments/${id}/statuses`,
-        '[.[] | select(.state == "success")][0].environment_url',
-      )
-    : "";
-  return url && url !== "null" ? url : null;
-}
 
 // §31's stratified split.
 const cases = loadCases();
