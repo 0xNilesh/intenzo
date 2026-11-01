@@ -622,6 +622,7 @@
 - Held-out results exist for all 4 arms with spread.
 - Charts are in `bench/results/`.
 - A results table is drafted for the README, with the small-n caveat.
+- *Passed 2026-11-01 (`pnpm gate:p6`): 336 held-out rows, arms A–D × 2 repeats, the three charts, and the README's IntentBench section.*
 
 **What we have after P6:** the proof slide. Measured catch and false-failure rates for diff-only vs readings vs frames vs video, on held-out cases, which is the evidence for why Meta's video models matter here.
 
