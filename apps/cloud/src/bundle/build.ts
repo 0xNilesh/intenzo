@@ -1,12 +1,21 @@
-// The context bundle (ARCHITECTURE §8): what the worker needs to know about the PR and its ticket,
+// The context bundle (ARCHITECTURE §8): what the worker needs to know about the PR and its tickets,
 // gathered by the Cloud, the only code with GitHub credentials (§29), when a run's job is spawned.
-// The PR, its ticket (§17.2) with the PM's recording, and the diff (patches cut at 400 lines). The
+// The PR, the tickets its description names (§17.2: several with an Intent section), each with
+// the PM's recording, the PR's own criteria and test hints, and the diff (patches cut at 400
+// lines). The
 // recording and the bundle go to the private Blob store, and the worker gets signed GET URLs for
 // both, valid for the job (§28): it never holds a GitHub or Blob credential.
 import { createHash } from "node:crypto";
 
 import { type ArtifactRef, ContextBundle } from "@intenzo/core";
-import { ticketHash, ticketNumberOf, videoUrlsIn } from "@intenzo/core/intent";
+import {
+  combinedHash,
+  parsePrIntent,
+  prCriteriaTicket,
+  PR_SOURCE,
+  ticketHash,
+  videoUrlsIn,
+} from "@intenzo/core/intent";
 import { z } from "zod";
 
 import { FULL_JSON, type GitHub } from "../github/api.ts";
@@ -14,6 +23,8 @@ import { FULL_JSON, type GitHub } from "../github/api.ts";
 const MAX_PATCH_LINES = 400;
 const MAX_COMMENTS = 20;
 const MAX_FILES = 100;
+/** Recordings read per run: each is transcribed and watched, so they're the costly part (§18). */
+const MAX_VIDEOS = 2;
 
 export interface BundleDeps {
   github: GitHub;
@@ -34,7 +45,7 @@ export interface BundleTarget {
 export interface BuiltBundle {
   bundle: ContextBundle;
   bundleUrl: string;
-  /** The ticket's hash (§18), to reuse its intent version; null without a ticket. */
+  /** The intent's hash over its tickets and the PR's criteria (§18); null without either. */
   ticketHash: string | null;
   /** GitHub says the PR's repo is public: its evidence may go to the public store (§28). */
   repoPublic: boolean;
@@ -77,45 +88,73 @@ export async function buildBundle(deps: BundleDeps, target: BundleTarget): Promi
   const pr = await github.get(`/repos/${repo}/pulls/${prNumber}`, Pull);
   if (!pr) throw new Error(`no PR #${prNumber} in ${repo}`);
 
-  let ticket: ContextBundle["ticket"] = null;
+  const intent = parsePrIntent(pr.title, pr.body, { self: prNumber, repo });
+  const tickets: ContextBundle["tickets"] = [];
+  const parts: { source: string; hash: string }[] = [];
   const media: ArtifactRef[] = [];
   const mediaUrls: string[] = [];
-  const mediaHashes: string[] = [];
   let mediaUnavailable = false;
-  const n = ticketNumberOf(pr.title, pr.body);
-  const issue =
-    n !== null && n !== prNumber
-      ? await github.get(`/repos/${repo}/issues/${n}`, Issue, FULL_JSON)
-      : null;
-  if (issue && !issue.pull_request) {
+  for (const n of intent.tickets) {
+    const issue = await github.get(`/repos/${repo}/issues/${n}`, Issue, FULL_JSON);
+    if (!issue || issue.pull_request) continue;
     const comments =
       (await github.get(
         `/repos/${repo}/issues/${n}/comments?per_page=${MAX_COMMENTS}`,
         Comments,
       )) ?? [];
-    ticket = {
-      source: "github_issue",
+    const text = {
       ref: `#${n}`,
       title: issue.title,
       body: issue.body ?? "",
       comments: comments.flatMap((c) => (c.body?.trim() ? [c.body] : [])),
     };
-    // §18: the PM's recording. One is enough for the demo's tickets; more would need a budget.
-    const [video] = videoUrlsIn(issue.body_html ?? "");
-    if (video) {
-      const bytes = await github.download(video);
-      const ref = bytes && (await deps.put(`runs/${runId}/ticket/media-1.mp4`, bytes, "video/mp4"));
-      const url = ref && (await deps.sign(ref));
-      if (bytes && ref && url) {
+    // §18: the PM's recording, one per ticket, at most MAX_VIDEOS per run.
+    let video: number | null = null;
+    const mediaHashes: string[] = [];
+    const [url] = videoUrlsIn(issue.body_html ?? "");
+    if (url && media.length < MAX_VIDEOS) {
+      const bytes = await github.download(url);
+      const ref =
+        bytes &&
+        (await deps.put(`runs/${runId}/ticket/media-${media.length + 1}.mp4`, bytes, "video/mp4"));
+      const signed = ref && (await deps.sign(ref));
+      if (bytes && ref && signed) {
+        video = media.length;
         media.push(ref);
-        mediaUrls.push(url);
+        mediaUrls.push(signed);
         mediaHashes.push(sha256(bytes));
       } else {
         mediaUnavailable = true;
         log(`PR #${prNumber}: ticket #${n}'s recording couldn't be downloaded`);
       }
+    } else if (url) {
+      log(
+        `PR #${prNumber}: ticket #${n}'s recording is past ${MAX_VIDEOS} a run, so its text is read alone`,
+      );
     }
+    tickets.push({ ...text, video });
+    parts.push({ source: text.ref, hash: ticketHash(text, mediaHashes) });
   }
+  if (intent.criteria.length > 0) {
+    parts.push({
+      source: PR_SOURCE,
+      hash: ticketHash(prCriteriaTicket(pr.title, intent.criteria)),
+    });
+  }
+  const first = tickets[0];
+  const ticket: ContextBundle["ticket"] = first
+    ? {
+        source: "github_issue",
+        ref: first.ref,
+        title: first.title,
+        body: first.body,
+        comments: first.comments,
+      }
+    : null;
+  const hints =
+    intent.hints.start || intent.hints.data.length > 0
+      ? { ...(intent.hints.start && { start: intent.hints.start }), data: intent.hints.data }
+      : null;
 
   const files =
     (await github.get(`/repos/${repo}/pulls/${prNumber}/files?per_page=${MAX_FILES}`, Files)) ?? [];
@@ -130,6 +169,8 @@ export async function buildBundle(deps: BundleDeps, target: BundleTarget): Promi
       isBot: pr.user?.type === "Bot",
     },
     ticket,
+    tickets,
+    prCriteria: intent.criteria,
     images: [],
     media,
     mediaUrls,
@@ -145,7 +186,7 @@ export async function buildBundle(deps: BundleDeps, target: BundleTarget): Promi
         }),
       })),
     },
-    hints: null,
+    hints,
   });
   const stored = await deps.put(
     `runs/${runId}/bundle.json`,
@@ -157,12 +198,7 @@ export async function buildBundle(deps: BundleDeps, target: BundleTarget): Promi
   return {
     bundle,
     bundleUrl,
-    ticketHash: ticket
-      ? ticketHash(
-          { ref: ticket.ref, title: ticket.title, body: ticket.body, comments: ticket.comments },
-          mediaHashes,
-        )
-      : null,
+    ticketHash: parts.length > 0 ? combinedHash(parts) : null,
     // Only an explicit "not private": a reply without the field keeps the evidence private.
     repoPublic: pr.base.repo?.private === false,
   };

@@ -217,6 +217,22 @@ describe("the spawn effect's context bundle (§8, T4.8)", () => {
     expect(group).toMatchObject({ ticketRef: "#5", ticketTitle: "Discount codes" });
   });
 
+  it("names every ticket of a PR with several intents", async () => {
+    const t5 = { ref: "#5", title: "Discount codes", body: "", comments: [], video: null };
+    const t9 = { ref: "#9", title: "Undo remove", body: "", comments: [], video: null };
+    await drainWith(async () => ({
+      bundleUrl: "https://private.blob.example/b.json",
+      ticketHash: HASH,
+      bundle: { ticket: { source: "github_issue", ...t5 }, tickets: [t5, t9] } as never,
+      repoPublic: false,
+    }));
+    const [group] = await t.db.select().from(runGroups).where(eq(runGroups.id, groupId));
+    expect(group).toMatchObject({
+      ticketRef: "#5, #9",
+      ticketTitle: "Discount codes · Undo remove",
+    });
+  });
+
   it("lets the job read a ticket no earlier run has read", async () => {
     await drainWith(async () => ({
       bundleUrl: "https://private.blob.example/b.json",

@@ -69,11 +69,15 @@ export function spawnExecutor(deps: JobEffectDeps): EffectExecutor {
           repoPublic = built.repoPublic;
           if (built.ticketHash)
             intent = await reusedIntent(deps.db, ctx.group.id, ctx.repo.id, built.ticketHash);
-          // The comment says which ticket it verified against (§26.1).
-          const ticket = built.bundle.ticket;
+          // The comment says which tickets it verified against (§26.1): "#5, #7".
+          const { tickets: all, ticket } = built.bundle;
+          const tickets = all?.length ? all : ticket ? [ticket] : [];
           await deps.db
             .update(runGroups)
-            .set({ ticketRef: ticket?.ref ?? null, ticketTitle: ticket?.title ?? null })
+            .set({
+              ticketRef: tickets.length > 0 ? tickets.map((t) => t.ref).join(", ") : null,
+              ticketTitle: tickets.length > 0 ? tickets.map((t) => t.title).join(" · ") : null,
+            })
             .where(eq(runGroups.id, ctx.group.id));
         } catch (err) {
           const why = (err as Error).message.slice(0, 200);
