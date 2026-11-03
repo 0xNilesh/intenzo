@@ -27,6 +27,11 @@ export const Criterion = z.object({
   sourceQuote: z.string().optional(),
   /** Ms into the PM video where it's shown. Comes from Spark watching the video: transcripts have no timings. */
   sourceMediaAt: z.number().nonnegative().optional(),
+  /**
+   * Where it comes from when a PR has several intents: a ticket ("#5") or the PR's own description
+   * ("pr", unverified: never counted toward the outcome or approval). Absent for one ticket.
+   */
+  source: z.string().min(1).max(40).optional(),
 });
 export type Criterion = z.infer<typeof Criterion>;
 
@@ -39,7 +44,8 @@ export type ReproHints = z.infer<typeof ReproHints>;
 
 export const CriterionSet = z
   .object({
-    criteria: z.array(Criterion).max(6),
+    /** One ticket gives at most 6; a PR with several intents at most 12 (pr-intent.ts). */
+    criteria: z.array(Criterion).max(12),
     repro: ReproHints.optional(),
     intentSource: z.enum(["linked_issue", "linked_issue_video", "pr_body", "inferred"]),
     /** sha256 of the normalized ticket text and media hashes. Never the diff (§18). */
