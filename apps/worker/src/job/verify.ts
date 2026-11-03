@@ -753,13 +753,20 @@ export async function verify(
   const criteria = intent.criteria.filter((c) => !job.only || job.only.includes(c.id));
   const verdicts = await Promise.all(criteria.map(verifyOne));
   await detectChanges();
-  // The tickets decide the run; a PR's own criteria are reported, never counted (§17.2).
-  const counted = new Set(intent.criteria.filter(countsTowardOutcome).map((c) => c.id));
-  const deciding = verdicts.filter((v) => counted.has(v.criterionId));
+  const deciding = decidingVerdicts(intent, verdicts);
   return {
     outcome: judges ? aggregateOutcome(deciding) : stubOutcome(deciding),
     costUsd: spent,
   };
+}
+
+/** The verdicts that decide the run: the tickets', never the PR's own criteria (§17.2). */
+export function decidingVerdicts<V extends { criterionId: string }>(
+  intent: CriterionSet,
+  verdicts: readonly V[],
+): V[] {
+  const counted = new Set(intent.criteria.filter(countsTowardOutcome).map((c) => c.id));
+  return verdicts.filter((v) => counted.has(v.criterionId));
 }
 
 /** The bundle the Cloud stored for the run (§8), through its signed URL. */
