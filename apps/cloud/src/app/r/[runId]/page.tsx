@@ -23,7 +23,7 @@ export default async function Report({ params }: { params: Promise<{ runId: stri
   const { run } = model;
 
   return (
-    <main style={{ maxWidth: 960 }}>
+    <main style={{ maxWidth: 960, margin: "3rem" }}>
       <h1 style={{ fontSize: "1.4rem" }}>
         Intenzo · {statusLine(model)} · attempt {run.attemptNo}
       </h1>
