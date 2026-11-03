@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { ArtifactRef } from "@intenzo/core";
-import { ticketHash } from "@intenzo/core/intent";
+import { combinedHash, prCriteriaTicket, ticketHash } from "@intenzo/core/intent";
 import { describe, expect, it } from "vitest";
 
 import type { GitHub } from "../github/api.ts";
@@ -41,6 +41,12 @@ function fakeGitHub(
       ...(over.issueIsPr && { pull_request: {} }),
     },
     [`/repos/${REPO}/issues/5/comments?per_page=20`]: [{ body: "Thanks!" }, { body: null }],
+    [`/repos/${REPO}/issues/9`]: {
+      title: "Undo remove",
+      body: "## Acceptance criteria\n- [ ] Undo restores the item",
+      body_html: "<h2>Acceptance criteria</h2>",
+    },
+    [`/repos/${REPO}/issues/9/comments?per_page=20`]: [],
     [`/repos/${REPO}/pulls/7/files?per_page=100`]: [
       {
         filename: "lib/cart.ts",
@@ -176,5 +182,94 @@ describe("buildBundle (§8, §17.2)", () => {
     expect(built.bundle.ticket).toBeNull();
     expect(built.ticketHash).toBeNull();
     expect(built.bundle.pr.isFork).toBe(true);
+  });
+});
+
+describe("a PR with several intents (§17.2)", () => {
+  const BODY = `## Intent
+Closes #5
+Closes #9
+
+## Acceptance criteria
+- [ ] The header's cart count updates after Undo
+
+## Test hints
+- start: /cart
+- data: valid discount code: SAVE10`;
+
+  it("gathers every ticket with its own recording, the PR's criteria and its hints", async () => {
+    const { github, asked } = fakeGitHub({ body: BODY });
+    const store = fakeStore();
+    const built = await buildBundle(
+      { github, put: store.put, sign: store.sign, log: () => {} },
+      { repo: REPO, prNumber: 7, runId: RUN, isFork: false },
+    );
+    const { bundle } = built;
+    expect(bundle.tickets.map((t) => [t.ref, t.title, t.video])).toEqual([
+      ["#5", "Discount codes", 0],
+      ["#9", "Undo remove", null],
+    ]);
+    expect(bundle.ticket).toMatchObject({ ref: "#5" });
+    expect(bundle.prCriteria).toEqual(["The header's cart count updates after Undo"]);
+    expect(bundle.hints).toEqual({ start: "/cart", data: ["valid discount code: SAVE10"] });
+    expect(bundle.mediaUrls).toHaveLength(1);
+    expect(asked).toContain(`/repos/${REPO}/issues/9 (application/vnd.github.full+json)`);
+
+    const video = createHash("sha256").update(VIDEO).digest("hex");
+    expect(built.ticketHash).toBe(
+      combinedHash([
+        {
+          source: "#5",
+          hash: ticketHash(
+            {
+              ref: "#5",
+              title: "Discount codes",
+              body: "The details are in the screen recording below.",
+              comments: ["Thanks!"],
+            },
+            [video],
+          ),
+        },
+        {
+          source: "#9",
+          hash: ticketHash({
+            ref: "#9",
+            title: "Undo remove",
+            body: "## Acceptance criteria\n- [ ] Undo restores the item",
+            comments: [],
+          }),
+        },
+        {
+          source: "pr",
+          hash: ticketHash(
+            prCriteriaTicket("Discount codes", ["The header's cart count updates after Undo"]),
+          ),
+        },
+      ]),
+    );
+  });
+
+  it("keeps a one-ticket PR's hash as before, so its cached intent is reused", async () => {
+    const { github } = fakeGitHub();
+    const store = fakeStore();
+    const built = await buildBundle(
+      { github, put: store.put, sign: store.sign, log: () => {} },
+      { repo: REPO, prNumber: 7, runId: RUN, isFork: false },
+    );
+    const video = createHash("sha256").update(VIDEO).digest("hex");
+    expect(built.ticketHash).toBe(
+      ticketHash(
+        {
+          ref: "#5",
+          title: "Discount codes",
+          body: "The details are in the screen recording below.",
+          comments: ["Thanks!"],
+        },
+        [video],
+      ),
+    );
+    expect(built.bundle.tickets).toHaveLength(1);
+    expect(built.bundle.prCriteria).toEqual([]);
+    expect(built.bundle.hints).toBeNull();
   });
 });
