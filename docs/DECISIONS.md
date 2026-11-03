@@ -28,7 +28,7 @@ A PR could name one ticket ("Closes #5"), so a PR that delivers two tickets was 
    - _Alternatives:_ one intent call over all tickets (cheaper by one call, but the criteria shift when a ticket is added).
 3. **Caps: 5 tickets, 10 PR criteria, 12 criteria a run, 2 recordings.**
    - _Why:_ a run records each criterion on both apps and judges it twice; past 12 the run outgrows its 15-minute deadline (§27). The PR's criteria are cut first.
-4. **Without an `## Intent` section, the old rule applies.** Existing PRs and templates read the same.
+4. **Without an `## Intent` section that names a ticket, the old rule applies.** Existing PRs read the same, and so does a template left blank ("Closes #") with "Fixes #5" written elsewhere.
 
 ---
 

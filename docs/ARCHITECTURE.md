@@ -757,7 +757,7 @@ pending ─► identity ─► [explore (PR, unrecorded)] ─► record_pr ─�
   data: valid code: SAVE10
   ```
 
-  - `## Intent` names up to 5 tickets, one per line (`#N`, `owner/repo#N` of this repo, or an issue URL). With the section, the rule above isn't used; without it, the first "Closes #N" still decides, so old PRs read the same.
+  - `## Intent` names up to 5 tickets, one per line (`#N`, `owner/repo#N` of this repo, or an issue URL). When the section names a ticket, the rule above isn't used; otherwise (no section, or a template left blank) the first "Closes #N" still decides, so old PRs read the same.
   - `## Acceptance criteria` adds up to 10 checks the PR claims. They're recorded and judged like any other, but reported apart as **from the PR (unverified)** and never count toward the run's outcome or the PM's approval: the tickets stay the authority.
   - `## Test hints` sets the navigator's start page (`start: /path`) and adds test data to `.intenzo.yml`'s.
   - HTML comments (`<!-- … -->`) are template instructions and are ignored.
