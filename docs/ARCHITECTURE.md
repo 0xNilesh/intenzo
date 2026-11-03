@@ -417,6 +417,7 @@ export const VerifyJob = JobBase.extend({
   - **Seen in T0.7, private repo:** a video's URL in `body_html` was a plain `https://github.com/user-attachments/assets/<uuid>` link, not a signed `?jwt=` URL. An authenticated GET with a user token downloaded it (302 to storage, then 200 `video/mp4`). Whether an App installation token can fetch it is untested; T4.2 must check, unless the demo repo is public by then.
 - If that fails, the bundle records `media_unavailable` and the report says so. The demo repo is public, so this doesn't affect it.
 - **Built in T4.8:** the spawn effect builds this bundle (`apps/cloud/src/bundle/build.ts`): the PR, its ticket (§17.2), the ticket's first recording downloaded and stored at `runs/{runId}/ticket/media-1.mp4`, and the diff. The worker gets signed GET URLs for the bundle and the recording (`mediaUrls`), and the run group keeps the ticket's reference and title for the comment. An intent version is reused when the ticket's hash (its text and the recording's sha256) matches: the PR's own first, else the latest any PR of the same repo read (since the P5 gate; never one with no criteria). A bundle that can't be built leaves the job to the fixtures. Downloads try without credentials first, then the installation token, which only GitHub's hosts see; on a private repo GitHub answers 404 to both (T4.8), so the demo repo is public.
+- **Several intents (DECISIONS 2026-11-03):** the bundle also carries `tickets` (each linked ticket with its comments and the index of its recording in `mediaUrls`; at most 2 recordings are downloaded), `prCriteria` and the PR's `hints`. `ticket` stays the first ticket, for older workers. The intent version's hash is `combinedHash` over the sources, the same one the worker computes.
 - **Built in T2.7b:** the Cloud's spawn effect sends this VerifyJob, with `bundleUrl: null` until the Cloud builds bundles (P4), `intent: null` (the job computes it) and, since T3.5, `cachedPaths`: the group's saved paths for its latest intent version. It's checked against core's schema before it goes.
 
 ## 9. Worker events
@@ -741,6 +742,26 @@ pending ─► identity ─► [explore (PR, unrecorded)] ─► record_pr ─�
 
 - **Built in T4.8** (`core/intent/ticket.ts`): the text is read first, "closes/fixes/resolves/refs #N" before a bare "#N" (an `&#35;` entity and `owner/repo#N` of another repo don't count); GraphQL isn't asked yet.
 
+- **Several intents (DECISIONS 2026-11-03, `core/intent/pr-intent.ts`).** A PR description can say what it delivers in three optional sections:
+
+  ```markdown
+  ## Intent
+  Closes #5
+  Closes #7
+
+  ## Acceptance criteria
+  - The code field keeps what was typed after Apply
+
+  ## Test hints
+  start: /cart
+  data: valid code: SAVE10
+  ```
+
+  - `## Intent` names up to 5 tickets, one per line (`#N`, `owner/repo#N` of this repo, or an issue URL). With the section, the rule above isn't used; without it, the first "Closes #N" still decides, so old PRs read the same.
+  - `## Acceptance criteria` adds up to 10 checks the PR claims. They're recorded and judged like any other, but reported apart as **from the PR (unverified)** and never count toward the run's outcome or the PM's approval: the tickets stay the authority.
+  - `## Test hints` sets the navigator's start page (`start: /path`) and adds test data to `.intenzo.yml`'s.
+  - HTML comments (`<!-- … -->`) are template instructions and are ignored.
+
 ### 17.3 Finding the baseline (merge-base preview)
 1. Compare API `GET /repos/{o}/{r}/compare/{base}...{head}` → `merge_base_commit.sha`.
 2. Look up a successful **non-production** deployment for that sha (in `deployments`, then the API).
@@ -784,6 +805,8 @@ Coverage (every run, since it depends on the diff; runs in parallel with recordi
 Muse Code, or Spark 1.3 if Muse Code is CLI-only (coverage.v1): criteria + diff → CoverageMap
    + deterministic route candidates (Next.js app/ and pages/ file → route rules)
 ```
+
+- **Several intents (DECISIONS 2026-11-03):** each ticket is read on its own (with its own recording), then the PR's own criteria as a checklist ticket, so a ticket's criteria and their hash don't change when another ticket joins the PR. `mergeIntents` renumbers them C1…Cn across sources (at most 12; the PR's are cut first), tags each with its `source` (`#5`, `pr`), and hashes the sources together. One source keeps its own hash, so single-ticket intents cached before this are reused. The outcome counts only the tickets' criteria.
 
 - **Built in T4.3** (`core/coverage`): Spark 1.3 (Muse Code is CLI-only, DECISIONS 2026-10-30). The diff goes in an `<untrusted>` block, cut at 60k characters with a count of the files left out. Code holds the reply to the diff: a path the diff doesn't change is dropped, `covered` without a file becomes `unclear`, and a criterion the reply skips is `unclear`. A failed call makes every criterion `unclear`, never `uncovered`; an empty diff makes no call (all `uncovered`). `routeOf` follows Next.js: route groups and private folders add nothing, a colocated file belongs to its folder's route, API handlers and app/'s shared root files have none. `pnpm intenzo coverage` runs it.
 

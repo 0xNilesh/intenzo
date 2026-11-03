@@ -116,6 +116,26 @@ Intenzo is a GitHub App, with the Cloud on Vercel and the worker on Modal ([`app
 - **A `.intenzo.yml`** on its default branch: the hook's path, where the app starts, the PM approvers, and what the navigator may never click ([ARCHITECTURE §10](docs/ARCHITECTURE.md#10-configuration-intenzoyml)).
 - **Tickets linked from PRs** ("Closes #5"), as text, or as the PM's screen recording.
 
+A PR says what it delivers in its description. The tickets decide the outcome; the PR's own criteria are shown as unverified, and the hints steer the navigator ([ARCHITECTURE §17.2](docs/ARCHITECTURE.md#172-finding-the-ticket)):
+
+```markdown
+## Intent
+
+Closes #5
+Closes #7
+
+## Acceptance criteria
+
+- The code field keeps what was typed after Apply
+
+## Test hints
+
+start: /cart
+data: valid code: SAVE10
+```
+
+Without an `## Intent` section, the first "Closes #N" in the title or description is the ticket.
+
 ## Honest limits
 
 - **UI behaviour only.** Intenzo checks what a user can see and do in the browser. A criterion about an API or a background job is reported as not verifiable.
