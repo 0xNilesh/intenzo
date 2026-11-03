@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { ContextBundle, IntenzoConfig, LaneResult, VerifyJob, WorkerEvent } from "@intenzo/core";
 import { snapshotLines, subtrees } from "@intenzo/core/changes";
-import { ticketHash } from "@intenzo/core/intent";
+import { combinedHash, prCriteriaTicket, ticketHash } from "@intenzo/core/intent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Judge } from "@intenzo/core/judge";
@@ -658,10 +658,11 @@ describe("the verify job with a context bundle (§8, §18)", () => {
   async function runWithBundle(
     over: Record<string, unknown> = {},
     deps: Record<string, unknown> = {},
+    bundleOver: Record<string, unknown> = {},
   ) {
     const files: Record<string, string> = {};
     const cloud = await fakeCloud({ files });
-    files["/bundle.json"] = JSON.stringify(bundleFor(cloud.base));
+    files["/bundle.json"] = JSON.stringify({ ...bundleFor(cloud.base), ...bundleOver });
     const job = VerifyJob.parse({
       ...verifyJob(cloud.base),
       bundleUrl: `${cloud.base}/bundle.json?sig=1`,
@@ -699,6 +700,72 @@ describe("the verify job with a context bundle (§8, §18)", () => {
     expect(port.requests.map((r) => r.stage)).toEqual(["intent", "coverage"]);
     const ask = port.requests[0]!.messages[1]!.content as { type: string }[];
     expect(ask.map((part) => part.type)).toEqual(["text", "video_url"]);
+  });
+
+  it("reads every ticket a PR names and its own criteria, merged and tagged by source", async () => {
+    const UNDO = {
+      ref: "#9",
+      title: "Undo remove",
+      body: "Undo brings the item back.",
+      comments: [],
+    };
+    const textOf = (request: { messages: { content: unknown }[] }) => {
+      const content = request.messages[1]!.content;
+      return typeof content === "string" ? content : JSON.stringify(content);
+    };
+    const port = scriptedPort((request) => {
+      if (request.stage !== "intent") return { items: [] };
+      const text = textOf(request);
+      if (text.includes("The header badge updates"))
+        return {
+          criteria: [said("The header badge updates")],
+          repro: { startPath: "/cart", steps: [] },
+        };
+      if (text.includes("Undo brings"))
+        return {
+          criteria: [said("Undo restores the mug")],
+          repro: { startPath: "/cart", steps: [] },
+        };
+      return {
+        criteria: [said("The total drops"), said("SAVE10 adds its own line")],
+        repro: { startPath: "/cart", steps: [] },
+      };
+    });
+    const { ready } = await runWithBundle(
+      {},
+      { models: port, retryDelaysMs: [1, 1, 1, 1, 1] },
+      {
+        tickets: [
+          { ...TICKET, video: 0 },
+          { ...UNDO, video: null },
+        ],
+        prCriteria: ["The header badge updates"],
+      },
+    );
+    expect(ready.intent.criteria.map((c) => `${c.id} ${c.source} ${c.text}`)).toEqual([
+      "C1 #5 The total drops",
+      "C2 #5 SAVE10 adds its own line",
+      "C3 #9 Undo restores the mug",
+      "C4 pr The header badge updates",
+    ]);
+    expect(ready.intent.intentSource).toBe("linked_issue_video");
+    // The same hash the Cloud's bundle builder computes, so a later run reuses this intent.
+    expect(ready.intent.ticketHash).toBe(
+      combinedHash([
+        { source: "#5", hash: ticketHash(TICKET, [MEDIA_HASH]) },
+        { source: "#9", hash: ticketHash(UNDO) },
+        {
+          source: "pr",
+          hash: ticketHash(prCriteriaTicket("Discount codes", ["The header badge updates"])),
+        },
+      ]),
+    );
+    const intentCalls = port.requests.filter((r) => r.stage === "intent");
+    expect(intentCalls.map((r) => typeof r.messages[1]!.content)).toEqual([
+      "object",
+      "string",
+      "string",
+    ]);
   });
 
   it("reuses the intent the Cloud passed, and still maps the diff", async () => {
@@ -742,7 +809,7 @@ describe("the verify job with a context bundle (§8, §18)", () => {
     const broken = scriptedPort(() => ({ criteria: "not a list" }));
     await expect(
       runWithBundle({}, { models: broken, retryDelaysMs: [1, 1, 1, 1, 1] }),
-    ).rejects.toThrow(/^the ticket couldn't be read: the intent call failed/);
+    ).rejects.toThrow(/^ticket #\d+ couldn't be read: the intent call failed/);
     // A reply that didn't fit is tried once more, not waited out.
     expect(broken.requests.filter((r) => r.stage === "intent")).toHaveLength(2);
   });

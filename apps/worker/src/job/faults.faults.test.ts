@@ -266,7 +266,7 @@ describe("a model API that answers 429 to everything (§14)", () => {
     expect(exit).toBe(EXIT.failed);
     expect(cloud.events.map((e) => e.kind)).toEqual(["started", "failed"]);
     expect(cloud.events.at(-1)).toMatchObject({
-      error: { code: "crash", message: expect.stringMatching(/^the ticket couldn't be read/) },
+      error: { code: "crash", message: expect.stringMatching(/^ticket #\d+ couldn't be read/) },
     });
     // The read and its five retries, each a call of four tries.
     expect(storm.seen).toHaveLength(24);
