@@ -14,7 +14,7 @@ import { type ModelPort, NO_USAGE, scriptedPort } from "@intenzo/core/models";
 
 import { jobClient, StaleJobError } from "./client.ts";
 import { EXIT, runJob } from "./run.ts";
-import { type LaneInput, type Recorder, verify } from "./verify.ts";
+import { decidingVerdicts, type LaneInput, type Recorder, verify } from "./verify.ts";
 
 const JOB = "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b";
 const RUN = "ea44d35d-4baa-4f81-ac92-08285fae4058";
@@ -908,5 +908,23 @@ describe("the verify job with a context bundle (§8, §18)", () => {
     const { ready } = await runWithBundle({}, { models: undefined, readRecording: undefined });
     expect(ready.intent.criteria.map((c) => c.id)).toEqual(["C1", "C2", "C3", "C4"]);
     expect(ready.coverage).toEqual({ items: [], routes: [] });
+  });
+});
+
+describe("decidingVerdicts", () => {
+  it("lets the tickets decide: a failing criterion of the PR's own never counts", () => {
+    const sources = { C1: "#5", C2: "#9", C3: "pr", C4: undefined };
+    const intent = {
+      criteria: Object.entries(sources).map(([id, source]) => ({ id, ...(source && { source }) })),
+    } as never;
+    const verdicts = ["C1", "C2", "C3", "C4"].map((criterionId) => ({
+      criterionId,
+      status: criterionId === "C3" ? "fail" : "pass",
+    }));
+    expect(decidingVerdicts(intent, verdicts).map((v) => v.criterionId)).toEqual([
+      "C1",
+      "C2",
+      "C4",
+    ]);
   });
 });
