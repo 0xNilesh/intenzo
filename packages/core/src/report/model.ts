@@ -19,6 +19,8 @@ export interface ReportCriterion {
   visual?: boolean;
   /** The readings behind the verdict, one line: "+0 s $50.00 · +1 s $50.00 · after reload $45.00". */
   readings: string | null;
+  /** With several intents: the ticket it comes from ("#5"), or "pr" for the PR's own (§17.2). */
+  source?: string;
 }
 
 export interface ReportRun {
@@ -40,6 +42,8 @@ export interface ReportModel {
   /** The run group: the comment's marker carries it. */
   groupId: number;
   ticket: { ref: string; title: string } | null;
+  /** Every ticket the PR names, when it names several (§17.2), in order. */
+  tickets?: readonly { ref: string; title: string }[];
   run: ReportRun;
   criteria: ReportCriterion[];
   /** The run's report page, where the videos play. */

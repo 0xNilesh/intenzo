@@ -355,3 +355,48 @@ describe("checkRunPayload (§26.2)", () => {
     expect(checkRunPayload(m).conclusion).toBe("failure");
   });
 });
+
+describe("a PR with several intents (§17.2)", () => {
+  const several = model(
+    {
+      ticket: { ref: "#5, #9", title: "Discount codes · Undo remove" },
+      tickets: [
+        { ref: "#5", title: "Discount codes" },
+        { ref: "#9", title: "Undo remove" },
+      ],
+      criteria: [
+        { ...C[0]!, source: "#5" },
+        { ...C[1]!, source: "#5", verdict: "fail" as const },
+        { ...criterion("C3", "Undo restores the mug", "The mug is back"), source: "#9" },
+        {
+          ...criterion("C4", "The header badge updates", "Cart (2)"),
+          source: "pr",
+          verdict: "fail" as const,
+        },
+      ],
+    },
+    { outcome: "fail" },
+  );
+  const text = renderComment(several);
+
+  it("names every ticket in the heading, and counts only the tickets' criteria", () => {
+    expect(text).toContain(
+      '### Intenzo · verified against #5 "Discount codes", #9 "Undo remove" · ❌ 2/3 passed · attempt 1',
+    );
+  });
+
+  it("gives each intent its own table and count, the PR's own last and marked unverified", () => {
+    const heads = text
+      .split("\n")
+      .filter((l) => l.startsWith("**#") || l.startsWith("**From the PR"));
+    expect(heads).toEqual([
+      "**#5 Discount codes** · 1/2 passed",
+      "**#9 Undo remove** · 1/1 passed",
+      "**From the PR (unverified: these don't decide the run)** · 0/1 passed",
+    ]);
+  });
+
+  it("leaves a one-ticket comment as it was", () => {
+    expect(renderComment(failing)).not.toContain("**#5");
+  });
+});
