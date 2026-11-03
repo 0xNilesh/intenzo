@@ -46,7 +46,12 @@ import {
 } from "@intenzo/core/judge";
 import { COVERAGE_MODEL, mapCoverage } from "@intenzo/core/coverage";
 import {
+  countsTowardOutcome,
   extractIntent,
+  intentSources,
+  mergeIntents,
+  type IntentPart,
+  type IntentSourceText,
   INTENT_MODEL,
   prepareTicketVideo,
   type TicketVideo,
@@ -302,26 +307,21 @@ export async function verify(
   let spent = 0;
   const spend = (model: string, usage: ModelUsage) => (spent += costUsd(model, usage) ?? 0);
 
-  /** The ticket's criteria (§18): its text, and the PM's recording when it has one (T4.2). */
-  const readIntent = async (bundle: ContextBundle, models: ModelPort): Promise<CriterionSet> => {
-    const ticket = bundle.ticket
-      ? {
-          ref: bundle.ticket.ref,
-          title: bundle.ticket.title,
-          body: bundle.ticket.body,
-          comments: bundle.ticket.comments,
-        }
-      : { ref: "PR body", title: bundle.pr.title, body: bundle.pr.body, comments: [] };
+  /**
+   * One source's criteria (§18): a ticket's text, and its PM recording when it has one (T4.2), or
+   * the PR's own criteria as a checklist.
+   */
+  const readSource = async (source: IntentSourceText, models: ModelPort): Promise<CriterionSet> => {
+    const { ticket } = source;
     let recording: TicketVideo | undefined;
-    const [url] = bundle.mediaUrls;
     const read = deps.readRecording ?? (deps.metaKey ? readRecordingFrom(deps.metaKey) : null);
-    if (url && read) {
+    if (source.videoUrl && read) {
       try {
-        recording = await read(url);
+        recording = await read(source.videoUrl);
         spent += transcribeCostUsd(recording.transcript.audioDurationMs ?? 0);
       } catch (err) {
         log(
-          redact(`the ticket's recording couldn't be read: ${(err as Error).message}`).slice(
+          redact(`${ticket.ref}'s recording couldn't be read: ${(err as Error).message}`).slice(
             0,
             300,
           ),
@@ -330,11 +330,7 @@ export async function verify(
     }
     const readTicket = () =>
       extractIntent(models, ticket, {
-        intentSource: bundle.ticket
-          ? recording
-            ? "linked_issue_video"
-            : "linked_issue"
-          : "pr_body",
+        intentSource: recording ? "linked_issue_video" : source.intentSource,
         ...(recording && {
           transcript: recording.transcript.text,
           video: {
@@ -356,7 +352,7 @@ export async function verify(
       const problems = result.problems.join("; ");
       const transient = TRANSIENT.test(problems);
       if (n >= (transient ? delays.length : 1)) {
-        throw new Error(`the ticket couldn't be read: ${problems}`.slice(0, 400));
+        throw new Error(`${sourceName(ticket.ref)} couldn't be read: ${problems}`.slice(0, 400));
       }
       log(
         redact(`intent: ${problems}: trying again in ${Math.round(delays[n]! / 1000)} s`).slice(
@@ -373,6 +369,18 @@ export async function verify(
       `intent: ${result.intent.criteria.length} criteria from ${ticket.ref}${recording ? " and its recording" : ""}`,
     );
     return result.intent;
+  };
+
+  /**
+   * The PR's criteria (§17.2): each ticket it names, then its own criteria. One source keeps its
+   * criteria as they are; several are merged, renumbered and tagged with their source.
+   */
+  const readIntent = async (bundle: ContextBundle, models: ModelPort): Promise<CriterionSet> => {
+    const parts: IntentPart[] = [];
+    for (const source of intentSources(bundle)) {
+      parts.push({ source: source.source, set: await readSource(source, models) });
+    }
+    return parts.length === 1 ? parts[0]!.set : mergeIntents(parts);
   };
 
   // §19 step 0: the bundle's ticket and recording become the criteria, unless the Cloud reused an
@@ -469,13 +477,23 @@ export async function verify(
     }
   };
 
+  // The PR's test hints steer the navigator: its start page, and test data added to the repo's.
+  const hints = bundle?.hints;
+  const navConfig = hints
+    ? {
+        ...job.config,
+        start: { ...job.config.start, default: hints.start ?? job.config.start.default },
+        data: [...job.config.data, ...hints.data],
+      }
+    : job.config;
+
   /** The navigator's run, with a crash (a lane that wouldn't open) counted as setup_failed. */
   const explore = async (criterion: Criterion): Promise<ExploreResult> => {
     try {
       const result = await recorder.explore!({
         origin: job.prUrl,
         criterion,
-        config: job.config,
+        config: navConfig,
         ...(identity && { identity }),
         ...(bypass && { bypass }),
       });
@@ -735,7 +753,13 @@ export async function verify(
   const criteria = intent.criteria.filter((c) => !job.only || job.only.includes(c.id));
   const verdicts = await Promise.all(criteria.map(verifyOne));
   await detectChanges();
-  return { outcome: judges ? aggregateOutcome(verdicts) : stubOutcome(verdicts), costUsd: spent };
+  // The tickets decide the run; a PR's own criteria are reported, never counted (§17.2).
+  const counted = new Set(intent.criteria.filter(countsTowardOutcome).map((c) => c.id));
+  const deciding = verdicts.filter((v) => counted.has(v.criterionId));
+  return {
+    outcome: judges ? aggregateOutcome(deciding) : stubOutcome(deciding),
+    costUsd: spent,
+  };
 }
 
 /** The bundle the Cloud stored for the run (§8), through its signed URL. */
@@ -759,6 +783,13 @@ function readRecordingFrom(apiKey: string): (url: string) => Promise<TicketVideo
       rmSync(dir, { recursive: true, force: true });
     }
   };
+}
+
+/** How an error names an intent source: "ticket #5", "the PR's own criteria"… */
+function sourceName(ref: string): string {
+  if (ref === "PR") return "the PR's own criteria";
+  if (ref === "PR body") return "the PR's description";
+  return `ticket ${ref}`;
 }
 
 /** §22.4 over the judges' verdicts; no criteria at all is inconclusive. */
