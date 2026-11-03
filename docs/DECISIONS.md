@@ -5,6 +5,33 @@ the date, the decision, why, and the alternatives considered (CONTRIBUTING.md §
 
 ---
 
+## 2026-11-03 · Several intents in one PR
+
+A PR could name one ticket ("Closes #5"), so a PR that delivers two tickets was judged against the first only, and an author had no place to say what else the change does. The PR description now has an optional structure (ARCHITECTURE §17.2). Checked with unit tests only (core, cloud bundle, worker verify, report comment); no paid run yet.
+
+### What we found
+
+| Check | Result |
+| --- | --- |
+| A description with `## Intent` (Closes #5, Closes #7), `## Acceptance criteria` and `## Test hints` | 2 tickets, the PR's criteria and both hints parsed; template comments ignored; the PR's own number and other repos' issues dropped |
+| The same PR's bundle | each ticket with its comments and its own recording; the hash matches the worker's merged intent |
+| A two-ticket run in the worker (fakes) | each ticket read on its own, criteria renumbered C1…C4 with sources; a failing PR criterion leaves the outcome `passed` |
+| A single-ticket PR | the same hash, criteria and comment as before (snapshots unchanged), so cached intents are reused |
+
+### Decisions
+
+1. **The PR names its tickets in `## Intent`; the tickets decide the outcome.**
+   - _Why:_ the ticket is the PM's statement of intent. A PR's own claims are worth recording, but a PR can't approve itself, so its criteria are shown as "from the PR (unverified)" and never count toward the outcome or the PM's approval.
+   - _Alternatives:_ every "Closes #N" in the body (catches issues mentioned in passing); a YAML block (harder to write by hand, and GitHub renders it as code).
+2. **Each source is read on its own, then merged.**
+   - _Why:_ a ticket's criteria and their hash stay the same whatever else the PR links, so a cached intent version is reused, and a checklist stays 1:1 per ticket.
+   - _Alternatives:_ one intent call over all tickets (cheaper by one call, but the criteria shift when a ticket is added).
+3. **Caps: 5 tickets, 10 PR criteria, 12 criteria a run, 2 recordings.**
+   - _Why:_ a run records each criterion on both apps and judges it twice; past 12 the run outgrows its 15-minute deadline (§27). The PR's criteria are cut first.
+4. **Without an `## Intent` section, the old rule applies.** Existing PRs and templates read the same.
+
+---
+
 ## 2026-11-01 · Docs and landing page (T7.3, #55)
 
 The README, `docs/hooks.md`, a landing page at the Cloud's root, and `pnpm docs:links`. Each piece was run as written.
