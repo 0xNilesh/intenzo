@@ -36,6 +36,24 @@ export const ContextBundle = z.object({
       comments: z.array(z.string()),
     })
     .nullable(),
+  /**
+   * Every ticket the PR delivers (its description's Intent section), in order; `ticket` is the
+   * first, for readers that know one. `video` indexes `mediaUrls`: the ticket's own recording.
+   */
+  tickets: z
+    .array(
+      z.object({
+        ref: z.string(),
+        title: z.string(),
+        body: z.string(),
+        comments: z.array(z.string()),
+        video: z.number().int().nonnegative().nullable(),
+      }),
+    )
+    .max(5)
+    .default([]),
+  /** Acceptance criteria the PR's description declares itself (unverified, §17.2). */
+  prCriteria: z.array(z.string().min(1)).max(10).default([]),
   images: z.array(ArtifactRef),
   media: z.array(ArtifactRef),
   /** Signed GET URLs for `media`, in order, valid for the job: the worker holds no Blob key (§28). */

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
-import type { Criterion, CriterionSet } from "../schema/index.ts";
+import type { TicketText } from "../prompts/intent.v1.ts";
+import type { ContextBundle, Criterion, CriterionSet } from "../schema/index.ts";
 import { ticketNumberOf } from "./ticket.ts";
 
 // A PR's intent (ARCHITECTURE §17.2, multiple intents): the description says which tickets the PR
@@ -130,15 +131,77 @@ export function mergeIntents(parts: readonly IntentPart[]): CriterionSet {
       ? "linked_issue"
       : "pr_body";
   const repro = parts.find((p) => p.set.repro)?.set.repro;
-  const ticketHash =
-    parts.length === 1
-      ? parts[0]!.set.ticketHash
-      : createHash("sha256")
-          .update(JSON.stringify(parts.map((p) => [p.source, p.set.ticketHash])))
-          .digest("hex");
+  const ticketHash = combinedHash(parts.map((p) => ({ source: p.source, hash: p.set.ticketHash })));
   return { criteria, ...(repro && { repro }), intentSource, ticketHash };
 }
 
 /** Criteria the run's outcome and the PM's approval count: the tickets', never the PR's own. */
 export const countsTowardOutcome = (c: Pick<Criterion, "source">): boolean =>
   c.source !== PR_SOURCE;
+
+/**
+ * The intent's hash over its sources, the same in the Cloud (to reuse an intent version) and the
+ * worker (mergeIntents): one source keeps its own hash.
+ */
+export function combinedHash(parts: readonly { source: string; hash: string }[]): string {
+  if (parts.length === 1) return parts[0]!.hash;
+  return createHash("sha256")
+    .update(JSON.stringify(parts.map((p) => [p.source, p.hash])))
+    .digest("hex");
+}
+
+/** The PR's own criteria as a checklist ticket, so intent.v1 keeps them 1:1, in order. */
+export function prCriteriaTicket(prTitle: string, criteria: readonly string[]): TicketText {
+  return {
+    ref: "PR",
+    title: prTitle,
+    body: ["## Acceptance criteria", ...criteria.map((c) => `- [ ] ${c}`)].join("\n"),
+    comments: [],
+  };
+}
+
+export interface IntentSourceText {
+  /** "#5", "pr", or "PR body" for a PR with neither tickets nor criteria of its own. */
+  source: string;
+  ticket: TicketText;
+  /** The ticket's recording (a signed URL from the bundle), if it has one. */
+  videoUrl?: string;
+  intentSource: CriterionSet["intentSource"];
+}
+
+/**
+ * What the intent step reads, in order: each linked ticket (with its own recording), then the
+ * PR's own criteria. A PR with neither falls back to its description (§17.2 step 3).
+ */
+export function intentSources(bundle: ContextBundle): IntentSourceText[] {
+  const tickets =
+    bundle.tickets.length > 0
+      ? bundle.tickets
+      : bundle.ticket
+        ? [{ ...bundle.ticket, video: bundle.mediaUrls.length > 0 ? 0 : null }]
+        : [];
+  const sources: IntentSourceText[] = tickets.map((t) => {
+    const videoUrl = t.video === null ? undefined : bundle.mediaUrls[t.video];
+    return {
+      source: t.ref,
+      ticket: { ref: t.ref, title: t.title, body: t.body, comments: t.comments },
+      ...(videoUrl && { videoUrl }),
+      intentSource: "linked_issue",
+    };
+  });
+  if (bundle.prCriteria.length > 0) {
+    sources.push({
+      source: PR_SOURCE,
+      ticket: prCriteriaTicket(bundle.pr.title, bundle.prCriteria),
+      intentSource: "pr_body",
+    });
+  }
+  if (sources.length === 0) {
+    sources.push({
+      source: "PR body",
+      ticket: { ref: "PR body", title: bundle.pr.title, body: bundle.pr.body, comments: [] },
+      intentSource: "pr_body",
+    });
+  }
+  return sources;
+}

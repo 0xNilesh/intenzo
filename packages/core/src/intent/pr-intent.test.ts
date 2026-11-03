@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { Criterion, CriterionSet } from "../schema/index.ts";
-import { countsTowardOutcome, MAX_RUN_CRITERIA, mergeIntents, parsePrIntent } from "./pr-intent.ts";
+import { ContextBundle, type Criterion, type CriterionSet } from "../schema/index.ts";
+import {
+  combinedHash,
+  countsTowardOutcome,
+  intentSources,
+  MAX_RUN_CRITERIA,
+  mergeIntents,
+  parsePrIntent,
+  prCriteriaTicket,
+} from "./pr-intent.ts";
 
 const TEMPLATE = `## Intent
 Closes #5
@@ -144,5 +152,78 @@ describe("mergeIntents", () => {
     expect(countsTowardOutcome({ source: "#5" })).toBe(true);
     expect(countsTowardOutcome({})).toBe(true);
     expect(countsTowardOutcome({ source: "pr" })).toBe(false);
+  });
+});
+
+describe("intentSources", () => {
+  const base = ContextBundle.parse({
+    pr: {
+      number: 30,
+      title: "Discount and undo",
+      body: "",
+      headSha: "a".repeat(40),
+      baseRef: "main",
+      isFork: false,
+      isBot: false,
+    },
+    ticket: null,
+    images: [],
+    media: [],
+    mediaUrls: ["https://blob.example/t5.mp4"],
+    diff: { files: [] },
+    hints: null,
+  });
+  const ticket = (ref: string, video: number | null) => ({
+    ref,
+    title: `Ticket ${ref}`,
+    body: "Body",
+    comments: [],
+    video,
+  });
+
+  it("reads each ticket with its own recording, then the PR's criteria as a checklist", () => {
+    const sources = intentSources({
+      ...base,
+      tickets: [ticket("#5", 0), ticket("#7", null)],
+      prCriteria: ["The badge updates"],
+    });
+    expect(sources.map((s) => [s.source, s.videoUrl ?? null, s.intentSource])).toEqual([
+      ["#5", "https://blob.example/t5.mp4", "linked_issue"],
+      ["#7", null, "linked_issue"],
+      ["pr", null, "pr_body"],
+    ]);
+    expect(sources[2]!.ticket.body).toBe("## Acceptance criteria\n- [ ] The badge updates");
+  });
+
+  it("reads a bundle from before several intents through its single ticket", () => {
+    const sources = intentSources({
+      ...base,
+      ticket: { source: "github_issue", ref: "#5", title: "T", body: "B", comments: [] },
+    });
+    expect(sources).toEqual([
+      {
+        source: "#5",
+        ticket: { ref: "#5", title: "T", body: "B", comments: [] },
+        videoUrl: "https://blob.example/t5.mp4",
+        intentSource: "linked_issue",
+      },
+    ]);
+  });
+
+  it("falls back to the PR's description when nothing is linked", () => {
+    expect(intentSources({ ...base, mediaUrls: [] }).map((s) => s.source)).toEqual(["PR body"]);
+  });
+});
+
+describe("combinedHash", () => {
+  it("matches mergeIntents, so the Cloud's lookup finds the worker's intent", () => {
+    const parts = [
+      { source: "#5", set: set(1, "a") },
+      { source: "pr", set: set(1, "b") },
+    ];
+    expect(combinedHash(parts.map((p) => ({ source: p.source, hash: p.set.ticketHash })))).toBe(
+      mergeIntents(parts).ticketHash,
+    );
+    expect(prCriteriaTicket("T", ["x"]).ref).toBe("PR");
   });
 });

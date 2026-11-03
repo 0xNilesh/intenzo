@@ -10,14 +10,18 @@ export {
 } from "./intent.ts";
 export { prepareTicketVideo, type TicketVideo } from "./media.ts";
 export {
+  combinedHash,
   countsTowardOutcome,
+  intentSources,
   MAX_PR_CRITERIA,
   MAX_RUN_CRITERIA,
   MAX_TICKETS,
   mergeIntents,
   parsePrIntent,
   PR_SOURCE,
+  prCriteriaTicket,
   type IntentPart,
+  type IntentSourceText,
   type PrIntent,
 } from "./pr-intent.ts";
 export { ticketNumberOf, videoUrlsIn } from "./ticket.ts";
