@@ -44,6 +44,12 @@ describe("parsePrIntent", () => {
       tickets: [7],
       criteria: [],
     });
+    // The template left blank: its "Closes #" names nothing, so the ticket elsewhere still counts.
+    const blank = "## Intent\n\nCloses #\n\n## Notes\nFixes #5 in the cart.";
+    expect(parsePrIntent("Discount codes", blank)).toMatchObject({
+      tickets: [5],
+      structured: false,
+    });
     expect(parsePrIntent("Tidy up", "No ticket here")).toMatchObject({
       tickets: [],
       structured: false,

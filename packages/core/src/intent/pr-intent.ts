@@ -11,7 +11,7 @@ import { ticketNumberOf } from "./ticket.ts";
 //   ## Acceptance criteria       optional bullets: checks the PR claims (shown as unverified)
 //   ## Test hints                optional: "start: /cart", "data: valid code: SAVE10"
 //
-// Without an "Intent" section the old rule applies: the first "Closes #N" in the title or
+// Without an "Intent" section naming a ticket, the old rule applies: the first "Closes #N" in the title or
 // description. The tickets stay the authority: a PR's own criteria are reported apart and never
 // count toward the run's outcome or the PM's approval.
 
@@ -29,7 +29,7 @@ export interface PrIntent {
   /** Acceptance criteria the PR declares itself (unverified). */
   criteria: string[];
   hints: { start?: string; data: string[] };
-  /** True when the description has an "Intent" section; else the single-ticket rule was used. */
+  /** True when the Intent section named a ticket; else the single-ticket rule was used. */
   structured: boolean;
 }
 
@@ -76,18 +76,17 @@ export function parsePrIntent(
   const found = sections(text);
   const keep = (n: number | null): n is number => n !== null && n !== options.self;
 
-  const intent = found.get("intent");
-  let tickets: number[];
-  if (intent) {
-    tickets = [];
-    for (const line of intent) {
-      const n = ticketIn(line, options.repo);
-      if (keep(n) && !tickets.includes(n)) tickets.push(n);
-    }
-    tickets = tickets.slice(0, MAX_TICKETS);
-  } else {
+  let tickets: number[] = [];
+  for (const line of found.get("intent") ?? []) {
+    const n = ticketIn(line, options.repo);
+    if (keep(n) && !tickets.includes(n)) tickets.push(n);
+  }
+  tickets = tickets.slice(0, MAX_TICKETS);
+  // No Intent section, or the template's left blank ("Closes #"): the old single-ticket rule.
+  const structured = tickets.length > 0;
+  if (!structured) {
     const n = ticketNumberOf(title, text);
-    tickets = keep(n) ? [n] : [];
+    if (keep(n)) tickets = [n];
   }
 
   const criteria = (found.get("acceptance criteria") ?? [])
@@ -105,7 +104,7 @@ export function parsePrIntent(
     if (data) hints.data.push(data);
   }
 
-  return { tickets, criteria, hints, structured: Boolean(intent) };
+  return { tickets, criteria, hints, structured };
 }
 
 /** One source of a run's intent: a ticket ("#5") or the PR's own criteria ("pr"). */

@@ -134,7 +134,7 @@ start: /cart
 data: valid code: SAVE10
 ```
 
-Without an `## Intent` section, the first "Closes #N" in the title or description is the ticket.
+Without an `## Intent` section that names a ticket, the first "Closes #N" in the title or description is the ticket.
 
 ## Honest limits
 
