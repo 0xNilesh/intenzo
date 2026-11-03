@@ -115,7 +115,7 @@ async function approversOf(db: Db, runId: string): Promise<string[]> {
 export type PublicFile = (path: string) => string | null;
 
 function reportCriterion(
-  c: { id: string; text: string; expected: string; kind: string },
+  c: { id: string; text: string; expected: string; kind: string; source?: string | undefined },
   result: ResultRow | undefined,
   publicFile?: PublicFile,
 ): ReportCriterion {
@@ -140,6 +140,7 @@ function reportCriterion(
     readings: pr ? readingsLine(pr) : null,
     gif: gifOf(evidence.gif, publicFile),
     ...(c.kind === "ui_visual" && { visual: true }),
+    ...(c.source && { source: c.source }),
   };
 }
 
@@ -198,6 +199,13 @@ export async function reportModel(
   const finished = run.finishedAt ?? null;
   return {
     groupId,
+    ...(ctx.group.ticketRef?.includes(", ") && {
+      // job-effects stores several tickets as "#5, #9" and "Discount codes · Undo remove".
+      tickets: ctx.group.ticketRef.split(", ").map((ref, i) => ({
+        ref,
+        title: (ctx.group.ticketTitle ?? "").split(" · ")[i] ?? "",
+      })),
+    }),
     ticket: ctx.group.ticketRef
       ? { ref: ctx.group.ticketRef, title: ctx.group.ticketTitle ?? "" }
       : null,

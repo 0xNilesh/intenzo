@@ -1,6 +1,7 @@
 // The PR comment (§26.1): one per run group, rebuilt from the database on every change. It shows
 // the latest run that wasn't superseded, with a row per criterion, and links each clip to the
 // report page, where the videos play.
+import { PR_SOURCE } from "../intent/pr-intent.ts";
 import { formatDuration } from "./duration.ts";
 import { aggregate, type ReportCriterion, type ReportModel } from "./model.ts";
 
@@ -35,9 +36,16 @@ function clock(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/** The criteria that decide a run: the tickets', never a PR's own (§17.2). */
+export const deciding = (criteria: readonly ReportCriterion[]): readonly ReportCriterion[] => {
+  const tickets = criteria.filter((c) => c.source !== PR_SOURCE);
+  return tickets.length > 0 ? tickets : criteria;
+};
+
 /** "❌ 3/4 passed", "⏳ waiting for the preview", "⏭ superseded"… */
 export function statusLine(model: ReportModel): string {
-  const { run, criteria } = model;
+  const { run } = model;
+  const criteria = deciding(model.criteria);
   const n = criteria.length;
   const passed = criteria.filter((c) => c.verdict === "pass").length;
   if (run.state === "waiting_inputs") return "⏳ waiting for the preview";
@@ -125,13 +133,39 @@ function criterionRows(c: ReportCriterion, reportUrl: string): string[] {
   return rows;
 }
 
+/** Criteria by source, in order of first appearance; one group when there's no source at all. */
+function sourceGroups(criteria: readonly ReportCriterion[]) {
+  const groups: { source: string; items: ReportCriterion[] }[] = [];
+  for (const c of criteria) {
+    const source = c.source ?? "";
+    const group = groups.find((g) => g.source === source);
+    if (group) group.items.push(c);
+    else groups.push({ source, items: [c] });
+  }
+  return groups;
+}
+
 /** The part both the comment and the check run show: the table, or a sentence, and the footer. */
 export function reportBody(model: ReportModel): string {
   const { run, criteria } = model;
   const lines: string[] = [];
   const sentence = stateSentence(model);
   if (sentence) lines.push(sentence, "");
-  if (criteria.length > 0) {
+  const groups = sourceGroups(criteria);
+  if (groups.length > 1) {
+    // §17.2: one table per intent, each with its own count; the PR's own checks last, apart.
+    for (const { source, items } of groups) {
+      const passed = items.filter((c) => c.verdict === "pass").length;
+      const name =
+        source === PR_SOURCE
+          ? "From the PR (unverified: these don't decide the run)"
+          : `${cell(source, 20)} ${cell(model.tickets?.find((t) => t.ref === source)?.title ?? "", 120)}`.trim();
+      lines.push(`**${name}** · ${passed}/${items.length} passed`, "");
+      lines.push("| | Criterion | Evidence |", "|---|---|---|");
+      for (const c of items) lines.push(...criterionRows(c, model.reportUrl));
+      lines.push("");
+    }
+  } else if (criteria.length > 0) {
     lines.push("| | Criterion | Evidence |", "|---|---|---|");
     for (const c of criteria) lines.push(...criterionRows(c, model.reportUrl));
     lines.push("");
@@ -212,9 +246,12 @@ function collapsedSections(model: ReportModel): string[] {
 }
 
 export function renderComment(model: ReportModel): string {
-  const ticket = model.ticket
-    ? ` · verified against ${cell(model.ticket.ref, 100)} "${cell(model.ticket.title, 120)}"`
-    : "";
+  const several = (model.tickets?.length ?? 0) > 1;
+  const ticket = several
+    ? ` · verified against ${model.tickets!.map((t) => `${cell(t.ref, 20)} "${cell(t.title, 60)}"`).join(", ")}`
+    : model.ticket
+      ? ` · verified against ${cell(model.ticket.ref, 100)} "${cell(model.ticket.title, 120)}"`
+      : "";
   const heading = `### Intenzo${ticket} · ${statusLine(model)} · attempt ${model.run.attemptNo}`;
   const main = `${commentMarker(model.groupId)}\n${heading}\n\n${reportBody(model)}`;
   const sections = collapsedSections(model);
