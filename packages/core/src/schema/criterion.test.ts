@@ -52,9 +52,10 @@ describe("CriterionSet", () => {
     expect(CriterionSet.parse(set).criteria.map((c) => c.id)).toEqual(["C2", "C3"]);
   });
 
-  it("allows at most six criteria", () => {
-    const seven = Array.from({ length: 7 }, (_, i) => ({ ...c2, id: `C${i + 1}` }));
-    expect(issues(CriterionSet, { ...set, criteria: seven })[0]).toMatch(/^criteria: /);
+  it("allows at most twelve criteria: a PR with several intents (one ticket gives at most six)", () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ ...c2, id: `C${i + 1}` }));
+    expect(issues(CriterionSet, { ...set, criteria: many(12) })).toEqual([]);
+    expect(issues(CriterionSet, { ...set, criteria: many(13) })[0]).toMatch(/^criteria: /);
   });
 
   it("rejects duplicate criterion ids, pointing at the second one", () => {
